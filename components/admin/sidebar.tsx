@@ -1,0 +1,128 @@
+"use client";
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { 
+  Home, 
+  Building, 
+  Calendar, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X,
+  Shield,
+  Compass,
+  FileText,
+  MessageSquare,
+  Star,
+  Globe
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+const navigation = [
+  { name: 'Dashboard', href: '/admin', icon: Home },
+  { name: 'Contenidos', href: '/admin/content', icon: FileText },
+  { name: 'Propiedades', href: '/admin/properties', icon: Building },
+  { name: 'Reservas', href: '/admin/reservations', icon: Calendar },
+  { name: 'Servicios', href: '/admin/services', icon: Compass },
+  { name: 'Testimonios', href: '/admin/testimonials', icon: MessageSquare },
+  { name: 'Amenidades', href: '/admin/amenities', icon: Star },
+  { name: 'Contacto', href: '/admin/contact', icon: Globe },
+  { name: 'Configuración', href: '/admin/settings', icon: Settings },
+];
+
+export default function AdminSidebar() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/admin/logout', { method: 'POST' });
+      if (response.ok) {
+        toast.success('Sesión cerrada exitosamente');
+        router.push('/admin/login');
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error('Error cerrando sesión');
+    }
+  };
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+        </Button>
+      </div>
+
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center gap-3 p-6 border-b">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
+              <p className="text-sm text-gray-500">Casa Alkimia</p>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  pathname === item.href
+                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    : "text-gray-700 hover:bg-gray-100"
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Logout */}
+          <div className="p-4 border-t">
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4 mr-3" />
+              Cerrar Sesión
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+    </>
+  );
+}
