@@ -72,6 +72,14 @@ const BreadcrumbPage = React.forwardRef<
 ));
 BreadcrumbPage.displayName = 'BreadcrumbPage';
 
+/**
+ * Renders a breadcrumb item with optional SVG icon and additional properties.
+ * @example
+ * BreadcrumbItem({ children: 'Home', className: 'custom-class' })
+ * Returns a breadcrumb list item with 'Home' text.
+ * @param {React.ComponentProps<'li'>} {children, className, ...props} - Component properties including children nodes, CSS class, and other list item properties.
+ * @returns {JSX.Element} Returns a JSX list item element styled for breadcrumb navigation.
+ **/
 const BreadcrumbSeparator = ({
   children,
   className,
@@ -88,6 +96,14 @@ const BreadcrumbSeparator = ({
 );
 BreadcrumbSeparator.displayName = 'BreadcrumbSeparator';
 
+/**
+* Renders a span element with a specific class and additional props, displaying a horizontal ellipsis.
+* @example
+* breadcrumbComponent({className: 'custom-class'})
+* // Renders a span with the class 'flex h-9 w-9 items-center justify-center custom-class' and a MoreHorizontal icon.
+* @param {object} props - Props to be passed to the span element, including className and others compatible with a span.
+* @returns {JSX.Element} A span element styled as a flex container with a MoreHorizontal icon and additional attributes.
+**/
 const BreadcrumbEllipsis = ({
   className,
   ...props

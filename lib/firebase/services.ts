@@ -10,6 +10,13 @@ import { Service } from '../types';
 
 const SERVICES_COLLECTION = 'services';
 
+/**
+ * Fetches and returns a list of services from the Firebase database, ordered by creation date.
+ * @example
+ * sync().then(services => console.log(services));
+ * // [{ id: '1', name: 'Service 1', createdAt: Date }, {...}]
+ * @returns {Promise<Service[]>} A promise that resolves to an array of services with their data and creation date.
+ */
 export const getServices = async (): Promise<Service[]> => {
   try {
     const querySnapshot = await getDocs(
@@ -27,6 +34,13 @@ export const getServices = async (): Promise<Service[]> => {
   }
 };
 
+/**
+ * Fetch and return an array of featured services from the database.
+ * @example
+ * sync().then(services => console.log(services));
+ * // Returns a promise that resolves to an array of featured services.
+ * @returns {Promise<Service[]>} A promise that resolves to an array of services which are featured, ordered by their creation date in descending order.
+ */
 export const getFeaturedServices = async (): Promise<Service[]> => {
   try {
     const q = query(

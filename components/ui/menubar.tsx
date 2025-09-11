@@ -200,6 +200,16 @@ const MenubarSeparator = React.forwardRef<
 ));
 MenubarSeparator.displayName = MenubarPrimitive.Separator.displayName;
 
+/**
+ * Renders a span element with additional class names and properties.
+ * @example
+ * renderSpan({ className: 'custom-class', id: 'unique-id' })
+ * // Returns a span element with 'ml-auto text-xs tracking-widest text-muted-foreground custom-class' classes and 'id' prop set.
+ * @param {Object} {className, ...props} - Object containing className and other props to be spread onto the span element.
+ * @param {string} className - Additional CSS classes to apply to the span element.
+ * @param {React.HTMLAttributes<HTMLSpanElement>} props - Other HTML attributes to apply to the span element.
+ * @returns {JSX.Element} A span element with the specified class names and properties.
+ */
 const MenubarShortcut = ({
   className,
   ...props

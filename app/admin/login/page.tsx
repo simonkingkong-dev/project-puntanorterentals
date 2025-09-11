@@ -10,12 +10,28 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Represents the admin login page interface and handles the authentication process.
+ * @example
+ * AdminLoginPage()
+ * Renders the admin login screen and manages user credentials.
+ * @param {none} No parameters taken.
+ * @returns {JSX.Element} A React component rendering the admin login page.
+ */
 export default function AdminLoginPage() {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
+  /**
+   * Handles form submission for admin login and manages loading and error states
+   * @example
+   * sync(event)
+   * No return value
+   * @param {React.FormEvent} e - The form event triggered by the user login attempt.
+   * @returns {void} This function does not return a value.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

@@ -32,6 +32,13 @@ const commonAmenities = [
   'Jardín',
 ];
 
+/**
+ * Renders a page for creating a new property listing in the admin panel.
+ * @example
+ * NewPropertyPage()
+ * <AdminLayout>JSX Content</AdminLayout>
+ * @returns {JSX.Element} Returns a form with fields to add property details including title, description, location, amenities, images, and other attributes necessary for a property listing.
+ */
 export default function NewPropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +56,14 @@ export default function NewPropertyPage() {
   const [newAmenity, setNewAmenity] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
 
+  /**
+   * Handles the form submission for creating a new property.
+   * @example
+   * sync(event)
+   * This function will validate the form data, create a slug, and attempt to save the property.
+   * @param {React.FormEvent} e - The form event triggered by submission.
+   * @returns {void} No meaningful return value, operates through side effects such as navigation and notifications.
+   **/
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

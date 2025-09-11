@@ -68,6 +68,14 @@ interface PropertyPageProps {
   };
 }
 
+/**
+ * Generates metadata for a property page based on provided parameters.
+ * @example
+ * generateMetadata({ params: someParams })
+ * // Returns a promise that resolves to metadata object
+ * @param {PropertyPageProps} {params} - An object containing parameters for the property page.
+ * @returns {Promise<Metadata>} A promise that resolves to a Metadata object containing title, description, and openGraph data.
+ **/
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   // In production, fetch actual property data
   const property = mockProperty;
@@ -96,6 +104,15 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   };
 }
 
+/**
+ * Renders a property details page using the provided property parameters, including a gallery, description, amenities, availability calendar, and a reservation form.
+ * @example
+ * PropertyPage({ params: { slug: 'example-slug' } })
+ * React component tree for the property details page
+ * @param {Object} params - Object that includes property parameters.
+ * @param {string} params.slug - Slug of the property used to fetch details.
+ * @returns {JSX.Element} Returns JSX elements representing the property details page.
+ */
 export default async function PropertyPage({ params }: PropertyPageProps) {
   // In production, fetch from Firebase
   const property = params.slug === mockProperty.slug ? mockProperty : null;

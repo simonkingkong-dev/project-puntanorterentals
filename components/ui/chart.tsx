@@ -67,6 +67,16 @@ const ChartContainer = React.forwardRef<
 });
 ChartContainer.displayName = 'Chart';
 
+/**
+ * Generates a style component for chart color theming based on the provided configuration.
+ * @example
+ * generateChartStyles({ id: 'chart1', config: sampleConfig })
+ * // Returns a <style> element with theme-specific color configurations.
+ * @param {Object} params - The parameters for the function.
+ * @param {string} params.id - The unique identifier for the chart.
+ * @param {ChartConfig} params.config - Configuration object containing theme and color data.
+ * @returns {JSX.Element|null} A 'style' JSX element with theme-based color configurations or null if no theme or color is defined.
+ */
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([_, config]) => config.theme || config.color
@@ -317,6 +327,16 @@ const ChartLegendContent = React.forwardRef<
 ChartLegendContent.displayName = 'ChartLegend';
 
 // Helper to extract item config from a payload.
+/**
+ * Retrieves a specific configuration from a chart's configuration based on a key found in the payload.
+ * @example
+ * getPayloadConfigFromPayload(sampleConfig, samplePayload, 'labelKey')
+ * // returns configuration based on 'labelKey' from samplePayload.
+ * @param {ChartConfig} config - The chart configuration object to retrieve from.
+ * @param {unknown} payload - The payload object that may contain a key to fetch the configuration.
+ * @param {string} key - The key to look for in the payload or payload's nested 'payload' for configuration retrieval.
+ * @returns {any} Returns the chart configuration associated with the provided key from the payload, or default key from config.
+ */
 function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: unknown,

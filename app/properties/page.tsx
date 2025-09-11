@@ -45,6 +45,13 @@ interface PropertiesPageProps {
   };
 }
 
+/**
+ * Renders a skeleton screen for a property listing page.
+ * @example
+ * <PropertySkeleton />
+ * // Renders a loading skeleton UI with several placeholder elements.
+ * @returns {JSX.Element} A React component that displays a set of skeleton loaders mimicking a property card structure, useful as a placeholder while actual data is being loaded.
+ */
 function PropertySkeleton() {
   return (
     <div className="space-y-3">
@@ -60,6 +67,14 @@ function PropertySkeleton() {
   );
 }
 
+/**
+ * Renders a list of properties based on the provided search parameters.
+ * @example
+ * PropertiesList({ searchParams: { location: 'New York', priceRange: '500000-1000000' } })
+ * // Returns a grid of property cards or a message if no properties are found.
+ * @param {Object} { searchParams: SearchParams } - An object containing search parameters to filter properties.
+ * @returns {JSX.Element} A React component that displays either a grid of property cards or a message indicating no properties were found.
+ */
 async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
   // In production, use actual Firebase data
   let properties = mockProperties;
@@ -91,6 +106,14 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
   );
 }
 
+/**
+ * Renders the properties page, displaying a list of properties with optional filters and a search form.
+ * @example
+ * PropertiesPage({ searchParams: { location: 'New York' } })
+ * // Renders a list of properties filtered by the New York location
+ * @param {Object} searchParams - An object containing search parameters to filter properties.
+ * @returns {JSX.Element} A JSX element representing the properties page.
+ */
 export default function PropertiesPage({ searchParams }: PropertiesPageProps) {
   const hasFilters = Object.keys(searchParams).length > 0;
 

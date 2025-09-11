@@ -14,6 +14,14 @@ import { Reservation } from '../types';
 
 const RESERVATIONS_COLLECTION = 'reservations';
 
+/**
+ * Creates a new reservation and returns its document ID.
+ * @example
+ * sync({ guestName: 'John Doe', checkIn: new Date(), checkOut: new Date(), roomNumber: 101 })
+ * // Returns: 'randomDocumentId123'
+ * @param {Omit<Reservation, 'id' | 'createdAt'>} reservationData - The reservation details excluding ID and creation date.
+ * @returns {Promise<string>} A promise that resolves to the reservation document ID.
+ */
 export const createReservation = async (reservationData: Omit<Reservation, 'id' | 'createdAt'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, RESERVATIONS_COLLECTION), {
@@ -30,6 +38,14 @@ export const createReservation = async (reservationData: Omit<Reservation, 'id' 
   }
 };
 
+/**
+ * Fetches and returns a list of confirmed reservations for a given property, ordered by check-in date.
+ * @example
+ * sync('propertyId123').then(reservations => console.log(reservations));
+ * // Expected output: Array of reservation objects with converted dates.
+ * @param {string} propertyId - The ID of the property to fetch reservations for.
+ * @returns {Promise<Reservation[]>} A promise that resolves to an array of Reservations.
+ */
 export const getReservationsByProperty = async (propertyId: string): Promise<Reservation[]> => {
   try {
     const q = query(
@@ -54,6 +70,16 @@ export const getReservationsByProperty = async (propertyId: string): Promise<Res
   }
 };
 
+/**
+ * Updates the status of a reservation in the Firestore database.
+ * @example
+ * sync('reservation123', 'confirmed', 'stripe123')
+ * // Returns: Promise resolves with no value upon successful update
+ * @param {string} reservationId - The unique identifier of the reservation to update.
+ * @param {Reservation['status']} status - The new status for the reservation.
+ * @param {string} [stripePaymentId] - The Stripe payment ID associated with the reservation, if applicable.
+ * @returns {Promise<void>} Resolves when the update is successful, rejects with an error if the update fails.
+ */
 export const updateReservationStatus = async (
   reservationId: string, 
   status: Reservation['status'],

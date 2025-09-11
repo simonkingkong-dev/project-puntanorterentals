@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+/**
+ * Displays a search form for users to find properties based on location, check-in and check-out dates, and number of guests.
+ * @example
+ * SearchForm()
+ * Renders a form with inputs for location, check-in and check-out dates, and guest selection.
+ * @returns {JSX.Element} A JSX element containing the search form UI.
+ */
 export default function SearchForm() {
   const router = useRouter();
   const [searchParams, setSearchParams] = useState({
