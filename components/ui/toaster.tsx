@@ -10,6 +10,13 @@ import {
   ToastViewport,
 } from '@/components/ui/toast';
 
+/**
+ * Renders a list of toast notifications.
+ * @example
+ * Toaster()
+ * // Returns a JSX element rendering the list of toasts
+ * @returns {JSX.Element} A JSX element containing toast notifications wrapped in a ToastProvider.
+ */
 export function Toaster() {
   const { toasts } = useToast();
 

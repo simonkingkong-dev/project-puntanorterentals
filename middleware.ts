@@ -2,6 +2,14 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
+/**
+ * Handles redirection based on admin session authentication state.
+ * @example
+ * middleware(request)
+ * Redirects to '/admin/login' or '/admin' based on session status.
+ * @param {NextRequest} request - The incoming request containing cookies and URL information.
+ * @returns {NextResponse} A redirection response or the next response in the chain.
+ */
 export function middleware(request: NextRequest) {
   const adminSession = request.cookies.get('admin-session');
   const path = request.nextUrl.pathname;

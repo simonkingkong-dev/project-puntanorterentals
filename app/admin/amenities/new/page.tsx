@@ -26,6 +26,13 @@ const availableIcons = [
   { value: 'coffee', label: 'Café/Desayuno', icon: Coffee },
 ];
 
+/**
+ * Renders a page for creating a new amenity with a form, preview, and submission handling.
+ * @example
+ * NewAmenityPage()
+ * A JSX component for the new amenity page is rendered.
+ * @returns {JSX.Element} Renders the New Amenity creation page component.
+ */
 export default function NewAmenityPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +44,14 @@ export default function NewAmenityPage() {
     order: 1,
   });
 
+  /**
+   * Handles form submission by creating a new amenity and provides feedback to the user.
+   * @example
+   * sync(e)
+   * // Redirects to '/admin/amenities' after successful creation
+   * @param {React.FormEvent} e - The form event triggered by submission.
+   * @returns {void} This function does not return a value, but navigates and displays success or error messages.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

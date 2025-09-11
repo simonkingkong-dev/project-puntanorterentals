@@ -165,6 +165,15 @@ const ContextMenuSeparator = React.forwardRef<
 ));
 ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName;
 
+/**
+ * Renders a span element with additional styles and properties.
+ * @example
+ * renderStyledSpan('custom-class', { id: 'span1', onClick: () => alert('Clicked') })
+ * // Returns a styled span element with the specified class and props.
+ * @param {Object} props - The props for the span element along with an optional className.
+ * @param {string} [props.className] - An optional className to apply additional styles.
+ * @returns {JSX.Element} A span element with the specified styles and props.
+ */
 const ContextMenuShortcut = ({
   className,
   ...props

@@ -9,6 +9,19 @@ interface PropertyCardProps {
   property: Property;
 }
 
+/**
+ * Renders a card component displaying property details, including images, title, location, capacity, description,
+ * price per night, and amenities.
+ * @example
+ * PropertyCard({ property: sampleProperty })
+ * <Link href="/properties/sample-slug">
+ *   ...card content...
+ * </Link>
+ * @param {Object} {property} - Object containing property details such as title, location, maxGuests, description,
+ * pricePerNight, amenities, images, and slug. The property title is displayed, the first image is shown (or a default
+ * image if not available), and a redirect link is generated using the property slug.
+ * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
+ */
 export default function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Link href={`/properties/${property.slug}`}>

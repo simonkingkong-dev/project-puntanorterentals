@@ -10,6 +10,20 @@ interface ServiceCardProps {
   service: Service;
 }
 
+/**
+ * Renders a card component displaying information about a service.
+ * @example
+ * <ServiceCard service={{ image: 'image-url', title: 'Service Title', description: 'Service description', featured: true, externalLink: 'http://link-to-service' }} />
+ * Renders a styled card with title, image, description, and a link button.
+ * @param {Object} props - The properties object for the ServiceCard component.
+ * @param {Object} props.service - The service object containing details to display in the card.
+ * @param {string} props.service.image - The URL of the service image.
+ * @param {string} props.service.title - The title of the service.
+ * @param {string} props.service.description - A brief description of the service.
+ * @param {boolean} props.service.featured - A flag indicating if the service is featured.
+ * @param {string} props.service.externalLink - The URL to more details or booking for the service.
+ * @returns {JSX.Element} A JSX element representing a stylized service card.
+ */
 export default function ServiceCard({ service }: ServiceCardProps) {
   return (
     <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">

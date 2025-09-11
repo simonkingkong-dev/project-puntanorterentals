@@ -45,6 +45,16 @@ const AlertDialogContent = React.forwardRef<
 ));
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
+/**
+* Renders a customizable alert dialog component.
+* @example
+* AlertDialog({ className: "custom-class", title: "Alert!" })
+* <div class="flex flex-col space-y-2 text-center sm:text-left custom-class" title="Alert!" />
+* @param {Object} { className, ...props } - The props for configuring the alert dialog.
+* @param {string} { className } - Additional CSS classes to apply.
+* @param {React.HTMLAttributes<HTMLDivElement>} { ...props } - Additional props for the HTML div element.
+* @returns {JSX.Element} A JSX element representing the alert dialog.
+**/
 const AlertDialogHeader = ({
   className,
   ...props
@@ -59,6 +69,15 @@ const AlertDialogHeader = ({
 );
 AlertDialogHeader.displayName = 'AlertDialogHeader';
 
+/**
+ * Renders an HTML div element with specified class names and properties.
+ * @example
+ * renderDiv({ className: 'additional-class', id: 'unique-id' })
+ * // Returns: <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 additional-class" id="unique-id"></div>
+ * @param {Object} props - Object containing className and other HTML attributes.
+ * @param {string} props.className - Additional class names to be added.
+ * @returns {JSX.Element} A JSX element representing the div with the specified attributes and class names.
+ */
 const AlertDialogFooter = ({
   className,
   ...props

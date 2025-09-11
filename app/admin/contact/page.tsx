@@ -12,6 +12,13 @@ import { toast } from 'sonner';
 import { getContactInfo, updateContactInfo } from '@/lib/firebase/content';
 import { ContactInfo } from '@/lib/types';
 
+/**
+ * Renders the Admin Contact Page allowing management of contact information.
+ * @example
+ * AdminContactPage()
+ * // Renders the admin contact management interface and handles data persistence
+ * @returns {JSX.Element} A JSX element that represents the admin contact page interface.
+ */
 export default function AdminContactPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [contactData, setContactData] = useState<Omit<ContactInfo, 'id' | 'updatedAt'>>({
@@ -31,6 +38,13 @@ export default function AdminContactPage() {
     loadContactInfo();
   }, []);
 
+  /**
+  * Asynchronously fetches and sets contact information.
+  * @example
+  * sync();
+  * // Sets contact data with email, phone, address, companyName, copyright, and social media information.
+  * @returns {void} Does not return a value but sets contact data in the application state.
+  **/
   const loadContactInfo = async () => {
     try {
       const info = await getContactInfo();
@@ -53,6 +67,15 @@ export default function AdminContactPage() {
     }
   };
 
+  /**
+   * Updates the contact data object with the new value for the specified field.
+   * @example
+   * updateContactData('socialMedia.twitter', '@user')
+   * // This updates the 'twitter' field under 'socialMedia' with the value '@user'.
+   * @param {string} field - The field name in the contact data object to be updated. If it starts with 'socialMedia.', it updates the respective social media sub-field.
+   * @param {string} value - The new value to be set for the specified field.
+   * @returns {void} Does not return a value; it updates the state directly.
+   */
   const handleInputChange = (field: string, value: string) => {
     if (field.startsWith('socialMedia.')) {
       const socialField = field.split('.')[1];
