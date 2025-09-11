@@ -1,4 +1,4 @@
-import { Metadata } from 'next/metadata';
+import { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building, Calendar, Users, DollarSign } from 'lucide-react';
 import AdminLayout from '@/components/admin/layout';
