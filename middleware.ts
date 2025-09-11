@@ -1,20 +1,19 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// middleware.ts
+
+import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Check if the request is for admin routes
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    // Allow login page
-    if (request.nextUrl.pathname === '/admin/login') {
-      return NextResponse.next();
-    }
+  const adminSession = request.cookies.get('admin-session');
+  const path = request.nextUrl.pathname;
 
-    // Check for admin session
-    const adminSession = request.cookies.get('admin-session');
-    
-    if (!adminSession || adminSession.value !== 'authenticated') {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+  // Si no hay sesión Y NO estás en la página de login
+  if (!adminSession && path !== '/admin/login') {
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  }
+
+  // Si hay sesión Y SÍ estás en la página de login
+  if (adminSession && path === '/admin/login') {
+    return NextResponse.redirect(new URL('/admin', request.url));
   }
 
   return NextResponse.next();
