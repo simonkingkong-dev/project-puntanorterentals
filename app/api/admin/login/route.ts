@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAdminCredentials, setAdminSession } from '@/lib/auth/admin';
 
