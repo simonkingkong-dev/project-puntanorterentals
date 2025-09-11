@@ -1,4 +1,4 @@
-# Casa Alkimia - Aplicación Web de Alquiler de Propiedades Vacacionales
+# Punta Norte Rentals - Aplicación Web de Alquiler de Propiedades Vacacionales
 
 Una aplicación web full-stack moderna para gestión de propiedades vacacionales, construida con Next.js 14, Firebase, y Stripe. Diseño inspirado en Lonely Planet con funcionalidad robusta para reservas y pagos.
 
@@ -308,4 +308,4 @@ Para soporte técnico:
 
 ---
 
-**Casa Alkimia** - Creando experiencias vacacionales excepcionales 🏖️✨
+**Punta Norte Rentals** - Creando experiencias vacacionales excepcionales 🏖️✨

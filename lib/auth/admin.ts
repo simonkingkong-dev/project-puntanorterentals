@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 import { cookies } from 'next/headers';
 
 export interface AdminCredentials {
