@@ -11,6 +11,16 @@ interface PropertyGalleryProps {
   title: string;
 }
 
+/**
+ * Renders a gallery component for displaying property images with modal and navigation features.
+ * @example
+ * <PropertyGallery images={['image1.jpg', 'image2.jpg']} title="Property Title" />
+ * Displays an interactive image gallery with navigation and modal viewing capabilities.
+ * @param {Object} props - The properties for the PropertyGallery component.
+ * @param {string[]} props.images - Array of image URLs to display in the gallery.
+ * @param {string} props.title - The title of the property for labeling images.
+ * @returns {JSX.Element} A JSX element representing the property image gallery.
+ **/
 export default function PropertyGallery({ images, title }: PropertyGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);

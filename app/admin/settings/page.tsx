@@ -14,6 +14,16 @@ export const metadata: Metadata = {
   robots: 'noindex, nofollow',
 };
 
+/**
+ * Renders the admin settings page allowing configuration of general,
+ * Firebase, Stripe, and email settings for the system.
+ *
+ * @example
+ * AdminSettingsPage()
+ * React component rendering the admin settings page JSX structure
+ * 
+ * @returns {JSX.Element} The JSX element representing the admin settings page structure.
+ */
 export default function AdminSettingsPage() {
   return (
     <AdminLayout>

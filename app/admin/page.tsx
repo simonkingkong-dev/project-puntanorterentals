@@ -46,6 +46,13 @@ const recentReservations = [
   },
 ];
 
+/**
+* Renders the admin dashboard with an overview of statistics and recent reservations.
+* @example
+* AdminDashboard()
+* This returns a React component containing the admin dashboard layout.
+* @returns {JSX.Element} A React component representing the admin dashboard containing stats cards and recent reservations.
+**/
 export default function AdminDashboard() {
   return (
     <AdminLayout>

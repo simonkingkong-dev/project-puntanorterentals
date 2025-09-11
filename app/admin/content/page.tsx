@@ -132,6 +132,13 @@ const contentSections: ContentSection[] = [
   }
 ];
 
+/**
+ * Displays and manages the admin content page for static website content.
+ * @example
+ * AdminContentPage()
+ * Renders the admin content management interface.
+ * @returns {JSX.Element} The rendered admin content management page component.
+ */
 export default function AdminContentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [contentData, setContentData] = useState<{ [key: string]: string }>({});
@@ -140,6 +147,14 @@ export default function AdminContentPage() {
     loadContent();
   }, []);
 
+  /**
+   * Fetches and organizes site content into a key-value map.
+   * @example
+   * sync()
+   * undefined
+   * @param {void} No parameters are required.
+   * @returns {void} Does not return a value but manages site content state and handles potential errors.
+   */
   const loadContent = async () => {
     try {
       const content = await getSiteContent();
@@ -164,6 +179,14 @@ export default function AdminContentPage() {
     }));
   };
 
+  /**
+   * Synchronizes the content of a specified section with the existing site content.
+   * @example
+   * sync('header')
+   * // No return value but updates site content and displays a success or error message through toast notifications.
+   * @param {string} section - The section of the site content to be synchronized.
+   * @returns {void} No return value, the function performs asynchronous updates on the site content.
+   **/
   const handleSaveSection = async (section: string) => {
     setIsLoading(true);
     try {

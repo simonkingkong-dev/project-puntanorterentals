@@ -72,6 +72,13 @@ const mockServices = [
   },
 ];
 
+/**
+ * Displays a services page with featured and additional experiences.
+ * @example
+ * ServicesPage()
+ * // Returns a React component rendering the services page with mock data.
+ * @returns {JSX.Element} React component representing the services page with a header, services grid, and a call to action section.
+ */
 export default async function ServicesPage() {
   // In production, fetch from Firebase
   const services = mockServices;

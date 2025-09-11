@@ -22,6 +22,15 @@ interface ReservationFormProps {
   onReservationComplete?: () => void;
 }
 
+/**
+ * Renders a reservation form component for booking a property.
+ * @example
+ * <ReservationForm property={property} selectedDates={selectedDates} onReservationComplete={callbackFunction} />
+ * @param {ReservationFormProps} {property} - The property object containing details, including price per night and maximum number of guests.
+ * @param {Object} {selectedDates} - An object containing the check-in and check-out dates for the reservation.
+ * @param {Function} {onReservationComplete} - A callback function that is executed once the reservation process is complete.
+ * @returns {JSX.Element} The reservation form component to be rendered within a React application.
+ */
 export default function ReservationForm({ 
   property, 
   selectedDates,
@@ -41,6 +50,14 @@ export default function ReservationForm({
   const fees = Math.round(subtotal * 0.1); // 10% service fee
   const total = subtotal + fees;
 
+  /**
+   * Handles form submission for creating a reservation and redirects to payment on success.
+   * @example
+   * sync(event)
+   * // Triggers reservation creation, date blocking, and payment redirection.
+   * @param {React.FormEvent} e - The form event triggered by submission, prevents default behavior.
+   * @returns {void} Executes reservation logic, updates UI based on success or failure, and manages redirection.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     

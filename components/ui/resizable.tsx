@@ -5,6 +5,14 @@ import * as ResizablePrimitive from 'react-resizable-panels';
 
 import { cn } from '@/lib/utils';
 
+/**
+* A function to render a resizable panel group component with a customizable className and additional props.
+* @example
+* renderPanelGroup({ className: 'custom-class', id: 'panel-group-1' })
+* <ResizablePrimitive.PanelGroup className="custom-class flex h-full w-full data-[panel-group-direction=vertical]:flex-col" id="panel-group-1" />
+* @param {Object} { className: string, ...props: React.ComponentProps<typeof ResizablePrimitive.PanelGroup> } - An object containing a className to customize the component's styling and any additional props to pass to the ResizablePrimitive.PanelGroup.
+* @returns {JSX.Element} A ResizablePrimitive.PanelGroup component with the specified className and additional props.
+**/
 const ResizablePanelGroup = ({
   className,
   ...props
@@ -20,6 +28,16 @@ const ResizablePanelGroup = ({
 
 const ResizablePanel = ResizablePrimitive.Panel;
 
+/**
+* Renders a resizable panel handle component with optional visual handle.
+* @example
+* renderResizableHandle({ withHandle: true, className: 'custom-class' })
+* // Renders a resizable panel handle component with a grip handle.
+* @param {Object} props - The component props.
+* @param {boolean} [props.withHandle] - Whether to display a visual handle for gripping.
+* @param {string} [props.className] - Additional CSS classes to apply to the handle.
+* @returns {JSX.Element} A rendered PanelResizeHandle component.
+**/
 const ResizableHandle = ({
   withHandle,
   className,

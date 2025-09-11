@@ -7,6 +7,13 @@ import { Check, Calendar, MapPin, Users, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+/**
+ * Renders the success content for a completed payment, displaying reservation details and next steps.
+ * @example
+ * <SuccessContent />
+ * // Renders the success page for the payment, including reservation details
+ * @returns {JSX.Element} The JSX content of the success page, showing a confirmation message, reservation details, next steps, and available actions for the user.
+**/
 function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');

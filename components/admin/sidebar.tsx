@@ -34,11 +34,33 @@ const navigation = [
   { name: 'Configuración', href: '/admin/settings', icon: Settings },
 ];
 
+/**
+ * Represents the admin navigation sidebar with a mobile-friendly menu toggle.
+ * 
+ * This component provides a sidebar for admin users, allowing seamless navigation 
+ * across different sections and a logout functionality. It adapts to mobile views 
+ * with a toggleable menu.
+ * 
+ * @example
+ * <AdminSidebar />
+ * 
+ * @returns {JSX.Element} The JSX element for the admin sidebar, including toggleable 
+ * mobile menu, navigation links, and a logout button.
+ */
 export default function AdminSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
+  /**
+  * Logs out the current admin user by sending a POST request to the logout API.
+  * @example
+  * logoutAdmin();
+  * // Displays a success message and redirects to the admin login page if successful, else shows an error message.
+  * @async
+  * @function
+  * @returns {void} Does not return a value.
+  **/
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', { method: 'POST' });
