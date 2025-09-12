@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 // Update the import path if necessary, for example:
-import { validateAdminCredentials, setAdminSession } from '@lib/auth/admin.ts';
+import { validateAdminCredentials, setAdminSession } from '@/lib/auth/admin/admin';
 // Or create the file at 'c:\Users\Simon\Desktop\Proyectos\project\lib\auth\admin\admin.ts' if it does not exist.
 
 export async function POST(request: NextRequest) {

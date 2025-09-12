@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clearAdminSession } from '@/lib/auth/admin';
+import { clearAdminSession } from '@/lib/auth/admin/admin';
 
 export async function POST() {
   try {
