@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building, Calendar, Users, DollarSign } from 'lucide-react';
+import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
 import AdminLayout from '@/components/admin/layout';
 
 export const metadata: Metadata = {
@@ -47,13 +49,18 @@ const recentReservations = [
 ];
 
 /**
-* Renders the admin dashboard with an overview of statistics and recent reservations.
-* @example
-* AdminDashboard()
-* This returns a React component containing the admin dashboard layout.
-* @returns {JSX.Element} A React component representing the admin dashboard containing stats cards and recent reservations.
-**/
-export default function AdminDashboard() {
+ * Renders the admin dashboard with an overview of statistics and recent reservations.
+ * @example
+ * AdminDashboard()
+ * This returns a React component containing the admin dashboard layout.
+ * @returns {JSX.Element} A React component representing the admin dashboard containing stats cards and recent reservations.
+ **/
+export default async function AdminDashboard() {
+  const isAuthenticated = await isAdminAuthenticated();
+  if (!isAuthenticated) {
+    redirect('/admin/login');
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-8">
