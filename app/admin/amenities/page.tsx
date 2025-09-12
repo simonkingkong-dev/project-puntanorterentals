@@ -79,6 +79,13 @@ const globalAmenities = [
   },
 ];
 
+/**
+ * Renders the Admin Amenities Page component that allows management of global amenities.
+ * @example
+ * AdminAmenitiesPage()
+ * <AdminLayout>...</AdminLayout>
+ * @returns {JSX.Element} A component rendering the admin interface for managing amenities, including lists and actions for amenities.
+ */
 export default function AdminAmenitiesPage() {
   return (
     <AdminLayout>

@@ -11,12 +11,30 @@ import { toast } from 'sonner';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
+/**
+ * A component that renders a checkout form and handles payment confirmation using Stripe.
+ * @example
+ * CheckoutForm()
+ * Returns a form element with payment handling and confirmation logic.
+ * @returns {JSX.Element} A form component that facilitates the payment process by integrating with Stripe APIs.
+ */
 function CheckoutForm() {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * Handles the payment confirmation process.
+   * Prevents default form submission behavior, confirms payment with Stripe, and manages loading state and error handling.
+   * 
+   * @example
+   * sync(event)
+   * // Initiates payment confirmation process and handles errors or success.
+   * 
+   * @param {React.FormEvent} event - The form submission event to be prevented.
+   * @returns {void} No return value.
+   */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -69,6 +87,14 @@ function CheckoutForm() {
   );
 }
 
+/**
+ * Handles the creation of a payment intent and displays payment information.
+ * @example
+ * PaymentContent()
+ * Returns and displays the payment component interface.
+ * @param {void} - This function takes no arguments.
+ * @returns {JSX.Element} Returns a React component dealing with payment process creation and UI.
+ */
 function PaymentContent() {
   const searchParams = useSearchParams();
   const reservationId = searchParams.get('reservation');
@@ -196,6 +222,13 @@ function PaymentContent() {
   );
 }
 
+/**
+ * Renders the payment page for finalizing reservations.
+ * @example
+ * PaymentPage()
+ * <div className="min-h-screen bg-gray-50 py-12">...</div>
+ * @returns {JSX.Element} JSX component of the payment page.
+ */
 export default function PaymentPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">

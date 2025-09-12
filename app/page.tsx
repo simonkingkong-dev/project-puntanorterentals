@@ -78,6 +78,14 @@ const mockFeaturedServices = [
   },
 ];
 
+/**
+ * Renders the home page with featured properties, services, and promotional sections.
+ * @example
+ * HomePage()
+ * <JSX.Element>
+ * @param None
+ * @returns {JSX.Element} The JSX layout of the home page, including hero, featured properties, services, and call-to-action sections.
+ */
 export default async function HomePage() {
   // In production, these would fetch from Firebase
   const featuredProperties = mockFeaturedProperties;

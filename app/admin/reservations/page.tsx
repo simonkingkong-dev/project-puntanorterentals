@@ -79,6 +79,14 @@ const reservations = [
   },
 ];
 
+/**
+ * Renders a status badge based on the reservation status string.
+ * @example
+ * status("confirmed")
+ * <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Confirmada</Badge>
+ * @param {string} status - The status of the reservation, can be 'confirmed', 'pending', 'cancelled', or any other string.
+ * @returns {JSX.Element} A JSX element representing the styled badge for the given status.
+ */
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -92,6 +100,14 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+/**
+ * AdminReservationsPage renders the admin interface to manage reservations.
+ * @example
+ * AdminReservationsPage()
+ * <AdminLayout>...</AdminLayout>
+ * @param None
+ * @returns {JSX.Element} A React component rendering the reservations management page.
+ */
 export default function AdminReservationsPage() {
   return (
     <AdminLayout>

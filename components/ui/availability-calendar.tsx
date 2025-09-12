@@ -13,6 +13,16 @@ interface AvailabilityCalendarProps {
   selectedDates?: { checkIn?: Date; checkOut?: Date };
 }
 
+/**
+ * Renders an availability calendar for selecting property stay dates.
+ * @example
+ * AvailabilityCalendar({ property: someProperty, onDateSelect: handleDateSelect, selectedDates: someSelectedDates })
+ * // Returns a JSX element representing the availability calendar
+ * @param {Object} {property} - The property object containing availability information.
+ * @param {Function} {onDateSelect} - Callback function invoked when a date range is selected.
+ * @param {Object} {selectedDates} - An object with `checkIn` and `checkOut` dates representing the currently selected date range.
+ * @returns {JSX.Element} JSX component rendering the availability calendar.
+ */
 export default function AvailabilityCalendar({ 
   property, 
   onDateSelect,
@@ -29,6 +39,14 @@ export default function AvailabilityCalendar({
     return isPast || isUnavailable;
   };
 
+  /**
+   * Handles the selection of a date range for check-in and check-out.
+   * @example
+   * handleDateSelection(new Date('2023-01-01'))
+   * // Starts selecting range or completes it with the given date.
+   * @param {Date | undefined} date - The date selected by the user, used to determine check-in or check-out.
+   * @returns {void} Modifies the state by updating temporary check-in, range selection status, and potentially calls the onDateSelect function.
+   */
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
 
@@ -54,6 +72,14 @@ export default function AvailabilityCalendar({
     }
   };
 
+  /**
+   * Determines the CSS class for a given date based on availability and selection range.
+   * @example
+   * getDateClass(new Date('2023-10-22'));
+   * // Returns a class string like 'bg-red-100 text-red-800 line-through', 'bg-orange-500 text-white', etc.
+   * @param {Date} date - The date for which to determine the class.
+   * @returns {string} CSS class string representing the availability or selection state for the given date.
+   */
   const getDateStyle = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     

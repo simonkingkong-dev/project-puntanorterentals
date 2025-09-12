@@ -52,6 +52,13 @@ const services = [
   },
 ];
 
+/**
+* Renders the Admin Services page with options to manage and view service statistics and details.
+* @example
+* AdminServicesPage()
+* Returns a JSX element layout displaying the admin services page.
+* @returns {JSX.Element} A React component that provides an interface for managing admin services.
+**/
 export default function AdminServicesPage() {
   return (
     <AdminLayout>

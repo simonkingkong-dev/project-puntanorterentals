@@ -39,6 +39,18 @@ type PaginationLinkProps = {
 } & Pick<ButtonProps, 'size'> &
   React.ComponentProps<'a'>;
 
+/**
+* Renders a pagination link component with conditional styling based on active state.
+* @example
+* PaginationLink({ className: 'custom-class', isActive: true, size: 'large' })
+* <a class="button outline large custom-class" aria-current="page" ...props />
+* @param {Object} PaginationLinkProps - Properties to configure the pagination link.
+* @param {string} PaginationLinkProps.className - Additional class names for the link.
+* @param {boolean} PaginationLinkProps.isActive - Determines if the link is the active page.
+* @param {string} [PaginationLinkProps.size='icon'] - The size variant of the button.
+* @param {Object} PaginationLinkProps.props - Additional props to be spread onto the <a> element.
+* @returns {JSX.Element} A styled anchor element that acts as a pagination link.
+**/
 const PaginationLink = ({
   className,
   isActive,
@@ -59,6 +71,16 @@ const PaginationLink = ({
 );
 PaginationLink.displayName = 'PaginationLink';
 
+/**
+* Renders a pagination link component for navigating to the previous page.
+* @example
+* renderPaginationLink({ className: 'custom-class', href: '/previous-page' })
+* Returns a JSX element displaying a navigational link with a "Previous" label and a left chevron icon.
+* @param {Object} paginationLinkProps - The props for the PaginationLink component.
+* @param {string} paginationLinkProps.className - Additional class names for custom styling.
+* @param {Object} paginationLinkProps.props - Additional props to be spread onto the PaginationLink component.
+* @returns {JSX.Element} The PaginationLink component for navigating to the previous page.
+**/
 const PaginationPrevious = ({
   className,
   ...props
@@ -75,6 +97,14 @@ const PaginationPrevious = ({
 );
 PaginationPrevious.displayName = 'PaginationPrevious';
 
+/**
+* Renders a pagination link component for navigating to the next page.
+* @example
+* PaginationLinkComponent({ className: 'custom-class', someProp: value })
+* Returns a React component for the next page link with additional props.
+* @param {React.ComponentProps<typeof PaginationLink>} params - An object containing the className and other props for the PaginationLink.
+* @returns {JSX.Element} A JSX element representing a pagination link to the next page.
+**/
 const PaginationNext = ({
   className,
   ...props
@@ -91,6 +121,16 @@ const PaginationNext = ({
 );
 PaginationNext.displayName = 'PaginationNext';
 
+/**
+* Renders a span element with a customizable class name and additional properties, including an icon and hidden text for accessibility.
+* @example
+* renderSpanWithIcon({ className: 'custom-class', id: 'icon-span' })
+* // Returns a span element with the specified class name and ID, containing an icon and screen reader text.
+* @param {Object} props - Contains properties and className for the span element.
+* @param {string} props.className - A string representing additional class names for the span element.
+* @param {Object} props.props - Other properties to be applied to the span element.
+* @returns {JSX.Element} A span element with additional styling, an icon for display, and aria-hidden text for accessibility.
+**/
 const PaginationEllipsis = ({
   className,
   ...props

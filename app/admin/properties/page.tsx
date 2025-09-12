@@ -28,6 +28,13 @@ const properties = Array.from({ length: 16 }, (_, i) => ({
   status: i % 10 === 0 ? 'inactive' : 'active',
 }));
 
+/**
+ * Renders the admin properties page allowing management of properties within the system.
+ * @example
+ * AdminPropertiesPage()
+ * <AdminLayout>...</AdminLayout>
+ * @returns {JSX.Element} The admin properties page component wrapped in an admin layout with a grid of property cards.
+ */
 export default function AdminPropertiesPage() {
   return (
     <AdminLayout>
