@@ -1,6 +1,4 @@
-// middleware.ts
-
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
 /**
  * Handles redirection based on admin session authentication state.
@@ -11,22 +9,25 @@ import { NextResponse, type NextRequest } from 'next/server';
  * @returns {NextResponse} A redirection response or the next response in the chain.
  */
 export function middleware(request: NextRequest) {
-  const adminSession = request.cookies.get('admin-session');
-  const path = request.nextUrl.pathname;
+  const adminSession = request.cookies.get('admin-session');
+  const path = request.nextUrl.pathname;
 
-  // Si no hay sesión O el valor de la sesión no es 'authenticated' Y NO estás en la página de login
-  if (!adminSession || (adminSession.value !== 'authenticated' && path !== '/admin/login')) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
-  }
+  // Si el usuario ya está en la página de login, no hay necesidad de redirigir
+  // Esto previene un bucle de redireccionamiento.
+  if (path === '/admin/login') {
+    return NextResponse.next();
+  }
 
-  // Si hay sesión Y el valor de la sesión es 'authenticated' Y SÍ estás en la página de login
-  if (adminSession && adminSession.value === 'authenticated' && path === '/admin/login') {
-    return NextResponse.redirect(new URL('/admin', request.url));
-  }
+  // Si no hay sesión o la sesión no es 'authenticated', redirigir al login
+  if (!adminSession || adminSession.value !== 'authenticated') {
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  }
 
-  return NextResponse.next();
+  // Si el usuario está autenticado y la ruta es /admin, permite el acceso.
+  // Cualquier otra ruta no será afectada por este middleware.
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/admin/:path*',
+  matcher: ['/admin/:path*'],
 };

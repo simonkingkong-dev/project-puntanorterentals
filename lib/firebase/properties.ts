@@ -1,13 +1,13 @@
 import { 
+  Timestamp, 
   collection, 
   doc, 
-  getDocs, 
   getDoc, 
-  updateDoc, 
+  getDocs, 
+  orderBy, 
   query, 
+  updateDoc,
   where, 
-  orderBy,
-  Timestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Property, SearchParams } from '../types';
@@ -24,7 +24,7 @@ const PROPERTIES_COLLECTION = 'properties';
 export const getProperties = async (): Promise<Property[]> => {
   try {
     const querySnapshot = await getDocs(
-      query(collection(db, PROPERTIES_COLLECTION), orderBy('createdAt', 'desc'))
+      query(collection(db, PROPERTIES_COLLECTION), orderBy('createdAt', 'desc')),
     );
     
     return querySnapshot.docs.map(doc => ({
@@ -114,7 +114,7 @@ export const searchProperties = async (params: SearchParams): Promise<Property[]
     // Filter by location
     if (params.location) {
       properties = properties.filter(property => 
-        property.location.toLowerCase().includes(params.location!.toLowerCase())
+        property.location.toLowerCase().includes(params.location!.toLowerCase()),
       );
     }
     
@@ -155,7 +155,7 @@ export const getFeaturedProperties = async (): Promise<Property[]> => {
     const q = query(
       collection(db, PROPERTIES_COLLECTION),
       where('featured', '==', true),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
     );
     const querySnapshot = await getDocs(q);
     
@@ -184,7 +184,7 @@ export const getFeaturedProperties = async (): Promise<Property[]> => {
 export const updatePropertyAvailability = async (
   propertyId: string, 
   dates: string[], 
-  available: boolean
+  available: boolean,
 ): Promise<void> => {
   try {
     const propertyRef = doc(db, PROPERTIES_COLLECTION, propertyId);
