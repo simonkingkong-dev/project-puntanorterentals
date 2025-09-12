@@ -17,10 +17,16 @@ export const generateDateRange = (startDate: Date, endDate: Date): string[] => {
   const currentDate = new Date(startDate);
   
   while (currentDate <= endDate) {
-    dates.push(format(currentDate, 'yyyy-MM-dd'));
+    // Formateamos la fecha actual y la añadimos al array.
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    dates.push(`${year}-${month}-${day}`);
+
+    // Incrementamos la fecha actual en un día para la siguiente iteración.
     currentDate.setDate(currentDate.getDate() + 1);
   }
-  
+
   return dates;
 };
 
