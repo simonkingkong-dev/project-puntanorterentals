@@ -13,35 +13,35 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Casa Alkimia - Propiedades Vacacionales de Lujo',
-    template: '%s | Casa Alkimia'
+    default: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',
+    template: '%s | Punta Norte Rentals',
   },
-  description: 'Descubre propiedades vacacionales excepcionales en destinos únicos. Experiencias inolvidables te esperan en Casa Alkimia.',
+  description: 'Descubre propiedades vacacionales excepcionales en destinos únicos. Experiencias inolvidables te esperan en Punta Norte Rentals.',
   keywords: ['vacaciones', 'alquiler', 'propiedades', 'turismo', 'hospedaje'],
-  authors: [{ name: 'Casa Alkimia Team' }],
-  creator: 'Casa Alkimia',
+  authors: [{ name: 'Punta Norte Rentals Team' }],
+  creator: 'Punta Norte Rentals',
   openGraph: {
     type: 'website',
     locale: 'es_ES',
-    url: 'https://casaalkimia.com',
-    siteName: 'Casa Alkimia',
-    title: 'Casa Alkimia - Propiedades Vacacionales de Lujo',
+    url: 'https://puntanorterentals.com',
+    siteName: 'Punta Norte Rentals',
+    title: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',
     description: 'Descubre propiedades vacacionales excepcionales en destinos únicos.',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Casa Alkimia - Propiedades Vacacionales',
+        alt: 'Punta Norte Rentals - Propiedades Vacacionales',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Casa Alkimia - Propiedades Vacacionales de Lujo',
+    title: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',
     description: 'Descubre propiedades vacacionales excepcionales en destinos únicos.',
     images: ['/og-image.jpg'],
-    creator: '@casaalkimia',
+    creator: '@puntanorterentals',
   },
   viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',

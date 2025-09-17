@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Star, MapPin, Users } from 'lucide-react';
+import { ArrowRight, MapPin, Star, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SearchForm from '@/components/ui/search-form';
 import PropertyCard from '@/components/ui/property-card';
