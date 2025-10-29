@@ -36,15 +36,12 @@ const navigation = [
 
 /**
  * Represents the admin navigation sidebar with a mobile-friendly menu toggle.
- * 
- * This component provides a sidebar for admin users, allowing seamless navigation 
+ * * This component provides a sidebar for admin users, allowing seamless navigation 
  * across different sections and a logout functionality. It adapts to mobile views 
  * with a toggleable menu.
- * 
- * @example
+ * * @example
  * <AdminSidebar />
- * 
- * @returns {JSX.Element} The JSX element for the admin sidebar, including toggleable 
+ * * @returns {JSX.Element} The JSX element for the admin sidebar, including toggleable 
  * mobile menu, navigation links, and a logout button.
  */
 export default function AdminSidebar() {
@@ -76,7 +73,7 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Mobile menu button - Necesitarás esto si el layout principal del admin no lo maneja */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
           variant="outline"
@@ -93,15 +90,25 @@ export default function AdminSidebar() {
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center gap-3 p-6 border-b">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
-              <p className="text-sm text-gray-500">Casa Alkimia</p>
-            </div>
+          
+          {/* CAMBIO CLAVE: Header del Logo "Punta Norte Rentals" alineado a la izquierda */}
+          <div className="flex items-center justify-start p-4 h-16 border-b">
+            <Link href="/admin" className="flex items-center space-x-2">
+              {/* Ícono con colores de marca (Naranja/Rojo) */}
+              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <Home className="w-4 h-4 text-white" /> {/* Usando Home como en el header principal */}
+              </div>
+
+              {/* Texto del Logo (Compacto y Alineado a la Izquierda) */}
+              <div className="flex flex-col leading-none">
+                <span className="text-xl font-bold text-gray-900 my-0">
+                  Punta Norte
+                </span>
+                <span className="text-xs font-medium text-gray-600 my-0">
+                  Rentals
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* Navigation */}
@@ -114,7 +121,7 @@ export default function AdminSidebar() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   pathname === item.href
-                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    ? "bg-orange-50 text-orange-700 border border-orange-200" // Colores de marca
                     : "text-gray-700 hover:bg-gray-100"
                 )}
               >
