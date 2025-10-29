@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; 
 import { 
   Home, 
   Building, 
@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-// Definición de Props - AHORA DEPENDE DEL LAYOUT
 interface AdminSidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
@@ -36,38 +35,31 @@ const navigation = [
   { name: 'Configuración', href: '/admin/settings', icon: Settings },
 ];
 
-/**
- * Representa la barra de navegación lateral de administración. 
- * Ahora es controlada por las props del layout padre para la visibilidad móvil.
- */
 export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProps) {
-  // *** CLAVE: Se eliminó el estado isMobileMenuOpen local (useState) y sus imports ***
-  
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/admin/logout', { method: 'POST' });
+       const response = await fetch('/api/admin/logout', { method: 'POST' });
       if (response.ok) {
         toast.success('Sesión cerrada exitosamente');
         router.push('/admin/login');
-        router.refresh();
+        router.refresh(); 
+      } else {
+        toast.error('Error al cerrar sesión desde la API'); 
       }
     } catch (error) {
-      toast.error('Error cerrando sesión');
+      console.error('Error en fetch logout:', error); 
+      toast.error('Error de red al cerrar sesión');
     }
   };
 
   return (
     <>
-      {/* *** CLAVE: Se eliminó el botón de menú móvil flotante de aquí *** */}
-
-      {/* Sidebar - Usa la prop 'isOpen' para la visibilidad móvil */}
+      {/* Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out",
-        "lg:translate-x-0", // Siempre visible en desktop
-        // CLAVE: Aplica la clase de transformación basada en 'isOpen' para móvil
         isOpen ? "translate-x-0" : "-translate-x-full" 
       )}>
         <div className="flex flex-col h-full">
@@ -78,26 +70,24 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                 <Home className="w-4 h-4 text-white" />
               </div>
-
               <div className="flex flex-col leading-none">
-                <span className="text-xl font-bold text-gray-900 my-0">
+                 <span className="text-xl font-bold text-gray-900 my-0">
                   Punta Norte
                 </span>
                 <span className="text-xs font-medium text-gray-600 my-0">
-                  Rentals
+                   Rentals
                 </span>
               </div>
             </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                // CLAVE: Cierra el sidebar al hacer clic en un enlace (importante en móvil)
-                onClick={toggleSidebar} 
+                onClick={isOpen ? toggleSidebar : undefined} 
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   pathname === item.href
@@ -108,24 +98,22 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 <item.icon className="w-4 h-4" />
                 {item.name}
               </Link>
-            ))}
+             ))}
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t mt-auto">
             <Button
               variant="ghost"
               onClick={handleLogout}
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+               className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <LogOut className="w-4 h-4 mr-3" />
               Cerrar Sesión
             </Button>
-          </div>
+           </div>
         </div>
       </div>
-
-      {/* *** CLAVE: Se eliminó el overlay local. Ahora lo maneja AdminLayout *** */}
     </>
   );
 }
