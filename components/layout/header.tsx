@@ -30,13 +30,14 @@ export default function Header() {
             </div>
 
             {/* Texto del Logo (Título y Subtítulo) */}
+            {/* CLAVE: Usamos 'flex flex-col leading-none' y 'my-0' en los spans para eliminar márgenes */}
             <div className="flex flex-col leading-none">
               {/* Título Principal */}
-              <span className="text-xl font-bold text-gray-900">
+              <span className="text-xl font-bold text-gray-900 my-0">
                 Punta Norte
               </span>
               {/* Subtítulo (más pequeño) */}
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-xs font-medium text-gray-600 my-0">
                 Rentals
               </span>
             </div>
@@ -75,8 +76,8 @@ export default function Header() {
                 </div>
                 {/* Asegurando que el logo en el móvil también se actualice */}
                 <div className="flex flex-col leading-none">
-                  <span className="text-xl font-bold text-gray-900">Punta Norte</span>
-                  <span className="text-sm font-medium text-gray-600">Rentals</span>
+                  <span className="text-xl font-bold text-gray-900 my-0">Punta Norte</span>
+                  <span className="text-xs font-medium text-gray-600 my-0">Rentals</span>
                 </div>
               </div>
               
@@ -90,7 +91,7 @@ export default function Header() {
                       "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full",
                       pathname === item.href
                         ? "text-orange-600 bg-orange-50"
-                        : "text-gray-700 hover:text-orange-600 hover:bg-gray-50",
+                        : "text-gray-700 hover:text-orange-600 hover:bg-gray-50"
                     )}
                   >
                     <item.icon className="w-4 h-4" />
