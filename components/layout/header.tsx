@@ -33,11 +33,11 @@ export default function Header() {
             {/* CLAVE: Usamos 'flex flex-col leading-none' y 'my-0' en los spans para eliminar márgenes */}
             <div className="flex flex-col leading-none">
               {/* Título Principal */}
-              <span className="text-xl font-bold text-gray-900 leading-none">
+              <span className="text-lg font-bold text-gray-900 leading-none">
                 Punta Norte
               </span>
               {/* Subtítulo (más pequeño) */}
-              <span className="text-xs font-medium text-gray-600 leading-none">
+              <span className="text-sm font-medium text-gray-500 leading-none">
                 Rentals
               </span>
             </div>
