@@ -33,11 +33,11 @@ export default function Header() {
             {/* CLAVE: Usamos 'flex flex-col leading-none' y 'my-0' en los spans para eliminar márgenes */}
             <div className="flex flex-col leading-none">
               {/* Título Principal */}
-              <span className="text-xl font-bold text-gray-900 my-0">
+              <span className="text-xl font-bold text-gray-900 leading-none">
                 Punta Norte
               </span>
               {/* Subtítulo (más pequeño) */}
-              <span className="text-xs font-medium text-gray-600 my-0">
+              <span className="text-xs font-medium text-gray-600 leading-none">
                 Rentals
               </span>
             </div>
@@ -76,8 +76,8 @@ export default function Header() {
                 </div>
                 {/* Asegurando que el logo en el móvil también se actualice */}
                 <div className="flex flex-col leading-none">
-                  <span className="text-xl font-bold text-gray-900 my-0">Punta Norte</span>
-                  <span className="text-xs font-medium text-gray-600 my-0">Rentals</span>
+                  <span className="text-xl font-bold text-gray-900 leading-none">Punta Norte</span>
+                  <span className="text-xs font-medium text-gray-600 leading-none">Rentals</span>
                 </div>
               </div>
               
