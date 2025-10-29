@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, Mail, Phone, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -12,7 +12,10 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                 <Home className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">Punta Norte Rentals</span>
+              <div className="flex flex-col leading-none">
+                <span className="text-lg font-bold leading-none">Punta Norte</span>
+                <span className="text-sm font-light leading-none">Rentals</span>
+              </div>
             </div>
             <p className="text-gray-400 text-sm">
               Propiedades vacacionales excepcionales que crean recuerdos inolvidables.
