@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* El margen 'lg:ml-64' empuja el contenido para dejar espacio al sidebar fijo en desktop */}
       <div className={cn(
         "flex flex-col flex-1 transition-all duration-300",
-        "lg:ml-64" // Margen fijo para desktop (la misma anchura del sidebar)
+        "lg:ml-64", // Margen fijo para desktop (la misma anchura del sidebar)
       )}>
         
         {/* Header de Admin (Barra Superior) */}
