@@ -12,7 +12,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                 <Home className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">Casa Alkimia</span>
+              <span className="text-xl font-bold">Punta Norte Rentals</span>
             </div>
             <p className="text-gray-400 text-sm">
               Propiedades vacacionales excepcionales que crean recuerdos inolvidables.
@@ -90,15 +90,15 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center space-x-3">
                 <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">Riviera Maya, México</span>
+                <span className="text-gray-400 text-sm">Isla Mujeres, México</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">+52 984 123 4567</span>
+                <span className="text-gray-400 text-sm">+52 998 401 3206</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">hola@casaalkimia.com</span>
+                <span className="text-gray-400 text-sm">hola@puntanorterentals.com</span>
               </li>
             </ul>
           </div>
@@ -107,7 +107,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 Casa Alkimia. Todos los derechos reservados.
+              © 2025 Punta Norte Rentals. Todos los derechos reservados.
             </p>
             <p className="text-gray-400 text-sm mt-2 md:mt-0">
               Creado con ❤️ para viajeros excepcionales
