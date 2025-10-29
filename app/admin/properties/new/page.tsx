@@ -9,10 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, X, Upload } from 'lucide-react';
-import AdminLayout from '@/components/admin/layout';
+// CORREGIDO: Añadimos Loader2
+import { ArrowLeft, Plus, X, Upload, Loader2, Save } from 'lucide-react';
+// CORREGIDO: Ruta del layout
+import AdminLayout from '@/app/admin/layout';
 import Link from 'next/link';
 import { toast } from 'sonner';
+// CORREGIDO: Importamos la función real de Firebase
+import { createProperty } from '@/lib/firebase/properties';
+// CORREGIDO: Importamos el tipo para el 'slug'
+import { Property } from '@/lib/types';
 
 const commonAmenities = [
   'WiFi de alta velocidad',
@@ -32,13 +38,6 @@ const commonAmenities = [
   'Jardín',
 ];
 
-/**
- * Renders a page for creating a new property listing in the admin panel.
- * @example
- * NewPropertyPage()
- * <AdminLayout>JSX Content</AdminLayout>
- * @returns {JSX.Element} Returns a form with fields to add property details including title, description, location, amenities, images, and other attributes necessary for a property listing.
- */
 export default function NewPropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -56,14 +55,6 @@ export default function NewPropertyPage() {
   const [newAmenity, setNewAmenity] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
 
-  /**
-   * Handles the form submission for creating a new property.
-   * @example
-   * sync(event)
-   * This function will validate the form data, create a slug, and attempt to save the property.
-   * @param {React.FormEvent} e - The form event triggered by submission.
-   * @returns {void} No meaningful return value, operates through side effects such as navigation and notifications.
-   **/
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -72,11 +63,13 @@ export default function NewPropertyPage() {
       // Validate form
       if (!formData.title || !formData.description || !formData.location) {
         toast.error('Por favor completa todos los campos requeridos');
+        setIsLoading(false); // CORREGIDO: Detener loading
         return;
       }
 
       if (formData.images.length === 0) {
         toast.error('Agrega al menos una imagen');
+        setIsLoading(false); // CORREGIDO: Detener loading
         return;
       }
 
@@ -86,26 +79,31 @@ export default function NewPropertyPage() {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      const propertyData = {
+      // CORREGIDO: Tipamos el objeto para asegurar que coincide con Omit<Property, 'id'>
+      const propertyData: Omit<Property, 'id'> = {
         ...formData,
         slug,
-        availability: {},
-        createdAt: new Date(),
+        availability: {}, // Disponibilidad inicial vacía
+        createdAt: new Date(), // El cliente genera la fecha
         updatedAt: new Date(),
       };
 
-      // In production, save to Firebase
-      console.log('Creating property:', propertyData);
+      // CORREGIDO: Reemplazamos el console.log con la llamada real a Firebase
+      await createProperty(propertyData);
       
       toast.success('Propiedad creada exitosamente');
       router.push('/admin/properties');
     } catch (error) {
+      console.error('Error creando la propiedad:', error); // CORREGIDO: Mejor log de error
       toast.error('Error creando la propiedad');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // El resto de tus funciones (addAmenity, removeAmenity, addImage, removeImage)
+  // están perfectas y no necesitan cambios.
+  
   const addAmenity = (amenity: string) => {
     if (amenity && !formData.amenities.includes(amenity)) {
       setFormData(prev => ({
@@ -124,6 +122,11 @@ export default function NewPropertyPage() {
 
   const addImage = () => {
     if (newImageUrl && !formData.images.includes(newImageUrl)) {
+      // Validación simple de URL (opcional pero recomendado)
+      if (!newImageUrl.startsWith('http://') && !newImageUrl.startsWith('https://')) {
+        toast.error('Por favor, introduce una URL válida (http:// o https://)');
+        return;
+      }
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, newImageUrl]
@@ -156,84 +159,84 @@ export default function NewPropertyPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Información Básica</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Título *</Label>
-                  <Input
+                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Casa Alkimia Suite Ocean View"
+                     placeholder="Casa Alkimia Suite Ocean View"
                     required
                   />
                 </div>
-                
+                 
                 <div className="space-y-2">
                   <Label htmlFor="location">Ubicación *</Label>
                   <Input
-                    id="location"
+                     id="location"
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="Playa del Carmen, Riviera Maya"
-                    required
+                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <Label htmlFor="description">Descripción *</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe la propiedad en detalle..."
                   rows={4}
-                  required
+                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="maxGuests">Máximo de Huéspedes</Label>
+                   <Label htmlFor="maxGuests">Máximo de Huéspedes</Label>
                   <Input
                     id="maxGuests"
                     type="number"
-                    min="1"
+                     min="1"
                     max="20"
                     value={formData.maxGuests}
-                    onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) }))}
-                  />
+                    onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 1 }))}
+                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="pricePerNight">Precio por Noche ($)</Label>
+                   <Label htmlFor="pricePerNight">Precio por Noche ($)</Label>
                   <Input
                     id="pricePerNight"
                     type="number"
-                    min="1"
+                     min="1"
                     value={formData.pricePerNight}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) || 1 }))}
                   />
-                </div>
+                 </div>
 
                 <div className="space-y-2">
                   <Label>Propiedad Destacada</Label>
                   <div className="flex items-center space-x-2">
-                    <Switch
+                     <Switch
                       checked={formData.featured}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
-                    />
+                     />
                     <span className="text-sm text-gray-600">
                       {formData.featured ? 'Sí' : 'No'}
                     </span>
-                  </div>
+                   </div>
                 </div>
               </div>
             </CardContent>
@@ -250,39 +253,39 @@ export default function NewPropertyPage() {
                 <div className="space-y-2">
                   <Label>Amenidades Seleccionadas</Label>
                   <div className="flex flex-wrap gap-2">
-                    {formData.amenities.map((amenity) => (
+                     {formData.amenities.map((amenity) => (
                       <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
                         {amenity}
-                        <button
+                         <button
                           type="button"
                           onClick={() => removeAmenity(amenity)}
-                          className="ml-1 hover:text-red-600"
+                           className="ml-1 hover:text-red-600"
                         >
                           <X className="w-3 h-3" />
-                        </button>
+                         </button>
                       </Badge>
                     ))}
-                  </div>
+                   </div>
                 </div>
               )}
 
               {/* Common Amenities */}
               <div className="space-y-2">
-                <Label>Amenidades Comunes</Label>
+                 <Label>Amenidades Comunes</Label>
                 <div className="flex flex-wrap gap-2">
                   {commonAmenities
                     .filter(amenity => !formData.amenities.includes(amenity))
-                    .map((amenity) => (
+                     .map((amenity) => (
                       <Button
                         key={amenity}
                         type="button"
-                        variant="outline"
+                         variant="outline"
                         size="sm"
                         onClick={() => addAmenity(amenity)}
-                      >
+                       >
                         <Plus className="w-3 h-3 mr-1" />
                         {amenity}
-                      </Button>
+                       </Button>
                     ))}
                 </div>
               </div>
@@ -292,20 +295,20 @@ export default function NewPropertyPage() {
                 <Label>Agregar Amenidad Personalizada</Label>
                 <div className="flex gap-2">
                   <Input
-                    value={newAmenity}
+                     value={newAmenity}
                     onChange={(e) => setNewAmenity(e.target.value)}
                     placeholder="Nombre de la amenidad"
                   />
-                  <Button
+                   <Button
                     type="button"
                     onClick={() => {
-                      addAmenity(newAmenity);
+                       addAmenity(newAmenity);
                       setNewAmenity('');
                     }}
                     disabled={!newAmenity}
                   >
                     <Plus className="w-4 h-4" />
-                  </Button>
+                   </Button>
                 </div>
               </div>
             </CardContent>
@@ -313,65 +316,76 @@ export default function NewPropertyPage() {
 
           {/* Images */}
           <Card>
-            <CardHeader>
+             <CardHeader>
               <CardTitle>Galería de Imágenes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Current Images */}
-              {formData.images.length > 0 && (
+               {formData.images.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Imágenes Actuales</Label>
+                  <Label>Imágenes Actuales (URL)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {formData.images.map((imageUrl, index) => (
+                     {formData.images.map((imageUrl, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={imageUrl}
+                           src={imageUrl}
                           alt={`Imagen ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
+                          className="w-full h-32 object-cover rounded-lg border"
+                         />
                         <button
                           type="button"
-                          onClick={() => removeImage(imageUrl)}
+                           onClick={() => removeImage(imageUrl)}
                           className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="w-3 h-3" />
+                           <X className="w-3 h-3" />
                         </button>
                       </div>
-                    ))}
+                     ))}
                   </div>
                 </div>
               )}
 
               {/* Add New Image */}
-              <div className="space-y-2">
-                <Label>Agregar Nueva Imagen</Label>
+               <div className="space-y-2">
+                <Label>Agregar Nueva Imagen (URL)</Label>
                 <div className="flex gap-2">
                   <Input
-                    value={newImageUrl}
+                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="URL de la imagen"
+                    placeholder="https://images.pexels.com/..."
                   />
-                  <Button
+                   <Button
                     type="button"
                     onClick={addImage}
                     disabled={!newImageUrl}
-                  >
+                   >
                     <Upload className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Agrega URLs de imágenes de alta calidad. Se recomienda usar servicios como Pexels o Unsplash.
+                 <p className="text-sm text-gray-500">
+                  Agrega URLs de imágenes. La primera será la imagen de portada.
                 </p>
               </div>
             </CardContent>
-          </Card>
+           </Card>
 
           {/* Submit */}
           <div className="flex gap-4">
+            {/* CORREGIDO: Botón con estado de carga */}
             <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? 'Creando...' : 'Crear Propiedad'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Crear Propiedad
+                </>
+              )}
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" disabled={isLoading}>
               <Link href="/admin/properties">Cancelar</Link>
             </Button>
           </div>

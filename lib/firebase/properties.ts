@@ -6,14 +6,15 @@ import {
   getDocs, 
   orderBy, 
   query, 
-  updateDoc,
-  where, 
+  updateDoc, 
+  where,
+  addDoc // CORREGIDO: Añadir esta importación
 } from 'firebase/firestore';
 import { db } from '../firebase';
+// CORREGIDO: Importamos el tipo 'Property'
 import { Property, SearchParams } from '../types';
 
 const PROPERTIES_COLLECTION = 'properties';
-
 /**
  * Fetches and returns a list of properties from the database, ordered by creation date.
  * @example
@@ -207,6 +208,29 @@ export const updatePropertyAvailability = async (
     });
   } catch (error) {
     console.error('Error updating property availability:', error);
+    throw error;
+  }
+};
+/**
+ * Creates a new property in the Firestore database.
+ * @param {Omit<Property, 'id'>} propertyData - The property data, exactly as prepared by the client form.
+ * @returns {Promise<string>} A promise that resolves to the new property's document ID.
+ */
+export const createProperty = async (propertyData: Omit<Property, 'id'>): Promise<string> => {
+  try {
+    // El formulario 'new/page.tsx' ya crea el objeto completo[cite: 228],
+    // incluyendo 'createdAt' y 'updatedAt' como Fechas de JS.
+    // Solo necesitamos convertirlas a Timestamps de Firebase.
+    const dataToSave = {
+      ...propertyData,
+      createdAt: Timestamp.fromDate(propertyData.createdAt as Date),
+      updatedAt: Timestamp.fromDate(propertyData.updatedAt as Date),
+    };
+
+    const docRef = await addDoc(collection(db, PROPERTIES_COLLECTION), dataToSave);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating property:', error);
     throw error;
   }
 };

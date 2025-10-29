@@ -1,60 +1,23 @@
-import { Metadata } from 'next/metadata';
+import type { Metadata } from 'next'; // CORREGIDO: Importación de tipo
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Star, User } from 'lucide-react';
-import AdminLayout from '@/components/admin/layout';
+import AdminLayout from '@/app/admin/layout'; // CORREGIDO: Ruta del layout
 import Image from 'next/image';
+// CORREGIDO: Importamos la función real y el tipo
+import { getTestimonials } from '@/lib/firebase/content';
+import { Testimonial } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Testimonios - Admin Panel',
   robots: 'noindex, nofollow',
 };
 
-// Mock data - in production, fetch from Firebase
-const testimonials = [
-  {
-    id: '1',
-    name: 'María González',
-    text: 'Una experiencia absolutamente increíble. La propiedad superó todas nuestras expectativas y el servicio fue impecable. Definitivamente regresaremos.',
-    image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-    rating: 5,
-    location: 'Ciudad de México',
-    featured: true,
-    createdAt: new Date('2024-12-01'),
-  },
-  {
-    id: '2',
-    name: 'Carlos Rodríguez',
-    text: 'Perfecto para unas vacaciones familiares. Los niños disfrutaron mucho la piscina y nosotros la tranquilidad del lugar.',
-    image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
-    rating: 5,
-    location: 'Guadalajara',
-    featured: true,
-    createdAt: new Date('2024-12-02'),
-  },
-  {
-    id: '3',
-    name: 'Ana Martínez',
-    text: 'La ubicación es perfecta y las amenidades son de primera calidad. Muy recomendable para una escapada romántica.',
-    image: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg',
-    rating: 4,
-    location: 'Monterrey',
-    featured: false,
-    createdAt: new Date('2024-12-03'),
-  },
-  {
-    id: '4',
-    name: 'Luis Hernández',
-    text: 'Excelente atención al cliente y propiedades muy bien mantenidas. Una experiencia que vale la pena repetir.',
-    rating: 5,
-    location: 'Puebla',
-    featured: false,
-    createdAt: new Date('2024-12-04'),
-  },
-];
+// CORREGIDO: Eliminamos los datos 'mock' [cite: 387-390]
 
+// Esta función helper la movemos aquí para que el Server Component la use
 const renderStars = (rating: number) => {
   return Array.from({ length: 5 }, (_, i) => (
     <Star
@@ -66,7 +29,12 @@ const renderStars = (rating: number) => {
   ));
 };
 
-export default function AdminTestimonialsPage() {
+// CORREGIDO: Convertimos la página en 'async'
+export default async function AdminTestimonialsPage() {
+  
+  // CORREGIDO: Obtenemos los datos reales de Firebase
+  const testimonials: Testimonial[] = (await getTestimonials()) ?? [];
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -84,7 +52,7 @@ export default function AdminTestimonialsPage() {
           </Button>
         </div>
 
-        {/* Stats */}
+        {/* Stats (Ahora son dinámicas) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -103,7 +71,11 @@ export default function AdminTestimonialsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-yellow-600">
-                {(testimonials.reduce((sum, t) => sum + t.rating, 0) / testimonials.length).toFixed(1)}
+                {/* CORREGIDO: Cálculo de promedio seguro (evita dividir por cero) */}
+                {testimonials.length > 0
+                  ? (testimonials.reduce((sum, t) => sum + t.rating, 0) / testimonials.length).toFixed(1)
+                  : 'N/A'
+                }
               </div>
               <p className="text-sm text-gray-600">Calificación Promedio</p>
             </CardContent>
@@ -118,72 +90,72 @@ export default function AdminTestimonialsPage() {
           </Card>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {testimonials.map((testimonial) => (
-            <Card key={testimonial.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {testimonial.image ? (
-                      <div className="relative w-12 h-12">
-                        <Image
-                          src={testimonial.image}
-                          alt={testimonial.name}
-                          fill
-                          className="object-cover rounded-full"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-gray-500" />
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-lg">{testimonial.name}</CardTitle>
-                      {testimonial.location && (
-                        <p className="text-sm text-gray-600">{testimonial.location}</p>
+        {/* Testimonials Grid (Ahora es dinámico) */}
+        {testimonials.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {testimonials.map((testimonial) => (
+              <Card key={testimonial.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {testimonial.image ? (
+                        <div className="relative w-12 h-12">
+                          <Image
+                            src={testimonial.image}
+                            alt={testimonial.name}
+                            fill
+                            className="object-cover rounded-full"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                          <User className="w-6 h-6 text-gray-500" />
+                        </div>
                       )}
+                      <div>
+                        <CardTitle className="text-lg">{testimonial.name}</CardTitle>
+                        {testimonial.location && (
+                          <p className="text-sm text-gray-600">{testimonial.location}</p>
+                        )}
+                      </div>
                     </div>
+                    {testimonial.featured && (
+                      <Badge className="bg-orange-500 hover:bg-orange-600">
+                        Destacado
+                      </Badge>
+                    )}
                   </div>
-                  {testimonial.featured && (
-                    <Badge className="bg-orange-500 hover:bg-orange-600">
-                      Destacado
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-1">
-                  {renderStars(testimonial.rating)}
-                  <span className="ml-2 text-sm text-gray-600">
-                    ({testimonial.rating}/5)
-                  </span>
-                </div>
+                </CardHeader>
                 
-                <p className="text-gray-700 line-clamp-3">
-                  "{testimonial.text}"
-                </p>
-                
-                <div className="flex gap-2 pt-2">
-                  <Button asChild variant="outline" size="sm" className="flex-1">
-                    <Link href={`/admin/testimonials/${testimonial.id}/edit`}>
-                      <Edit className="w-4 h-4 mr-1" />
-                      Editar
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {testimonials.length === 0 && (
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-1">
+                    {renderStars(testimonial.rating)}
+                    <span className="ml-2 text-sm text-gray-600">
+                      ({testimonial.rating}/5)
+                    </span>
+                  </div>
+                  
+                  <p className="text-gray-700 line-clamp-3">
+                    "{testimonial.text}"
+                  </p>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <Button asChild variant="outline" size="sm" className="flex-1">
+                      <Link href={`/admin/testimonials/${testimonial.id}/edit`}>
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editar
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          // Estado Vacío (del código original) [cite: 415-419]
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">

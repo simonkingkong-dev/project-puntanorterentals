@@ -3,7 +3,10 @@ import {
   getDocs, 
   query, 
   where, 
-  orderBy 
+  orderBy,
+  // CORREGIDO: Añadimos las importaciones necesarias
+  addDoc, 
+  Timestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Service } from '../types';
@@ -11,11 +14,8 @@ import { Service } from '../types';
 const SERVICES_COLLECTION = 'services';
 
 /**
- * Fetches and returns a list of services from the Firebase database, ordered by creation date.
- * @example
- * sync().then(services => console.log(services));
- * // [{ id: '1', name: 'Service 1', createdAt: Date }, {...}]
- * @returns {Promise<Service[]>} A promise that resolves to an array of services with their data and creation date.
+ * Fetches and returns a list of services from the Firebase database...
+ * (Tu función getServices existente va aquí)
  */
 export const getServices = async (): Promise<Service[]> => {
   try {
@@ -35,11 +35,8 @@ export const getServices = async (): Promise<Service[]> => {
 };
 
 /**
- * Fetch and return an array of featured services from the database.
- * @example
- * sync().then(services => console.log(services));
- * // Returns a promise that resolves to an array of featured services.
- * @returns {Promise<Service[]>} A promise that resolves to an array of services which are featured, ordered by their creation date in descending order.
+ * Fetch and return an array of featured services...
+ * (Tu función getFeaturedServices existente va aquí)
  */
 export const getFeaturedServices = async (): Promise<Service[]> => {
   try {
@@ -58,5 +55,25 @@ export const getFeaturedServices = async (): Promise<Service[]> => {
   } catch (error) {
     console.error('Error fetching featured services:', error);
     return [];
+  }
+};
+
+// --- CORREGIDO: AÑADE ESTA NUEVA FUNCIÓN ---
+
+/**
+* Adds a new service to the database.
+* @param {Omit<Service, 'id' | 'createdAt'>} serviceData - The service data excluding ID and creation date.
+* @returns {Promise<string>} A promise that resolves to the service document ID.
+*/
+export const createService = async (serviceData: Omit<Service, 'id' | 'createdAt'>): Promise<string> => {
+  try {
+    const docRef = await addDoc(collection(db, SERVICES_COLLECTION), {
+      ...serviceData,
+      createdAt: Timestamp.now(), // Añade la fecha de creación
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating service:', error);
+    throw error;
   }
 };
