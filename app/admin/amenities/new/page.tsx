@@ -9,10 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Wifi, Car, Utensils, Home, Waves, Shield, Star, Zap, Coffee } from 'lucide-react';
-import AdminLayout from '@/components/admin/layout';
+// CORREGIDO: Añadimos Loader2 para el estado de carga
+import { ArrowLeft, Save, Wifi, Car, Utensils, Home, Waves, Shield, Star, Zap, Coffee, Loader2 } from 'lucide-react';
+// CORREGIDO: Aseguramos la ruta correcta al layout del admin
+import AdminLayout from '@/app/admin/layout'; 
 import Link from 'next/link';
 import { toast } from 'sonner';
+// CORREGIDO: Importamos la función real de Firebase para crear
+import { createGlobalAmenity } from '@/lib/firebase/content';
 
 const availableIcons = [
   { value: 'wifi', label: 'WiFi', icon: Wifi },
@@ -60,20 +64,19 @@ export default function NewAmenityPage() {
       // Validate form
       if (!formData.title || !formData.description) {
         toast.error('Por favor completa todos los campos requeridos');
+        setIsLoading(false); // CORREGIDO: Detenemos el loading si la validación falla
         return;
       }
-
-      const amenityData = {
-        ...formData,
-        createdAt: new Date(),
-      };
-
-      // In production, save to Firebase
-      console.log('Creating amenity:', amenityData);
+      
+      // CORREGIDO: Reemplazamos el console.log con la llamada real a Firebase.
+      // Tu función 'createGlobalAmenity' ya se encarga de añadir el 'createdAt'.
+      await createGlobalAmenity(formData);
       
       toast.success('Amenidad creada exitosamente');
-      router.push('/admin/amenities');
+      router.push('/admin/amenities'); // Redirigimos al listado
+    
     } catch (error) {
+      console.error('Error creando la amenidad:', error); // Mantenemos el log para debug
       toast.error('Error creando la amenidad');
     } finally {
       setIsLoading(false);
@@ -90,13 +93,13 @@ export default function NewAmenityPage() {
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link href="/admin/amenities">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver
             </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Nueva Amenidad</h1>
-            <p className="text-gray-600">Agrega una nueva amenidad global</p>
+             <p className="text-gray-600">Agrega una nueva amenidad global</p>
           </div>
         </div>
 
@@ -104,104 +107,104 @@ export default function NewAmenityPage() {
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Información Básica</CardTitle>
+               <CardTitle>Información Básica</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
-                <Input
+                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="WiFi de Alta Velocidad"
+                     placeholder="WiFi de Alta Velocidad"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción *</Label>
+                 <Label htmlFor="description">Descripción *</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Conexión a internet de fibra óptica en todas las áreas de la propiedad"
                   rows={3}
                   required
-                />
+                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="icon">Icono</Label>
+                   <Label htmlFor="icon">Icono</Label>
                   <Select value={formData.icon} onValueChange={(value) => setFormData(prev => ({ ...prev, icon: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un icono" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableIcons.map((icon) => (
-                        <SelectItem key={icon.value} value={icon.value}>
+                         <SelectItem key={icon.value} value={icon.value}>
                           <div className="flex items-center gap-2">
                             <icon.icon className="w-4 h-4" />
-                            {icon.label}
+                               {icon.label}
                           </div>
                         </SelectItem>
-                      ))}
+                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                 <div className="space-y-2">
                   <Label htmlFor="order">Orden de Visualización</Label>
                   <Input
                     id="order"
-                    type="number"
+                     type="number"
                     min="1"
                     value={formData.order}
-                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))} // Aseguramos que sea un número
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Amenidad Destacada</Label>
+                 <Label>Amenidad Destacada</Label>
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={formData.featured}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
+                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
                   />
                   <span className="text-sm text-gray-600">
                     {formData.featured ? 'Se mostrará en la página principal' : 'Amenidad regular'}
-                  </span>
+                   </span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Preview */}
+           {/* Preview */}
           <Card>
             <CardHeader>
               <CardTitle>Vista Previa</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 p-4 border rounded-lg">
+               <div className="flex items-center gap-4 p-4 border rounded-lg">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <IconComponent className="w-6 h-6 text-blue-600" />
                 </div>
-                <div className="flex-1">
+                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">
                     {formData.title || 'Título de la Amenidad'}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                   <p className="text-sm text-gray-600">
                     {formData.description || 'Descripción de la amenidad aparecerá aquí...'}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-500">Orden: {formData.order}</span>
                     {formData.featured && (
                       <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                        Destacada
+                         Destacada
                       </span>
                     )}
-                  </div>
+                   </div>
                 </div>
               </div>
             </CardContent>
@@ -209,12 +212,23 @@ export default function NewAmenityPage() {
 
           {/* Submit */}
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              <Save className="w-4 h-4 mr-2" />
-              {isLoading ? 'Creando...' : 'Crear Amenidad'}
+            {/* CORREGIDO: El botón ahora reacciona a 'isLoading' */}
+             <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Crear Amenidad
+                </>
+              )}
             </Button>
-            <Button asChild variant="outline">
-              <Link href="/admin/amenities">Cancelar</Link>
+            {/* CORREGIDO: Deshabilitamos el botón de cancelar mientras se guarda */}
+            <Button asChild variant="outline" disabled={isLoading}>
+               <Link href="/admin/amenities">Cancelar</Link>
             </Button>
           </div>
         </form>

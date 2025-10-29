@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
+import { cookies } from 'next/headers'; // [cite: 460]
 // Update the import path if necessary, for example:
 import { validateAdminCredentials, setAdminSession } from '@/lib/auth/admin/admin';
 // Or create the file at 'c:\Users\Simon\Desktop\Proyectos\project\lib\auth\admin\admin.ts' if it does not exist.
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Usuario y contraseña son requeridos' },
+        { error: 'Usuario y contraseña son requeridos' }, // [cite: 461]
         { status: 400 }
       );
     }
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 60 * 60 * 24 * 7, // Una semana
+        maxAge: 60 * 60 * 24 * 7, // Una semana [cite: 462]
       });
       return NextResponse.json({ success: true }, { status: 200 });
     } else {
@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     console.error(e);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+     
+        { error: 'Error interno del servidor' }, // [cite: 463]
       { status: 500 }
     );
   }

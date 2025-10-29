@@ -1,57 +1,47 @@
-"use client";
+'use client'; // ¡IMPORTANTE! Convierte este archivo a un Client Component
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import AdminSidebar from '@/components/admin/sidebar'; // Tu sidebar existente (ya actualizado)
-import AdminHeader from '@/components/admin/header'; // El nuevo Header de Admin
-import { cn } from '@/lib/utils';
+import { ReactNode, useState } from 'react';
+import AdminSidebar from '@/components/admin/sidebar';
+import AdminHeader from '@/components/admin/header';
 
-// Este layout se aplicará a todas las rutas dentro de /admin
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  
-  // *** CLAVE: ELEVACIÓN DEL ESTADO para el control centralizado ***
-  // Controla si el sidebar está abierto (principalmente usado para la vista móvil)
+interface AdminLayoutProps {
+  children: ReactNode; 
+}
+
+/**
+ * Layout principal del panel de administración.
+ * Proporciona la barra lateral y la estructura de contenido, gestionando
+ * el estado de apertura/cierre para dispositivos móviles.
+ */
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  // 1. Estado para controlar la visibilidad de la barra lateral en móviles
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const pathname = usePathname();
-
-  // Función para alternar el estado del sidebar
+  
+  // Función para alternar el estado de la barra lateral
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
-    // Estructura general: Flex container que ocupa toda la altura de la pantalla
-    <div className="flex min-h-screen bg-gray-50">
-      
-      {/* 1. Sidebar (Le pasamos el estado y el toggle) */}
-      {/* El sidebar usa 'isOpen' para moverse y 'toggleSidebar' para cerrarse al navegar */}
+    <div className="flex h-screen bg-gray-50">
+      {/* 1. Sidebar - Se le pasa el estado y la función para cambiarlo */}
       <AdminSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-
-      {/* Overlay para móvil cuando el sidebar está abierto */}
-      {/* Es importante que este overlay se oculte en lg: (desktop) */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={toggleSidebar} // Cierra al hacer clic fuera del sidebar
-        />
-      )}
-
-      {/* 2. Contenido Principal (Header + Main Content) */}
-      {/* El margen 'lg:ml-64' empuja el contenido para dejar espacio al sidebar fijo en desktop */}
-      <div className={cn(
-        "flex flex-col flex-1 transition-all duration-300",
-        "lg:ml-64", // Margen fijo para desktop (la misma anchura del sidebar)
-      )}>
+      
+      {/* 2. Contenido principal y cabecera */}
+      <div className={`flex flex-col flex-1 overflow-y-auto ${isSidebarOpen ? 'ml-0 lg:ml-64' : 'ml-0'}`}>
         
-        {/* Header de Admin (Barra Superior) */}
-        {/* Le pasamos la función de toggle para que el botón de menú en el Header funcione */}
+        {/* Header - Se le pasa la función para que el botón de menú la use */}
         <AdminHeader toggleSidebar={toggleSidebar} />
 
-        {/* Contenido de la Página */}
-        <main className="flex-1 p-6 md:p-8">
-          {children}
+        {/* Contenido de la página (children) */}
+        <main className="p-4 sm:p-6 flex-1">
+          {children} 
         </main>
-
+        
+        {/* Pie de página (opcional) */}
+        {/* <footer className="p-4 text-center text-sm text-gray-500 border-t">
+          © {new Date().getFullYear()} Casa Alkímia. Todos los derechos reservados.
+        </footer> */}
       </div>
     </div>
   );

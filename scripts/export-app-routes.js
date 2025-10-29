@@ -37,9 +37,7 @@ async function walk(dir) {
       // skip build/output and node_modules
       if (e.name === '.next' || e.name === 'node_modules') continue;
       files = files.concat(await walk(full));
-    } else {
-      if (FILE_EXTS.includes(path.extname(e.name))) files.push(full);
-    }
+    } else if (FILE_EXTS.includes(path.extname(e.name))) files.push(full);
   }
   return files;
 }
