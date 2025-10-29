@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -9,11 +8,8 @@ import {
   Calendar, 
   Settings, 
   LogOut, 
-  Menu, 
-  X,
-  Shield,
-  Compass,
   FileText,
+  Compass,
   MessageSquare,
   Star,
   Globe
@@ -21,6 +17,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+// Definición de Props - AHORA DEPENDE DEL LAYOUT
+interface AdminSidebarProps {
+  isOpen: boolean;
+  toggleSidebar: () => void;
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: Home },
@@ -35,29 +37,15 @@ const navigation = [
 ];
 
 /**
- * Represents the admin navigation sidebar with a mobile-friendly menu toggle.
- * * This component provides a sidebar for admin users, allowing seamless navigation 
- * across different sections and a logout functionality. It adapts to mobile views 
- * with a toggleable menu.
- * * @example
- * <AdminSidebar />
- * * @returns {JSX.Element} The JSX element for the admin sidebar, including toggleable 
- * mobile menu, navigation links, and a logout button.
+ * Representa la barra de navegación lateral de administración. 
+ * Ahora es controlada por las props del layout padre para la visibilidad móvil.
  */
-export default function AdminSidebar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProps) {
+  // *** CLAVE: Se eliminó el estado isMobileMenuOpen local (useState) y sus imports ***
+  
   const pathname = usePathname();
   const router = useRouter();
 
-  /**
-  * Logs out the current admin user by sending a POST request to the logout API.
-  * @example
-  * logoutAdmin();
-  * // Displays a success message and redirects to the admin login page if successful, else shows an error message.
-  * @async
-  * @function
-  * @returns {void} Does not return a value.
-  **/
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', { method: 'POST' });
@@ -73,33 +61,24 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile menu button - Necesitarás esto si el layout principal del admin no lo maneja */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </Button>
-      </div>
+      {/* *** CLAVE: Se eliminó el botón de menú móvil flotante de aquí *** */}
 
-      {/* Sidebar */}
+      {/* Sidebar - Usa la prop 'isOpen' para la visibilidad móvil */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out",
+        "lg:translate-x-0", // Siempre visible en desktop
+        // CLAVE: Aplica la clase de transformación basada en 'isOpen' para móvil
+        isOpen ? "translate-x-0" : "-translate-x-full" 
       )}>
         <div className="flex flex-col h-full">
           
-          {/* CAMBIO CLAVE: Header del Logo "Punta Norte Rentals" alineado a la izquierda */}
+          {/* Header del Logo */}
           <div className="flex items-center justify-start p-4 h-16 border-b">
             <Link href="/admin" className="flex items-center space-x-2">
-              {/* Ícono con colores de marca (Naranja/Rojo) */}
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <Home className="w-4 h-4 text-white" /> {/* Usando Home como en el header principal */}
+                <Home className="w-4 h-4 text-white" />
               </div>
 
-              {/* Texto del Logo (Compacto y Alineado a la Izquierda) */}
               <div className="flex flex-col leading-none">
                 <span className="text-xl font-bold text-gray-900 my-0">
                   Punta Norte
@@ -117,11 +96,12 @@ export default function AdminSidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
+                // CLAVE: Cierra el sidebar al hacer clic en un enlace (importante en móvil)
+                onClick={toggleSidebar} 
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   pathname === item.href
-                    ? "bg-orange-50 text-orange-700 border border-orange-200" // Colores de marca
+                    ? "bg-orange-50 text-orange-700 border border-orange-200"
                     : "text-gray-700 hover:bg-gray-100"
                 )}
               >
@@ -145,13 +125,7 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* Mobile overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      {/* *** CLAVE: Se eliminó el overlay local. Ahora lo maneja AdminLayout *** */}
     </>
   );
 }
