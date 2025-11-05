@@ -1,0 +1,24 @@
+{
+  "files.associations": {
+    "*.css": "postcss",
+    "*.module.css": "postcss",
+    "*.pcss": "postcss",
+    "*.scss": "scss",
+    "*.module.scss": "scss"
+  },
+  "tailwindCSS.includeLanguages": {
+    "postcss": "css",
+    "css": "css",
+    "javascript": "javascript",
+    "javascriptreact": "javascriptreact",
+    "typescript": "typescript",
+    "typescriptreact": "typescriptreact",
+    "html": "html"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  // opcional: si sigues viendo validación que no quieres, deshabilita validación CSS/SCSS del lenguaje por defecto
+  // "css.validate": false,
+  // "scss.validate": false
+}
