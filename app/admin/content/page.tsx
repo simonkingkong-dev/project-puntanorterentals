@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, FileText, Home, Info } from 'lucide-react';
-import AdminLayout from '@/components/admin/layout';
+import { Home, Info, Save } from 'lucide-react';
+import AdminLayout from '@/app/admin/layout';
 import { toast } from 'sonner';
 import { getSiteContent, updateSiteContent } from '@/lib/firebase/content';
-import { SiteContent } from '@/lib/types';
 
 interface ContentSection {
   section: string;

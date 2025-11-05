@@ -1,4 +1,4 @@
-import { Metadata } from 'next/metadata';
+import { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Save, Database, Mail, CreditCard, Shield } from 'lucide-react';
-import AdminLayout from '@/components/admin/layout';
+import { CreditCard, Database, Mail, Save, Shield } from 'lucide-react';
+import AdminLayout from '@/app/admin/layout';
 
 export const metadata: Metadata = {
   title: 'Configuración - Admin Panel',
