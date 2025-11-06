@@ -12,7 +12,6 @@ const TO_EXPORT = [
   'components',
   'hooks',
   'lib',
-  'node_modules',
   '.env.local',
   '.eslintrc.json',
   'components.json',

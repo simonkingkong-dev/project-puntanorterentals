@@ -1,4 +1,4 @@
-// Archivo: app/admin/reservations/page.tsx (Código Limpio y Completo)
+// Archivo: app/admin/reservations/page.tsx (Completo y Corregido)
 
 import { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,25 +11,23 @@ import {
   TableCell, 
   TableHead, 
   TableHeader, 
-  TableRow, 
+  TableRow 
 } from '@/components/ui/table';
-import { Edit, Eye, Filter, Search, Trash2 } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout'; // Asegúrate que esta ruta es correcta
+import { Search, Edit, Trash2, Eye, Filter, Calendar } from 'lucide-react';
+import AdminLayout from '@/app/admin/layout';
+import { getReservations } from '@/lib/firebase/reservations'; // <-- CORREGIDO: Importar función real
+import { Reservation } from '@/lib/types'; // <-- CORREGIDO: Importar tipo
+import { format } from 'date-fns'; // <-- Para formatear fechas
+import { es } from 'date-fns/locale';
 
 export const metadata: Metadata = {
   title: 'Reservas - Admin Panel',
   robots: 'noindex, nofollow',
 };
 
-// Mock data (la dejamos por ahora)
-const reservations = [
-  { id: 'RES-001', guestName: 'María González', guestEmail: 'maria@example.com', guestPhone: '+52 984 123 4567', propertyTitle: 'Casa Alkimia Suite Ocean View', checkIn: '2024-12-20', checkOut: '2024-12-23', guests: 2, totalAmount: 450, status: 'confirmed', stripePaymentId: 'pi_1234567890', createdAt: '2024-12-15' },
-  { id: 'RES-002', guestName: 'Carlos Rodríguez', guestEmail: 'carlos@example.com', guestPhone: '+52 984 987 6543', propertyTitle: 'Casa Alkimia Villa Tropical', checkIn: '2024-12-25', checkOut: '2024-12-28', guests: 4, totalAmount: 840, status: 'pending', stripePaymentId: null, createdAt: '2024-12-16' },
-  { id: 'RES-003', guestName: 'Ana Martínez', guestEmail: 'ana@example.com', guestPhone: '+52 984 555 1234', propertyTitle: 'Casa Alkimia Penthouse', checkIn: '2024-12-30', checkOut: '2025-01-02', guests: 3, totalAmount: 600, status: 'confirmed', stripePaymentId: 'pi_0987654321', createdAt: '2024-12-17' },
-  { id: 'RES-004', guestName: 'Luis Hernández', guestEmail: 'luis@example.com', guestPhone: '+52 984 777 8888', propertyTitle: 'Casa Alkimia Suite Ocean View', checkIn: '2024-12-18', checkOut: '2024-12-20', guests: 2, totalAmount: 300, status: 'cancelled', stripePaymentId: null, createdAt: '2024-12-10' },
-];
+// CORREGIDO: Eliminamos los datos mock 
 
-// Función helper para los badges
+// Función helper para los badges (sin cambios)
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -43,9 +41,11 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-
-export default function AdminReservationsPage() {
-  // En un futuro: const reservations = await getReservationsFromFirebase();
+// CORREGIDO: La página ahora es 'async'
+export default async function AdminReservationsPage() {
+  
+  // CORREGIDO: Obtenemos las reservaciones reales de Firebase
+  const reservations: Reservation[] = (await getReservations()) ?? [];
 
   return (
     <AdminLayout>
@@ -58,7 +58,7 @@ export default function AdminReservationsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards (Ahora son dinámicas) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -89,12 +89,12 @@ export default function AdminReservationsPage() {
               <div className="text-2xl font-bold text-blue-600">
                 ${reservations.reduce((sum, r) => (r.status === 'confirmed' ? sum + r.totalAmount : sum), 0).toLocaleString()}
               </div>
-              <p className="text-sm text-gray-600">Ingresos Totales</p>
+              <p className="text-sm text-gray-600">Ingresos (Confirmados)</p>
             </CardContent>
            </Card>
         </div>
 
-        {/* Filters */}
+        {/* Filters (sin cambios, aún no funcional) */}
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -115,7 +115,7 @@ export default function AdminReservationsPage() {
            </CardContent>
         </Card>
 
-        {/* Reservations Table */}
+        {/* Reservations Table (Ahora es dinámica) */}
         <Card>
           <CardHeader>
             <CardTitle>Lista de Reservas</CardTitle>
@@ -127,7 +127,7 @@ export default function AdminReservationsPage() {
                   <TableRow>
                      <TableHead>ID</TableHead>
                     <TableHead>Huésped</TableHead>
-                    <TableHead>Propiedad</TableHead>
+                    <TableHead>Propiedad (ID)</TableHead>
                     <TableHead>Fechas</TableHead>
                      <TableHead>Huéspedes</TableHead>
                     <TableHead>Total</TableHead>
@@ -136,48 +136,73 @@ export default function AdminReservationsPage() {
                    </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reservations.map((reservation) => (
-                    <TableRow key={reservation.id}>
-                       <TableCell className="font-medium">{reservation.id}</TableCell>
-                      <TableCell>
-                        <div>
-                           <p className="font-medium">{reservation.guestName}</p>
-                          <p className="text-sm text-gray-600">{reservation.guestEmail}</p>
-                        </div>
-                       </TableCell>
-                      <TableCell>
-                        <p className="font-medium">{reservation.propertyTitle}</p>
-                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>Check-in: {reservation.checkIn}</p>
-                           <p>Check-out: {reservation.checkOut}</p>
-                        </div>
+                  {/* CORREGIDO: Mapeamos las reservaciones reales */}
+                  {reservations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center">
+                        No hay reservaciones encontradas.
                       </TableCell>
-                       <TableCell>{reservation.guests}</TableCell>
-                      <TableCell className="font-medium">${reservation.totalAmount}</TableCell>
-                      <TableCell>{getStatusBadge(reservation.status)}</TableCell>
-                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                             <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    reservations.map((reservation) => (
+                      <TableRow key={reservation.id}>
+                         <TableCell className="font-medium text-xs">...{reservation.id.slice(-6)}</TableCell>
+                        <TableCell>
+                          <div>
+                             <p className="font-medium">{reservation.guestName}</p>
+                            <p className="text-sm text-gray-600">{reservation.guestEmail}</p>
+                          </div>
+                         </TableCell>
+                        <TableCell>
+                          {/* NOTA: Mostramos el ID. Más adelante podríamos hacer un 'get' para mostrar el título. */}
+                          <p className="font-medium text-xs">...{reservation.propertyId.slice(-6)}</p>
+                         </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <p>Entrada: {format(reservation.checkIn, 'dd/MM/yy', { locale: es })}</p>
+                            <p>Salida: {format(reservation.checkOut, 'dd/MM/yy', { locale: es })}</p>
+                          </div>
+                        </TableCell>
+                         <TableCell>{reservation.guests}</TableCell>
+                        <TableCell className="font-medium">${reservation.totalAmount}</TableCell>
+                        <TableCell>{getStatusBadge(reservation.status)}</TableCell>
+                         <TableCell>
+                          <div className="flex gap-2">
+                            {/* Los botones de Editar y Borrar aún no están conectados */}
+                            <Button variant="outline" size="sm">
+                               <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                               <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                         </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
                </Table>
-            </div> {/* Cierre de div overflow-x-auto */}
-          </CardContent> {/* Cierre de CardContent */}
-        </Card> {/* Cierre de Card Reservations Table */}
-      </div> {/* Cierre de div space-y-6 */}
-    </AdminLayout> /* Cierre de AdminLayout */
-  ); // Cierre del return
-} // Cierre de la función AdminReservationsPage
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Estado Vacío (Manejado dentro de la tabla) */}
+        {reservations.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <Calendar className="w-12 h-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se han encontrado reservaciones
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Cuando los clientes comiencen a reservar, sus reservaciones aparecerán aquí.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </AdminLayout>
+  );
+}

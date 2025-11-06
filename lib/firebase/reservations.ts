@@ -1,3 +1,5 @@
+// Archivo: lib/firebase/reservations.ts (Completo)
+
 import { 
   collection, 
   doc, 
@@ -7,7 +9,9 @@ import {
   query, 
   where, 
   orderBy,
-  Timestamp 
+  Timestamp,
+  deleteDoc,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Reservation } from '../types';
@@ -15,12 +19,30 @@ import { Reservation } from '../types';
 const RESERVATIONS_COLLECTION = 'reservations';
 
 /**
+ * Fetches ALL reservations from the database, ordered by creation date.
+ * (Para el panel de admin)
+ */
+export const getReservations = async (): Promise<Reservation[]> => {
+  try {
+    const querySnapshot = await getDocs(
+      query(collection(db, RESERVATIONS_COLLECTION), orderBy('createdAt', 'desc'))
+    );
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      checkIn: doc.data().checkIn?.toDate() || new Date(),
+      checkOut: doc.data().checkOut?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    })) as Reservation[];
+  } catch (error) {
+    console.error('Error fetching all reservations:', error);
+    return [];
+  }
+};
+
+/**
  * Creates a new reservation and returns its document ID.
- * @example
- * sync({ guestName: 'John Doe', checkIn: new Date(), checkOut: new Date(), roomNumber: 101 })
- * // Returns: 'randomDocumentId123'
- * @param {Omit<Reservation, 'id' | 'createdAt'>} reservationData - The reservation details excluding ID and creation date.
- * @returns {Promise<string>} A promise that resolves to the reservation document ID.
  */
 export const createReservation = async (reservationData: Omit<Reservation, 'id' | 'createdAt'>): Promise<string> => {
   try {
@@ -39,12 +61,7 @@ export const createReservation = async (reservationData: Omit<Reservation, 'id' 
 };
 
 /**
- * Fetches and returns a list of confirmed reservations for a given property, ordered by check-in date.
- * @example
- * sync('propertyId123').then(reservations => console.log(reservations));
- * // Expected output: Array of reservation objects with converted dates.
- * @param {string} propertyId - The ID of the property to fetch reservations for.
- * @returns {Promise<Reservation[]>} A promise that resolves to an array of Reservations.
+ * Fetches confirmed reservations for a given property.
  */
 export const getReservationsByProperty = async (propertyId: string): Promise<Reservation[]> => {
   try {
@@ -71,14 +88,7 @@ export const getReservationsByProperty = async (propertyId: string): Promise<Res
 };
 
 /**
- * Updates the status of a reservation in the Firestore database.
- * @example
- * sync('reservation123', 'confirmed', 'stripe123')
- * // Returns: Promise resolves with no value upon successful update
- * @param {string} reservationId - The unique identifier of the reservation to update.
- * @param {Reservation['status']} status - The new status for the reservation.
- * @param {string} [stripePaymentId] - The Stripe payment ID associated with the reservation, if applicable.
- * @returns {Promise<void>} Resolves when the update is successful, rejects with an error if the update fails.
+ * Updates the status of a reservation (usado por el webhook de Stripe).
  */
 export const updateReservationStatus = async (
   reservationId: string, 
@@ -97,5 +107,38 @@ export const updateReservationStatus = async (
   } catch (error) {
     console.error('Error updating reservation status:', error);
     throw error;
+  }
+};
+
+// --- NUEVA FUNCIÓN AÑADIDA ---
+/**
+ * Fetches a reservation by its Stripe Payment Intent ID.
+ * @param {string} paymentIntentId - The ID of the Stripe payment_intent.
+ * @returns {Promise<Reservation | null>}
+ */
+export const getReservationByPaymentIntentId = async (paymentIntentId: string): Promise<Reservation | null> => {
+  try {
+    const q = query(
+      collection(db, RESERVATIONS_COLLECTION),
+      where('stripePaymentId', '==', paymentIntentId)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      console.warn(`No reservation found for paymentIntentId: ${paymentIntentId}`);
+      return null;
+    }
+    
+    const doc = querySnapshot.docs[0];
+    return {
+      id: doc.id,
+      ...doc.data(),
+      checkIn: doc.data().checkIn?.toDate() || new Date(),
+      checkOut: doc.data().checkOut?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    } as Reservation;
+  } catch (error) {
+    console.error('Error fetching reservation by payment intent ID:', error);
+    return null;
   }
 };
