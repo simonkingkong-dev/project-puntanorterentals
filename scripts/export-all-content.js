@@ -8,9 +8,11 @@ const OUTPUT = path.join(ROOT, 'export_all_code.txt');
 const TO_EXPORT = [
   '.bolt',
   'app',
+  '.vscode',
   'components',
   'hooks',
   'lib',
+  'node_modules',
   '.env.local',
   '.eslintrc.json',
   'components.json',
@@ -22,7 +24,7 @@ const TO_EXPORT = [
   'postcss.config.js',
   'README.md',
   'tailwind.config.ts',
-  'tsconfig.json'
+  'tsconfig.json',
 ];
 
 const SKIP_DIRS = new Set(['.next', 'node_modules', '.git']);

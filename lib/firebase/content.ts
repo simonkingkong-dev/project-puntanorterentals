@@ -1,5 +1,3 @@
-// Archivo: lib/firebase/content.ts (Versión Completa y Definitiva)
-
 import { 
   collection, 
   doc, 
@@ -68,6 +66,29 @@ export const getFeaturedTestimonials = async (): Promise<Testimonial[]> => {
 };
 
 /**
+ * Fetches a single testimonial by its ID.
+ */
+export const getTestimonialById = async (id: string): Promise<Testimonial | null> => {
+  try {
+    const docRef = doc(db, TESTIMONIALS_COLLECTION, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    return {
+      id: docSnap.id,
+      ...docSnap.data(),
+      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+    } as Testimonial;
+  } catch (error) {
+    console.error('Error fetching testimonial by ID:', error);
+    return null;
+  }
+};
+
+/**
 * Adds a testimonial to the database.
 */
 export const createTestimonial = async (testimonialData: Omit<Testimonial, 'id' | 'createdAt'>): Promise<string> => {
@@ -86,7 +107,7 @@ export const createTestimonial = async (testimonialData: Omit<Testimonial, 'id' 
 /**
  * Updates an existing testimonial.
  */
-export const updateTestimonial = async (id: string, testimonialData: Partial<Testimonial>): Promise<void> => {
+export const updateTestimonial = async (id: string, testimonialData: Partial<Omit<Testimonial, 'id' | 'createdAt'>>): Promise<void> => {
   try {
      const testimonialRef = doc(db, TESTIMONIALS_COLLECTION, id);
     await updateDoc(testimonialRef, {
@@ -322,4 +343,4 @@ export const updateContactInfo = async (contactData: Omit<ContactInfo, 'id' | 'u
     console.error('Error updating contact info:', error);
     throw error;
   }
-}; // <--- ESTA ES LA LLAVE QUE FALTABA
+};

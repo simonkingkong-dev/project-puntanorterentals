@@ -1,13 +1,13 @@
 // Archivo: app/admin/amenities/actions.ts
 
-"use server";
+"use server"; // ¡Esto es clave! Marca este archivo como Server Actions
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation"; // <--- AÑADIR import
-import { deleteGlobalAmenity, updateGlobalAmenity } from "@/lib/firebase/content"; // <--- AÑADIR updateGlobalAmenity
-import { GlobalAmenity } from "@/lib/types"; // <--- AÑADIR import
+import { redirect } from "next/navigation"; // Importar redirect
+import { deleteGlobalAmenity, updateGlobalAmenity } from "@/lib/firebase/content"; // Importar updateGlobalAmenity
+import { GlobalAmenity } from "@/lib/types"; // Importar el tipo
 
-// --- CORREGIDO: AÑADE ESTA NUEVA FUNCIÓN ---
+// --- NUEVA FUNCIÓN DE ACTUALIZACIÓN ---
 
 // Definimos el tipo de datos que esperamos del formulario
 export type UpdateAmenityFormData = Partial<Omit<GlobalAmenity, 'id' | 'createdAt' | 'updatedAt'>>;
@@ -33,11 +33,10 @@ export async function handleUpdateAmenity(amenityId: string, formData: UpdateAme
   // Hacemos esto fuera del try/catch para asegurar que ocurra si no hay error
   redirect("/admin/amenities");
 }
-// --- FIN DE LA NUEVA FUNCIÓN ---
 
+// --- FUNCIÓN DE BORRADO EXISTENTE ---
 
 export async function handleDeleteAmenity(amenityId: string) {
-  // ... (Tu función de borrado existente) ...
   if (!amenityId) {
     return { success: false, error: "ID de amenidad no provisto." };
   }

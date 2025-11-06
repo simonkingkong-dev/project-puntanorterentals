@@ -68,7 +68,9 @@ export const getPropertyById = async (id: string): Promise<Property | null> => {
     const docRef = doc(db, PROPERTIES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists()) return null;
+    if (!docSnap.exists()) {
+      return null;
+    }
     
     return {
       id: docSnap.id,
@@ -87,23 +89,18 @@ export const getPropertyById = async (id: string): Promise<Property | null> => {
 */
 export const searchProperties = async (params: SearchParams): Promise<Property[]> => {
   try {
-    // Nota: Esta es una búsqueda simple del lado del cliente.
-    // Para producción a gran escala, esto debería ser una consulta de Firebase.
     let properties = await getProperties();
     
-    // Filter by guests
     if (params.guests) {
       properties = properties.filter(property => property.maxGuests >= params.guests!);
     }
     
-    // Filter by location
     if (params.location) {
       properties = properties.filter(property => 
          property.location.toLowerCase().includes(params.location!.toLowerCase()),
       );
     }
     
-    // Filter by availability (if dates are provided)
     if (params.checkIn && params.checkOut) {
       properties = properties.filter(property => {
         const checkIn = new Date(params.checkIn!);
@@ -200,6 +197,24 @@ export const createProperty = async (propertyData: Omit<Property, 'id'>): Promis
     return docRef.id;
   } catch (error) {
     console.error('Error creating property:', error);
+    throw error;
+  }
+};
+
+/**
+ * Updates an existing property.
+ * @param {string} id - The document ID of the property to update.
+ * @param {Partial<Omit<Property, 'id' | 'createdAt' | 'updatedAt'>>} propertyData - The data to update.
+ */
+export const updateProperty = async (id: string, propertyData: Partial<Omit<Property, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
+  try {
+    const propertyRef = doc(db, PROPERTIES_COLLECTION, id);
+    await updateDoc(propertyRef, {
+      ...propertyData,
+      updatedAt: Timestamp.now() // Actualizar la fecha de modificación
+    });
+  } catch (error) {
+    console.error('Error updating property:', error);
     throw error;
   }
 };
