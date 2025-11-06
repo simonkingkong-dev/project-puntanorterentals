@@ -1,8 +1,12 @@
+// Archivo: proxy.ts (CORREGIDO)
+
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
 
-export async function middleware(request: NextRequest) {
+// CORREGIDO: Renombramos la función de "middleware" a "proxy"
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  
   // Esta línea usa la función que importaste, eliminando la advertencia.
   const isAuthenticated = await isAdminAuthenticated();
 
@@ -20,6 +24,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// El objeto 'config' no necesita cambiar
 export const config = {
   matcher: ['/admin/:path*'],
 };

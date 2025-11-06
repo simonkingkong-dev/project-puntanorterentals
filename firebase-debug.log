@@ -1,0 +1,57 @@
+[debug] [2025-11-06T21:36:41.966Z] ----------------------------------------------------------------------
+[debug] [2025-11-06T21:36:41.970Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Simon\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2025-11-06T21:36:41.971Z] CLI Version:   14.24.0
+[debug] [2025-11-06T21:36:41.971Z] Platform:      win32
+[debug] [2025-11-06T21:36:41.971Z] Node Version:  v22.18.0
+[debug] [2025-11-06T21:36:41.972Z] Time:          Thu Nov 06 2025 16:36:41 GMT-0500 (hora estándar oriental)
+[debug] [2025-11-06T21:36:41.972Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Simon\Desktop\Proyectos\project
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2025-11-06T21:37:10.857Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-06T21:37:10.858Z] > authorizing via signed-in user (curagutierrezsimon@gmail.com)
+[debug] [2025-11-06T21:37:10.859Z] Checked if tokens are valid: true, expires at: 1762468557185
+[debug] [2025-11-06T21:37:10.860Z] Checked if tokens are valid: true, expires at: 1762468557185
+[debug] [2025-11-06T21:37:10.861Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=100
+[debug] [2025-11-06T21:37:11.446Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-11-06T21:37:11.446Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] 
+=== Hosting Setup
+[debug] [2025-11-06T21:37:15.635Z] Checked if tokens are valid: true, expires at: 1762468557185
+[debug] [2025-11-06T21:37:15.635Z] Checked if tokens are valid: true, expires at: 1762468557185
+[debug] [2025-11-06T21:37:15.636Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/punta-norte-rentals [none]
+[debug] [2025-11-06T21:37:16.007Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/punta-norte-rentals 200
+[debug] [2025-11-06T21:37:16.008Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/punta-norte-rentals {"projectId":"punta-norte-rentals","projectNumber":"23435543582","displayName":"Punta Norte Rentals","name":"projects/punta-norte-rentals","resources":{"hostingSite":"punta-norte-rentals"},"state":"ACTIVE","etag":"1_d7921ed8-ca34-487d-96ce-4e69c28bfe13"}
+[info] 
+[info] Your public directory is the folder (relative to your project directory) that
+[info] will contain Hosting assets to be uploaded with firebase deploy. If you
+[info] have a build process for your assets, use your build's output directory.
+[info] 
+[debug] [2025-11-06T21:41:22.147Z] ExitPromptError: User force closed the prompt with SIGINT
+    at Interface.sigint (C:\Users\Simon\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\@inquirer\core\dist\commonjs\lib\create-prompt.js:101:37)
+    at Interface.emit (node:events:518:28)
+    at Interface.emit (node:domain:489:12)
+    at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1132:18)
+    at ReadStream.onkeypress (node:internal/readline/interface:271:20)
+    at ReadStream.emit (node:events:530:35)
+    at ReadStream.emit (node:domain:489:12)
+    at emitKeys (node:internal/readline/utils:370:14)
+    at emitKeys.next (<anonymous>)
+    at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+[error] 
+[error] Error: An unexpected error has occurred.
