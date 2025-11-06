@@ -30,7 +30,6 @@ export default async function AdminAmenitiesPage() {
   const globalAmenities: GlobalAmenity[] = (await getGlobalAmenities()) ?? [];
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* ... (Tu Header y Stats se quedan igual) ... */}
         
@@ -148,6 +147,5 @@ export default async function AdminAmenitiesPage() {
           </Card>
         )}
       </div>
-    </AdminLayout>
   );
 }

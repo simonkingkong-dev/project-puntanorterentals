@@ -87,7 +87,6 @@ export default function NewTestimonialPage() {
   };
 
   return (
-    <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
          <div className="flex items-center gap-4">
@@ -254,6 +253,5 @@ export default function NewTestimonialPage() {
           </div>
         </form>
       </div>
-    </AdminLayout>
   );
 }

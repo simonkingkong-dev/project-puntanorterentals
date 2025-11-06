@@ -48,7 +48,6 @@ export default async function AdminReservationsPage() {
   const reservations: Reservation[] = (await getReservations()) ?? [];
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
          <div className="flex items-center justify-between">
@@ -203,6 +202,5 @@ export default async function AdminReservationsPage() {
           </Card>
         )}
       </div>
-    </AdminLayout>
   );
 }

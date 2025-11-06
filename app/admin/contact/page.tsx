@@ -50,7 +50,6 @@ export default async function AdminContactPage() {
   }
 
   return (
-    <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -79,6 +78,5 @@ export default async function AdminContactPage() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   );
 }

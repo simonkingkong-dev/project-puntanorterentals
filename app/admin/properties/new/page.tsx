@@ -108,7 +108,7 @@ export default function NewPropertyPage() {
     if (amenity && !formData.amenities.includes(amenity)) {
       setFormData(prev => ({
         ...prev,
-        amenities: [...prev.amenities, amenity]
+        amenities: [...prev.amenities, amenity],
       }));
     }
   };
@@ -116,7 +116,7 @@ export default function NewPropertyPage() {
   const removeAmenity = (amenity: string) => {
     setFormData(prev => ({
       ...prev,
-      amenities: prev.amenities.filter(a => a !== amenity)
+      amenities: prev.amenities.filter(a => a !== amenity),
     }));
   };
 
@@ -129,7 +129,7 @@ export default function NewPropertyPage() {
       }
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images, newImageUrl]
+        images: [...prev.images, newImageUrl],
       }));
       setNewImageUrl('');
     }
@@ -138,12 +138,11 @@ export default function NewPropertyPage() {
   const removeImage = (imageUrl: string) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images.filter(img => img !== imageUrl)
+      images: prev.images.filter(img => img !== imageUrl),
     }));
   };
 
   return (
-    <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -211,7 +210,7 @@ export default function NewPropertyPage() {
                      min="1"
                     max="20"
                     value={formData.maxGuests}
-                    onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 1 }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value, 10) || 1 }))}
                    />
                 </div>
                 
@@ -222,7 +221,7 @@ export default function NewPropertyPage() {
                     type="number"
                      min="1"
                     value={formData.pricePerNight}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) || 1 }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value, 10) || 1 }))}
                   />
                  </div>
 
@@ -391,6 +390,5 @@ export default function NewPropertyPage() {
           </div>
         </form>
       </div>
-    </AdminLayout>
   );
 }

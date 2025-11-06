@@ -59,7 +59,6 @@ export default function NewServicePage() {
 
 
   return (
-    <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -165,6 +164,5 @@ export default function NewServicePage() {
           </div>
         </form>
       </div>
-    </AdminLayout>
   );
 }

@@ -7,8 +7,7 @@ import { Plus, Edit, Trash2, MapPin, Users, Building } from 'lucide-react';
 import Image from 'next/image';
 import { getProperties } from '@/lib/firebase/properties';
 import { Property } from '@/lib/types';
-// CORREGIDO: Importamos el nuevo componente cliente
-import DeletePropertyButton from './delete-property-button';
+import DeletePropertyButton from './delete-property-button'; // Importamos el botón de borrado
 
 export const metadata: Metadata = {
   title: 'Propiedades - Admin Panel',
@@ -47,7 +46,6 @@ export default async function AdminPropertiesPage() {
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  unoptimized={property.images[0]?.includes('pexels')} 
                 />
                 <div className="absolute top-2 right-2 flex gap-2">
                   {property.featured && (
@@ -88,9 +86,8 @@ export default async function AdminPropertiesPage() {
                     </Link>
                   </Button>
                   
-                  {/* --- CORRECCIÓN CLAVE --- */}
+                  {/* Botón de Borrar con confirmación */}
                   <DeletePropertyButton propertyId={property.id} />
-                  {/* --- FIN DE LA CORRECCIÓN --- */}
 
                 </div>
               </CardContent>

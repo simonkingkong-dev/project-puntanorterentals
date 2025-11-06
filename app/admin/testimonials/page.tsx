@@ -31,7 +31,6 @@ export default async function AdminTestimonialsPage() {
   const testimonials: Testimonial[] = (await getTestimonials()) ?? [];
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* ... (Header y Stats se quedan igual) ... */}
 
@@ -176,6 +175,5 @@ export default async function AdminTestimonialsPage() {
           </Card>
         )}
       </div>
-    </AdminLayout>
   );
 }

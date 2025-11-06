@@ -208,7 +208,6 @@ export default function AdminContentPage() {
   };
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -282,6 +281,5 @@ export default function AdminContentPage() {
           ))}
         </Tabs>
       </div>
-    </AdminLayout>
   );
 }

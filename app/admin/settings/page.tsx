@@ -26,7 +26,6 @@ export const metadata: Metadata = {
  */
 export default function AdminSettingsPage() {
   return (
-    <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -237,6 +236,5 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
       </div>
-    </AdminLayout>
   );
 }
