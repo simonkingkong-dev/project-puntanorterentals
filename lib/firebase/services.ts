@@ -4,9 +4,10 @@ import {
   query, 
   where, 
   orderBy,
-  // CORREGIDO: Añadimos las importaciones necesarias
   addDoc, 
-  Timestamp 
+  Timestamp,
+  doc,
+  deleteDoc 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Service } from '../types';
@@ -14,8 +15,7 @@ import { Service } from '../types';
 const SERVICES_COLLECTION = 'services';
 
 /**
- * Fetches and returns a list of services from the Firebase database...
- * (Tu función getServices existente va aquí)
+ * Fetches and returns a list of services from the Firebase database.
  */
 export const getServices = async (): Promise<Service[]> => {
   try {
@@ -35,8 +35,7 @@ export const getServices = async (): Promise<Service[]> => {
 };
 
 /**
- * Fetch and return an array of featured services...
- * (Tu función getFeaturedServices existente va aquí)
+ * Fetch and return an array of featured services from the database.
  */
 export const getFeaturedServices = async (): Promise<Service[]> => {
   try {
@@ -58,22 +57,35 @@ export const getFeaturedServices = async (): Promise<Service[]> => {
   }
 };
 
-// --- CORREGIDO: AÑADE ESTA NUEVA FUNCIÓN ---
-
 /**
 * Adds a new service to the database.
-* @param {Omit<Service, 'id' | 'createdAt'>} serviceData - The service data excluding ID and creation date.
-* @returns {Promise<string>} A promise that resolves to the service document ID.
+* @param {Omit<Service, 'id' | 'createdAt'>} serviceData - The service data.
+* @returns {Promise<string>} The new document ID.
 */
 export const createService = async (serviceData: Omit<Service, 'id' | 'createdAt'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, SERVICES_COLLECTION), {
       ...serviceData,
-      createdAt: Timestamp.now(), // Añade la fecha de creación
+      createdAt: Timestamp.now(),
     });
     return docRef.id;
   } catch (error) {
     console.error('Error creating service:', error);
+    throw error;
+  }
+};
+
+/**
+* Deletes a service from the database by its ID.
+* @param {string} id - The document ID of the service to delete.
+* @returns {Promise<void>}
+*/
+export const deleteService = async (id: string): Promise<void> => {
+  try {
+    const serviceRef = doc(db, SERVICES_COLLECTION, id);
+    await deleteDoc(serviceRef);
+  } catch (error) {
+    console.error('Error deleting service:', error);
     throw error;
   }
 };

@@ -12,7 +12,8 @@ import {
   Compass,
   MessageSquare,
   Star,
-  Globe
+  Globe,
+  Menu // CORREGIDO: Importar el ícono de Menú
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
   const router = useRouter();
 
   const handleLogout = async () => {
+    // ... (tu función de logout no cambia)
     try {
        const response = await fetch('/api/admin/logout', { method: 'POST' });
       if (response.ok) {
@@ -59,26 +61,24 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
     <>
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "-translate-x-full" 
+        "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
+        // CORREGIDO: Cambiamos el ancho en lugar de 'translate-x'
+        isOpen ? "w-64" : "w-20" 
       )}>
         <div className="flex flex-col h-full">
           
-          {/* Header del Logo */}
-          <div className="flex items-center justify-start p-4 h-16 border-b">
-            <Link href="/admin" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <Home className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex flex-col leading-none">
-                 <span className="text-xl font-bold text-gray-900 my-0">
-                  Punta Norte
-                </span>
-                <span className="text-xs font-medium text-gray-600 my-0">
-                   Rentals
-                </span>
-              </div>
-            </Link>
+          {/* CORREGIDO: Nuevo Header del Sidebar con el botón */}
+          <div className={cn(
+            "flex flex-col items-center justify-center p-4 h-16 border-b",
+            isOpen ? "items-start" : "items-center" // Alinear al inicio cuando está abierto
+          )}>
+            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
+              <Menu className="w-5 h-5" />
+            </Button>
+            {/* CORREGIDO: Texto "Menu" condicional */}
+            {isOpen && (
+              <span className="text-xs text-muted-foreground mt-1">Menu</span>
+            )}
           </div>
 
           {/* Navigation */}
@@ -87,16 +87,19 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
               <Link
                 key={item.name}
                 href={item.href}
-                onClick={isOpen ? toggleSidebar : undefined} 
+                // Añadimos un tooltip para cuando el sidebar está cerrado
+                title={!isOpen ? item.name : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  !isOpen && "justify-center", // Centrar ícono cuando está cerrado
                   pathname === item.href
-                    ? "bg-orange-50 text-orange-700 border border-orange-200"
+                    ? "bg-orange-50 text-orange-700"
                     : "text-gray-700 hover:bg-gray-100"
                 )}
               >
-                <item.icon className="w-4 h-4" />
-                {item.name}
+                <item.icon className="w-4 h-4 flex-shrink-0" />
+                {/* CORREGIDO: Ocultar texto cuando está cerrado */}
+                {isOpen && <span className="truncate">{item.name}</span>}
               </Link>
              ))}
           </nav>
@@ -106,10 +109,16 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
             <Button
               variant="ghost"
               onClick={handleLogout}
-               className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              // Añadimos un tooltip para cuando el sidebar está cerrado
+              title={!isOpen ? "Cerrar Sesión" : undefined}
+              className={cn(
+                "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50",
+                !isOpen && "justify-center" // Centrar ícono
+              )}
             >
-              <LogOut className="w-4 h-4 mr-3" />
-              Cerrar Sesión
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              {/* CORREGIDO: Ocultar texto cuando está cerrado */}
+              {isOpen && <span className="ml-3 truncate">Cerrar Sesión</span>}
             </Button>
            </div>
         </div>

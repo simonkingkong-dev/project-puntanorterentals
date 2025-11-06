@@ -1,165 +1,185 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Wifi, Car, Utensils, Home, Waves, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ServiceCard from '@/components/ui/service-card';
-import { getServices } from '@/lib/firebase/services';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import PropertyGallery from '@/components/ui/property-gallery';
+import AvailabilityCalendar from '@/components/ui/availability-calendar';
+import ReservationForm from '@/components/ui/reservation-form';
+import { getPropertyBySlug } from '@/lib/firebase/properties';
 
-export const metadata: Metadata = {
-  title: 'Experiencias y Servicios',
-  description: 'Descubre experiencias únicas y servicios exclusivos para complementar tu estancia perfecta.',
-  openGraph: {
-    title: 'Experiencias y Servicios | Casa Alkimia',
-    description: 'Descubre experiencias únicas y servicios exclusivos para complementar tu estancia perfecta.',
-  },
+// Mapeo de íconos (ajustado para coincidir con tu mock)
+const amenityIcons: { [key: string]: any } = {
+  'WiFi de alta velocidad': Wifi,
+  'Aire acondicionado': Home,
+  'Cocina equipada': Utensils,
+  'Estacionamiento': Car,
+  'Piscina comunitaria': Waves,
+  'Vista al mar': Waves,
+  'Terraza privada': Home,
+  'Servicio de limpieza': Home,
+  'Seguridad 24/7': Shield,
+  'Acceso a playa': Waves,
+  default: Home, // Icono por defecto
 };
 
-// Mock data for development
-const mockServices = [
-  {
-    id: '1',
-    title: 'Experiencia de Buceo en Cenotes',
-    description: 'Explora los cenotes más hermosos de la Riviera Maya con guías expertos certificados. Una aventura única en aguas cristalinas rodeada de formaciones rocosas milenarias. Incluye equipo completo de buceo, transporte y almuerzo típico mexicano.',
-    image: 'https://images.pexels.com/photos/1001682/pexels-photo-1001682.jpeg',
-    externalLink: 'https://example.com/buceo-cenotes',
-    featured: true,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    title: 'Tour Gastronómico Maya',
-    description: 'Descubre los sabores auténticos de la cocina maya en un recorrido por los mejores restaurantes y mercados locales. Incluye degustaciones, historia culinaria y clase de cocina práctica con un chef experto en tradiciones mayas.',
-    image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-    externalLink: 'https://example.com/tour-gastronomico',
-    featured: true,
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    title: 'Excursión a Chichen Itzá VIP',
-    description: 'Visita una de las maravillas del mundo moderno con acceso preferencial y guía especializado en cultura maya. Tour privado que incluye transporte de lujo, almuerzo gourmet y tiempo exclusivo para fotografías sin multitudes.',
-    image: 'https://images.pexels.com/photos/161401/pyramids-chichen-itza-mexico-mayan-161401.jpeg',
-    externalLink: 'https://example.com/chichen-itza-vip',
-    featured: false,
-    createdAt: new Date(),
-  },
-  {
-    id: '4',
-    title: 'Spa y Wellness Maya',
-    description: 'Experimenta tratamientos ancestrales mayas en un spa de lujo frente al mar. Masajes con técnicas tradicionales, temazcal ceremonial y terapias con ingredientes naturales de la región como cacao, miel y jade.',
-    image: 'https://images.pexels.com/photos/3757942/pexels-photo-3757942.jpeg',
-    externalLink: 'https://example.com/spa-wellness',
-    featured: false,
-    createdAt: new Date(),
-  },
-  {
-    id: '5',
-    title: 'Aventura en Sian Ka\'an',
-    description: 'Explora la reserva de la biosfera de Sian Ka\'an, Patrimonio de la Humanidad por la UNESCO. Incluye navegación por canales naturales, observación de fauna silvestre, snorkel en arrecifes vírgenes y almuerzo en una comunidad local.',
-    image: 'https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg',
-    externalLink: 'https://example.com/sian-kaan',
-    featured: false,
-    createdAt: new Date(),
-  },
-  {
-    id: '6',
-    title: 'Pesca Deportiva en el Caribe',
-    description: 'Vive la emoción de la pesca deportiva en las aguas del Mar Caribe. Embarcación equipada con última tecnología, capitán experimentado y oportunidad de pescar mahi-mahi, pez vela y marlin. Incluye equipo completo y bebidas.',
-    image: 'https://images.pexels.com/photos/1123982/pexels-photo-1123982.jpeg',
-    externalLink: 'https://example.com/pesca-deportiva',
-    featured: false,
-    createdAt: new Date(),
-  },
-];
+interface PropertyPageProps {
+  params: {
+    slug: string;
+  };
+}
 
 /**
- * Displays a services page with featured and additional experiences.
- * @example
- * ServicesPage()
- * // Returns a React component rendering the services page with mock data.
- * @returns {JSX.Element} React component representing the services page with a header, services grid, and a call to action section.
+ * Genera Metadata dinámica para SEO
  */
-export default async function ServicesPage() {
-  // In production, fetch from Firebase
-  const services = mockServices;
+export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
+  const property = await getPropertyBySlug(params.slug);
+
+  if (!property) {
+    return {
+      title: 'Propiedad no encontrada',
+    };
+  }
+
+  return {
+    title: property.title,
+    description: property.description.slice(0, 160) + '...',
+    openGraph: {
+      title: property.title + ' | Punta Norte Rentals',
+      description: property.description.slice(0, 160) + '...',
+      images: [
+        {
+          url: property.images[0] || '', // Usa la primera imagen
+          width: 1200,
+          height: 630,
+          alt: property.title,
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * La página ahora es 'async' y obtiene datos reales
+ */
+export default async function PropertyPage({ params }: PropertyPageProps) {
+  // Obtenemos la propiedad real de Firebase usando el slug de la URL
+  const property = await getPropertyBySlug(params.slug);
+
+  // Si no se encuentra la propiedad, mostramos la página 404
+  if (!property) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Breadcrumb */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button asChild variant="ghost" className="mb-6">
-            <Link href="/">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Button asChild variant="ghost" className="mb-4">
+            <Link href="/properties">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al Inicio
+              Volver a Propiedades
             </Link>
           </Button>
-
-          <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Experiencias Únicas
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Complementa tu estancia con experiencias locales auténticas y memorables. 
-              Cada actividad está cuidadosamente seleccionada para ofrecerte lo mejor de la cultura y naturaleza local.
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Services Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {services.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Próximamente
-            </h3>
-            <p className="text-gray-600">
-              Estamos preparando experiencias increíbles para ti. ¡Vuelve pronto!
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Featured Services */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Experiencias Destacadas</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {services.filter(service => service.featured).map((service) => (
-                  <ServiceCard key={service.id} service={service} />
-                ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-8">
+          {/* Property Header */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              {property.featured && (
+                <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
+                  Destacado
+                </Badge>
+              )}
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {property.title}
+            </h1>
+            
+            <div className="flex flex-wrap items-center gap-6 text-gray-600">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span>{property.location}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>Hasta {property.maxGuests} huéspedes</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-900">
+                ${property.pricePerNight} / noche
               </div>
             </div>
+          </div>
 
-            {/* All Services */}
-            {services.filter(service => !service.featured).length > 0 && (
+          {/* Gallery */}
+          <PropertyGallery images={property.images} title={property.title} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Property Details */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Description */}
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Más Experiencias</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {services.filter(service => !service.featured).map((service) => (
-                    <ServiceCard key={service.id} service={service} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Descripción</h2>
+                <div className="prose prose-gray max-w-none">
+                  {property.description.split('\n').map((paragraph, index) => (
+                    <p key={index} className="text-gray-600 leading-relaxed mb-4">
+                      {paragraph}
+                    </p>
                   ))}
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 py-16">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            ¿Necesitas Ayuda Personalizando Tu Experiencia?
-          </h2>
-          <p className="text-xl text-teal-100 mb-8">
-            Nuestro equipo de concierge está listo para ayudarte a crear el itinerario perfecto 
-            adaptado a tus intereses y preferencias.
-          </p>
-          <Button asChild size="lg" className="bg-white text-teal-600 hover:bg-gray-100">
-            <Link href="/contact">
-              Contactar Concierge
-            </Link>
-          </Button>
+              <Separator />
+
+              {/* Amenities */}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Amenidades</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {property.amenities.map((amenity, index) => {
+                     const IconComponent = amenityIcons[amenity] || amenityIcons.default;
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                        <IconComponent className="w-5 h-5 text-orange-600" />
+                        <span className="text-gray-900">{amenity}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Calendar */}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Disponibilidad</h2>
+                <AvailabilityCalendar
+                  property={property}
+                  onDateSelect={(dates) => {
+                    console.log('Selected dates:', dates);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Reservation Form */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24">
+                <ReservationForm
+                  property={property}
+                  onReservationComplete={() => {
+                    console.log('Reservation completed');
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

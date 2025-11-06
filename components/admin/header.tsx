@@ -1,57 +1,38 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { Bell, User, Menu } from 'lucide-react';
+// CORREGIDO: 'Menu' ya no se importa aquí
+import { Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface AdminHeaderProps {
-  toggleSidebar: () => void; // Función para abrir/cerrar el sidebar
-}
+// CORREGIDO: El header ya no maneja el estado del sidebar
+interface AdminHeaderProps {}
 
-// Función para obtener un título legible a partir de la ruta
+// La función 'getTitleFromPathname' no cambia
 const getTitleFromPathname = (pathname: string) => {
   const parts = pathname.split('/').filter(p => p && p !== 'admin');
-  
-  if (parts.length === 0) {
-    return 'Dashboard';
-  }
-
-  // Capitalizar la primera letra y reemplazar guiones
-  return parts[parts.length - 1]
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, (l) => l.toUpperCase());
+  if (parts.length === 0) return 'Dashboard';
+  return parts[parts.length - 1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-/**
- * Encabezado de la página de administración. 
- * Muestra el título de la sección actual y el botón de menú móvil.
- */
-export default function AdminHeader({ toggleSidebar }: AdminHeaderProps) {
+export default function AdminHeader({}: AdminHeaderProps) { // Se quita 'toggleSidebar'
   const pathname = usePathname();
-  const title = getTitleFromPathname(pathname);
+  const title = getTitleFromPathname(pathname); // 'title' ahora es el subtítulo
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 lg:px-6">
       
-      {/* 1. Título de la Sección y Botón de Menú Móvil */}
-      <div className="flex items-center">
-        
-        {/* CLAVE: Botón de Menú Móvil - Llama a la función del Layout */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden mr-4" // Se oculta en desktop (lg)
-          onClick={toggleSidebar} // Usa la función recibida por props
-        >
-          <Menu className="w-5 h-5" />
-        </Button>
-        
-        <h1 className="text-xl font-semibold text-gray-800">
-          {title}
+      {/* CORREGIDO: Eliminamos el botón de menú y lo reemplazamos */}
+      <div className="flex flex-col">
+        <h1 className="text-xl font-semibold text-gray-800 leading-none">
+          Punta Norte Rentals
         </h1>
+        <p className="text-sm text-muted-foreground leading-none mt-1">
+          {title} {/* El nombre de la pestaña va aquí */}
+        </p>
       </div>
 
-      {/* 2. Acciones y Perfil del Usuario */}
+      {/* Acciones y Perfil del Usuario (no cambian) */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon">
           <Bell className="w-5 h-5 text-gray-600" />

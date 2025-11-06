@@ -8,6 +8,8 @@ import AdminLayout from '@/app/admin/layout';
 import Image from 'next/image';
 import { getServices } from '@/lib/firebase/services';
 import { Service } from '@/lib/types';
+// CORREGIDO: Importamos el nuevo componente cliente
+import DeleteServiceButton from './delete-service-button'; 
 
 export const metadata: Metadata = {
   title: 'Servicios - Admin Panel',
@@ -15,12 +17,15 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminServicesPage() {
-  
   const services: Service[] = (await getServices()) ?? [];
+  const featuredServices = services.filter(service => service.featured);
+  const regularServices = services.filter(service => !service.featured);
 
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* ... (Header y Stats se quedan igual) ... */}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -35,7 +40,7 @@ export default async function AdminServicesPage() {
           </Button>
         </div>
 
-        {/* Stats (Ahora son dinámicas) */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -46,7 +51,7 @@ export default async function AdminServicesPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-orange-600">
-                {services.filter(s => s.featured).length}
+                {featuredServices.length}
               </div>
               <p className="text-sm text-gray-600">Destacados</p>
             </CardContent>
@@ -54,14 +59,14 @@ export default async function AdminServicesPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-600">
-                {services.filter(s => !s.featured).length}
+                {regularServices.length}
               </div>
               <p className="text-sm text-gray-600">Regulares</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Services Grid (Ahora es dinámico) */}
+        {/* Services Grid */}
         {services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {services.map((service) => (
@@ -109,16 +114,19 @@ export default async function AdminServicesPage() {
                         Editar
                       </Link>
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    
+                    {/* --- CORRECCIÓN CLAVE --- */}
+                    {/* Reemplazamos el <Button> por el nuevo Client Component */}
+                    <DeleteServiceButton serviceId={service.id} />
+                    {/* --- FIN DE LA CORRECCIÓN --- */}
+
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          // Estado vacío
+          // Estado Vacío
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">

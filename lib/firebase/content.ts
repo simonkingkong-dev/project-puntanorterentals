@@ -1,3 +1,5 @@
+// Archivo: lib/firebase/content.ts (Versión Completa y Definitiva)
+
 import { 
   collection, 
   doc, 
@@ -14,19 +16,16 @@ import {
 import { db } from '../firebase';
 import { Testimonial, GlobalAmenity, SiteContent, ContactInfo } from '../types';
 
-// Collections
+// --- COLECCIONES ---
 const TESTIMONIALS_COLLECTION = 'testimonials';
 const GLOBAL_AMENITIES_COLLECTION = 'globalAmenities';
 const SITE_CONTENT_COLLECTION = 'siteContent';
 const CONTACT_INFO_COLLECTION = 'contactInfo';
 
-// Testimonials
+// --- TESTIMONIOS ---
+
 /**
- * Fetches and returns a list of testimonials from the Firestore database.
- * @example
- * sync().then(testimonials => console.log(testimonials));
- * // Example output: [{ id: "1", ... }, { id: "2", ... }]
- * @returns {Promise<Testimonial[]>} A promise that resolves to an array of testimonial objects, sorted by creation date in descending order.
+ * Fetches and returns a list of testimonials.
  */
 export const getTestimonials = async (): Promise<Testimonial[]> => {
   try {
@@ -35,7 +34,7 @@ export const getTestimonials = async (): Promise<Testimonial[]> => {
     );
     
     return querySnapshot.docs.map(doc => ({
-      id: doc.id,
+       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
     })) as Testimonial[];
@@ -46,11 +45,7 @@ export const getTestimonials = async (): Promise<Testimonial[]> => {
 };
 
 /**
- * Fetches and returns a list of featured testimonials from the database.
- * @example
- * sync()
- * // Returns: Promise<Testimonial[]>
- * @returns {Promise<Testimonial[]>} A promise that resolves to an array of featured testimonial objects, each including an ID, data, and a creation date.
+ * Fetches and returns a list of featured testimonials.
  */
 export const getFeaturedTestimonials = async (): Promise<Testimonial[]> => {
   try {
@@ -64,7 +59,7 @@ export const getFeaturedTestimonials = async (): Promise<Testimonial[]> => {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
+       createdAt: doc.data().createdAt?.toDate() || new Date(),
     })) as Testimonial[];
   } catch (error) {
     console.error('Error fetching featured testimonials:', error);
@@ -73,13 +68,8 @@ export const getFeaturedTestimonials = async (): Promise<Testimonial[]> => {
 };
 
 /**
-* Adds a testimonial to the database and returns the generated document ID.
-* @example
-* sync({ name: "John Doe", message: "Great service!" })
-* "abc123"
-* @param {Omit<Testimonial, 'id' | 'createdAt'>} testimonialData - The testimonial data excluding 'id' and 'createdAt'.
-* @returns {Promise<string>} A promise that resolves to the document ID of the newly created testimonial.
-**/
+* Adds a testimonial to the database.
+*/
 export const createTestimonial = async (testimonialData: Omit<Testimonial, 'id' | 'createdAt'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, TESTIMONIALS_COLLECTION), {
@@ -93,16 +83,25 @@ export const createTestimonial = async (testimonialData: Omit<Testimonial, 'id' 
   }
 };
 
+/**
+ * Updates an existing testimonial.
+ */
 export const updateTestimonial = async (id: string, testimonialData: Partial<Testimonial>): Promise<void> => {
   try {
-    const testimonialRef = doc(db, TESTIMONIALS_COLLECTION, id);
-    await updateDoc(testimonialRef, testimonialData);
+     const testimonialRef = doc(db, TESTIMONIALS_COLLECTION, id);
+    await updateDoc(testimonialRef, {
+      ...testimonialData,
+      updatedAt: Timestamp.now()
+    });
   } catch (error) {
     console.error('Error updating testimonial:', error);
     throw error;
   }
 };
 
+/**
+ * Deletes a testimonial from the database.
+ */
 export const deleteTestimonial = async (id: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, TESTIMONIALS_COLLECTION, id));
@@ -112,13 +111,10 @@ export const deleteTestimonial = async (id: string): Promise<void> => {
   }
 };
 
-// Global Amenities
+// --- AMENIDADES GLOBALES ---
+
 /**
- * Synchronizes and retrieves a list of global amenities from the database.
- * @example
- * sync().then(globalAmenities => console.log(globalAmenities));
- * [{ id: '1', name: 'Pool', createdAt: '2023-10-08T00:00:00Z' }, ...]
- * @returns {Promise<GlobalAmenity[]>} A promise that resolves to an array of global amenity objects.
+ * Fetches and returns a list of global amenities.
  */
 export const getGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
   try {
@@ -129,7 +125,7 @@ export const getGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
+       createdAt: doc.data().createdAt?.toDate() || new Date(),
     })) as GlobalAmenity[];
   } catch (error) {
     console.error('Error fetching global amenities:', error);
@@ -138,13 +134,31 @@ export const getGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
 };
 
 /**
-* Syncs provided amenity data to the global amenities collection and returns the document ID.
-* @example
-* sync({ name: "Swimming Pool", description: "A large pool for communal use" })
-* "newDocumentId123"
-* @param {Omit<GlobalAmenity, 'id' | 'createdAt'>} amenityData - Amenity data excluding id and createdAt fields.
-* @returns {Promise<string>} A promise that resolves to the ID of the newly created document.
-**/
+ * Fetches a single global amenity by its ID.
+ */
+export const getGlobalAmenityById = async (id: string): Promise<GlobalAmenity | null> => {
+  try {
+    const docRef = doc(db, GLOBAL_AMENITIES_COLLECTION, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    return {
+      id: docSnap.id,
+      ...docSnap.data(),
+      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+    } as GlobalAmenity;
+  } catch (error) {
+    console.error('Error fetching global amenity by ID:', error);
+    return null;
+  }
+};
+
+/**
+* Creates a new global amenity.
+*/
 export const createGlobalAmenity = async (amenityData: Omit<GlobalAmenity, 'id' | 'createdAt'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, GLOBAL_AMENITIES_COLLECTION), {
@@ -158,16 +172,25 @@ export const createGlobalAmenity = async (amenityData: Omit<GlobalAmenity, 'id' 
   }
 };
 
-export const updateGlobalAmenity = async (id: string, amenityData: Partial<GlobalAmenity>): Promise<void> => {
+/**
+ * Updates an existing global amenity.
+ */
+export const updateGlobalAmenity = async (id: string, amenityData: Partial<Omit<GlobalAmenity, 'id' | 'createdAt'>>): Promise<void> => {
   try {
     const amenityRef = doc(db, GLOBAL_AMENITIES_COLLECTION, id);
-    await updateDoc(amenityRef, amenityData);
+    await updateDoc(amenityRef, {
+      ...amenityData,
+      updatedAt: Timestamp.now() 
+    });
   } catch (error) {
     console.error('Error updating global amenity:', error);
     throw error;
   }
 };
 
+/**
+ * Deletes a global amenity.
+ */
 export const deleteGlobalAmenity = async (id: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, GLOBAL_AMENITIES_COLLECTION, id));
@@ -177,21 +200,18 @@ export const deleteGlobalAmenity = async (id: string): Promise<void> => {
   }
 };
 
-// Site Content
+// --- CONTENIDO DEL SITIO ---
+
 /**
 * Fetches and synchronizes the site content from the database.
-* @example
-* sync().then(contents => console.log(contents))
-* // Outputs an array of site content objects
-* @returns {Promise<SiteContent[]>} A promise that resolves to an array of site content objects, with each object containing an id and data fields, or an empty array if an error occurs.
-**/
+*/
 export const getSiteContent = async (): Promise<SiteContent[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, SITE_CONTENT_COLLECTION));
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+       ...doc.data(),
       updatedAt: doc.data().updatedAt?.toDate() || new Date(),
     })) as SiteContent[];
   } catch (error) {
@@ -201,12 +221,7 @@ export const getSiteContent = async (): Promise<SiteContent[]> => {
 };
 
 /**
- * Synchronizes and retrieves site content for a specified section from the database.
- * @example
- * sync('home').then(data => console.log(data));
- * // Expected output: [{ id: 'docId', section: 'home', updatedAt: Date, ... }]
- * @param {string} section - The section of the site content to retrieve.
- * @returns {Promise<SiteContent[]>} A promise that resolves to an array of site content objects.
+ * Synchronizes and retrieves site content for a specified section.
  */
 export const getSiteContentBySection = async (section: string): Promise<SiteContent[]> => {
   try {
@@ -218,7 +233,7 @@ export const getSiteContentBySection = async (section: string): Promise<SiteCont
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+       ...doc.data(),
       updatedAt: doc.data().updatedAt?.toDate() || new Date(),
     })) as SiteContent[];
   } catch (error) {
@@ -228,15 +243,7 @@ export const getSiteContentBySection = async (section: string): Promise<SiteCont
 };
 
 /**
- * Synchronizes site content by either adding new content or updating existing content in the database.
- * @example
- * sync('homepage', 'welcomeMessage', 'Welcome to our site', 'text')
- * // Adds or updates the welcome message on the homepage with the specified value and type
- * @param {string} section - The section of the site content to synchronize.
- * @param {string} key - The key within the section for the content.
- * @param {string} value - The value of the content to be added or updated.
- * @param {string} [type='text'] - The type of the site content, defaults to 'text' if not specified.
- * @returns {Promise<void>} A promise that resolves when the operation is complete.
+ * Synchronizes site content by either adding new content or updating existing content.
  */
 export const updateSiteContent = async (section: string, key: string, value: string, type: SiteContent['type'] = 'text'): Promise<void> => {
   try {
@@ -248,20 +255,18 @@ export const updateSiteContent = async (section: string, key: string, value: str
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
-      // Create new content
       await addDoc(collection(db, SITE_CONTENT_COLLECTION), {
-        section,
+         section,
         key,
         value,
         type,
         updatedAt: Timestamp.now(),
       });
     } else {
-      // Update existing content
       const docRef = querySnapshot.docs[0].ref;
       await updateDoc(docRef, {
         value,
-        type,
+         type,
         updatedAt: Timestamp.now(),
       });
     }
@@ -271,13 +276,10 @@ export const updateSiteContent = async (section: string, key: string, value: str
   }
 };
 
-// Contact Info
+// --- INFO DE CONTACTO ---
+
 /**
  * Synchronizes and fetches the contact information from the database.
- * @example
- * sync().then(contactInfo => console.log(contactInfo));
- * // Output: { id: 'documentId', name: 'John Doe', updatedAt: Date ... }
- * @returns {Promise<ContactInfo | null>} A promise that resolves to the contact information object or null if no data is found.
  */
 export const getContactInfo = async (): Promise<ContactInfo | null> => {
   try {
@@ -292,32 +294,25 @@ export const getContactInfo = async (): Promise<ContactInfo | null> => {
       updatedAt: doc.data().updatedAt?.toDate() || new Date(),
     } as ContactInfo;
   } catch (error) {
-    console.error('Error fetching contact info:', error);
+     console.error('Error fetching contact info:', error);
     return null;
   }
 };
 
 /**
-* Synchronizes contact information with a Firestore database collection by either adding new data or updating existing data.
-* @example
-* sync({ name: 'John Doe', email: 'john@example.com' })
-* // Returns undefined
-* @param {Omit<ContactInfo, 'id' | 'updatedAt'>} contactData - The contact information to sync, excluding 'id' and 'updatedAt'.
-* @returns {Promise<void>} A Promise that resolves when the contact information is successfully synchronized.
-**/
+* Synchronizes contact information.
+*/
 export const updateContactInfo = async (contactData: Omit<ContactInfo, 'id' | 'updatedAt'>): Promise<void> => {
   try {
     const querySnapshot = await getDocs(collection(db, CONTACT_INFO_COLLECTION));
     
     if (querySnapshot.empty) {
-      // Create new contact info
       await addDoc(collection(db, CONTACT_INFO_COLLECTION), {
         ...contactData,
         updatedAt: Timestamp.now(),
       });
     } else {
-      // Update existing contact info
-      const docRef = querySnapshot.docs[0].ref;
+       const docRef = querySnapshot.docs[0].ref;
       await updateDoc(docRef, {
         ...contactData,
         updatedAt: Timestamp.now(),
@@ -327,4 +322,4 @@ export const updateContactInfo = async (contactData: Omit<ContactInfo, 'id' | 'u
     console.error('Error updating contact info:', error);
     throw error;
   }
-};
+}; // <--- ESTA ES LA LLAVE QUE FALTABA

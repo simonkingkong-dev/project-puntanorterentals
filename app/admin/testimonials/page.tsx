@@ -1,23 +1,21 @@
-import type { Metadata } from 'next'; // CORREGIDO: Importación de tipo
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Star, User } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout'; // CORREGIDO: Ruta del layout
+import AdminLayout from '@/app/admin/layout';
 import Image from 'next/image';
-// CORREGIDO: Importamos la función real y el tipo
 import { getTestimonials } from '@/lib/firebase/content';
 import { Testimonial } from '@/lib/types';
+// CORREGIDO: Importamos el nuevo componente cliente
+import DeleteTestimonialButton from './delete-testimonials-button';
 
 export const metadata: Metadata = {
   title: 'Testimonios - Admin Panel',
   robots: 'noindex, nofollow',
 };
 
-// CORREGIDO: Eliminamos los datos 'mock' [cite: 387-390]
-
-// Esta función helper la movemos aquí para que el Server Component la use
 const renderStars = (rating: number) => {
   return Array.from({ length: 5 }, (_, i) => (
     <Star
@@ -29,15 +27,14 @@ const renderStars = (rating: number) => {
   ));
 };
 
-// CORREGIDO: Convertimos la página en 'async'
 export default async function AdminTestimonialsPage() {
-  
-  // CORREGIDO: Obtenemos los datos reales de Firebase
   const testimonials: Testimonial[] = (await getTestimonials()) ?? [];
 
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* ... (Header y Stats se quedan igual) ... */}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -52,7 +49,7 @@ export default async function AdminTestimonialsPage() {
           </Button>
         </div>
 
-        {/* Stats (Ahora son dinámicas) */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -71,7 +68,6 @@ export default async function AdminTestimonialsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-yellow-600">
-                {/* CORREGIDO: Cálculo de promedio seguro (evita dividir por cero) */}
                 {testimonials.length > 0
                   ? (testimonials.reduce((sum, t) => sum + t.rating, 0) / testimonials.length).toFixed(1)
                   : 'N/A'
@@ -90,7 +86,8 @@ export default async function AdminTestimonialsPage() {
           </Card>
         </div>
 
-        {/* Testimonials Grid (Ahora es dinámico) */}
+
+        {/* Testimonials Grid */}
         {testimonials.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {testimonials.map((testimonial) => (
@@ -146,16 +143,18 @@ export default async function AdminTestimonialsPage() {
                         Editar
                       </Link>
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    
+                    {/* --- CORRECCIÓN CLAVE --- */}
+                    <DeleteTestimonialButton testimonialId={testimonial.id} />
+                    {/* --- FIN DE LA CORRECCIÓN --- */}
+
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          // Estado Vacío (del código original) [cite: 415-419]
+          // Estado Vacío
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">

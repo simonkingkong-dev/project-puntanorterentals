@@ -1,124 +1,153 @@
-// Archivo: app/admin/page.tsx (CORREGIDO)
-
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, Calendar, DollarSign, Users } from 'lucide-react';
-import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
-// NO DEBE HABER NINGÚN IMPORT DE AdminLayout AQUÍ
+import { Badge } from '@/components/ui/badge';
+import { Car, Edit, Home, Plus, Shield, Trash2, Utensils, Waves, Wifi } from 'lucide-react';
+import AdminLayout from '@/app/admin/layout';
+import { getGlobalAmenities } from '@/lib/firebase/content';
+import { GlobalAmenity } from '@/lib/types';
+
+// CORREGIDO: Ya no importamos 'handleDeleteAmenity' aquí
+// CORREGIDO: Importamos el nuevo componente cliente
+import DeleteAmenityButton from './delete-amenity-button'; 
 
 export const metadata: Metadata = {
-  title: 'Dashboard - Admin Panel',
+  title: 'Amenidades Globales - Admin Panel',
   robots: 'noindex, nofollow',
 };
 
-// Mock data (la dejaremos por ahora)
-const stats = {
-  totalProperties: 16,
-  totalReservations: 45,
-  activeGuests: 12,
-  monthlyRevenue: 15420,
+const iconMap: { [key: string]: any } = {
+  'wifi': Wifi,
+  'car': Car,
+  'utensils': Utensils,
+  'home': Home,
+  'waves': Waves,
+  'shield': Shield,
 };
-const recentReservations = [
-  { id: '1', guestName: 'María González', property: 'Casa Alkimia Suite Ocean View', checkIn: '2024-12-20', checkOut: '2024-12-23', status: 'confirmed', total: 450 },
-  { id: '2', guestName: 'Carlos Rodríguez', property: 'Casa Alkimia Villa Tropical', checkIn: '2024-12-25', checkOut: '2024-12-28', status: 'pending', total: 840 },
-  { id: '3', guestName: 'Ana Martínez', property: 'Casa Alkimia Penthouse', checkIn: '2024-12-30', checkOut: '2025-01-02', status: 'confirmed', total: 600 },
-];
 
+export default async function AdminAmenitiesPage() {
+  const globalAmenities: GlobalAmenity[] = (await getGlobalAmenities()) ?? [];
 
-export default async function AdminDashboard() {
-  const isAuthenticated = await isAdminAuthenticated();
-  if (!isAuthenticated) {
-    redirect('/admin/login');
-  }
-
-  // No se necesita el wrapper <AdminLayout>
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Resumen general de tu negocio</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Propiedades</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProperties}</div>
-            <p className="text-xs text-muted-foreground">Propiedades activas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reservas Totales</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalReservations}</div>
-            <p className="text-xs text-muted-foreground">Este mes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Huéspedes Activos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeGuests}</div>
-            <p className="text-xs text-muted-foreground">Actualmente hospedados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Mensuales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${stats.monthlyRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+12% vs mes anterior</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Reservations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Reservas Recientes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentReservations.map((reservation) => (
-              <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <p className="font-medium">{reservation.guestName}</p>
-                  <p className="text-sm text-gray-600">{reservation.property}</p>
-                  <p className="text-xs text-gray-500">
-                    {reservation.checkIn} - {reservation.checkOut}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">${reservation.total}</p>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    reservation.status === 'confirmed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {reservation.status === 'confirmed' ? 'Confirmada' : 'Pendiente'}
-                  </span>
-                </div>
-              </div>
-            ))}
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* ... (Tu Header y Stats se quedan igual) ... */}
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Amenidades Globales</h1>
+            <p className="text-gray-600">Gestiona las amenidades que se muestran en el sitio</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <Button asChild>
+            <Link href="/admin/amenities/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Amenidad
+            </Link>
+          </Button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-blue-600">{globalAmenities.length}</div>
+              <p className="text-sm text-gray-600">Total Amenidades</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-orange-600">
+                {globalAmenities.filter(a => a.featured).length}
+              </div>
+              <p className="text-sm text-gray-600">Destacadas</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-green-600">
+                {globalAmenities.filter(a => !a.featured).length}
+              </div>
+              <p className="text-sm text-gray-600">Regulares</p>
+            </CardContent>
+          </Card>
+        </div>
+
+
+        {/* Amenities List */}
+        {globalAmenities.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {globalAmenities
+              .sort((a, b) => a.order - b.order) 
+              .map((amenity: GlobalAmenity) => {
+                const Icon = iconMap[amenity.icon] || Shield;
+                
+                // CORREGIDO: Eliminamos la acción 'deleteActionWithId'
+                
+                return (
+                  <Card key={amenity.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Icon className="h-4 w-4" />
+                        {amenity.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-gray-600 line-clamp-2">{amenity.description}</p>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          {amenity.featured && (
+                            <Badge className="bg-orange-500 hover:bg-orange-600 text-xs">
+                              Destacada
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex gap-1">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/admin/amenities/${amenity.id}/edit`}>
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                          
+                          {/* --- CORRECCIÓN CLAVE --- */}
+                          {/* Reemplazamos el <form> por el nuevo Client Component */}
+                          <DeleteAmenityButton amenityId={amenity.id} />
+                          {/* --- FIN DE LA CORRECCIÓN --- */}
+
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            }
+          </div>
+        ) : (
+          // Estado Vacío (sin cambios)
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <Plus className="w-12 h-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No hay amenidades registradas
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Comienza agregando las amenidades que ofrecen tus propiedades.
+              </p>
+              <Button asChild>
+                <Link href="/admin/amenities/new">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear Primera Amenidad
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </AdminLayout>
   );
 }

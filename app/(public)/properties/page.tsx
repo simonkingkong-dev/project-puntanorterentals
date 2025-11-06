@@ -1,57 +1,26 @@
+// Archivo: app/(public)/properties/page.tsx (El código público)
+
 import { Suspense } from 'react';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import PropertyCard from '@/components/ui/property-card';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getProperties, searchProperties } from '@/lib/firebase/properties';
-import { SearchParams } from '@/lib/types';
+import { Property, SearchParams } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Propiedades Vacacionales',
   description: 'Explora nuestra colección completa de propiedades vacacionales excepcionales en destinos únicos.',
   openGraph: {
-    title: 'Propiedades Vacacionales | Casa Alkimia',
+    title: 'Propiedades Vacacionales | Punta Norte Rentals',
     description: 'Explora nuestra colección completa de propiedades vacacionales excepcionales en destinos únicos.',
   },
 };
 
-// Mock data for development
-const mockProperties = Array.from({ length: 16 }, (_, i) => ({
-  id: `property-${i + 1}`,
-  title: `Casa Alkimia ${i + 1}`,
-  description: `Una propiedad excepcional que ofrece comodidad y lujo en un entorno único. Perfecta para ${2 + (i % 6)} huéspedes que buscan una experiencia inolvidable.`,
-  location: ['Playa del Carmen', 'Tulum', 'Cancún', 'Cozumel'][i % 4] + ', Riviera Maya',
-  maxGuests: 2 + (i % 6),
-  amenities: ['WiFi', 'A/C', 'Piscina', 'Cocina', 'Estacionamiento'].slice(0, 3 + (i % 3)),
-  images: [
-    'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg',
-    'https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg',
-    'https://images.pexels.com/photos/2089698/pexels-photo-2089698.jpeg',
-  ],
-  pricePerNight: 100 + (i * 25),
-  availability: {},
-  slug: `casa-alkimia-${i + 1}`,
-  featured: i < 3,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-}));
-
 interface PropertiesPageProps {
-  searchParams: {
-    checkIn?: string;
-    checkOut?: string;
-    guests?: string;
-    location?: string;
-  };
+  searchParams: SearchParams; 
 }
 
-/**
- * Renders a skeleton screen for a property listing page.
- * @example
- * <PropertySkeleton />
- * // Renders a loading skeleton UI with several placeholder elements.
- * @returns {JSX.Element} A React component that displays a set of skeleton loaders mimicking a property card structure, useful as a placeholder while actual data is being loaded.
- */
 function PropertySkeleton() {
   return (
     <div className="space-y-3">
@@ -67,55 +36,56 @@ function PropertySkeleton() {
   );
 }
 
-/**
- * Renders a list of properties based on the provided search parameters.
- * @example
- * PropertiesList({ searchParams: { location: 'New York', priceRange: '500000-1000000' } })
- * // Returns a grid of property cards or a message if no properties are found.
- * @param {Object} { searchParams: SearchParams } - An object containing search parameters to filter properties.
- * @returns {JSX.Element} A React component that displays either a grid of property cards or a message indicating no properties were found.
- */
 async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
-  // In production, use actual Firebase data
-  let properties = mockProperties;
+  
+  let properties: Property[];
+  const hasSearchParams = Object.keys(searchParams).length > 0;
 
-  // Apply filters based on search params
-  if (Object.keys(searchParams).length > 0) {
-    properties = await searchProperties(searchParams);
+  try {
+    if (hasSearchParams) {
+      const paramsForSearch: SearchParams = {
+        ...searchParams,
+        guests: searchParams.guests ? Number(searchParams.guests) : undefined,
+      };
+      properties = await searchProperties(paramsForSearch);
+    } else {
+      properties = await getProperties();
+    }
+  } catch (error) {
+    console.error("Error fetching properties:", error);
+    properties = [];
   }
 
-  if (properties.length === 0) {
+  if (!Array.isArray(properties) || properties.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 col-span-1 md:col-span-2 lg:col-span-3">
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          No se encontraron propiedades
+          {hasSearchParams ? 'No se encontraron propiedades' : 'Aún no hay propiedades cargadas'}
         </h3>
         <p className="text-gray-600">
-          Intenta ajustar tus filtros de búsqueda para encontrar más opciones.
+          {hasSearchParams 
+            ? 'Intenta ajustar tus filtros de búsqueda.' 
+            : 'Vuelve pronto o carga propiedades desde el panel de administración.'}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <>
       {properties.map((property) => (
         <PropertyCard key={property.id} property={property} />
       ))}
-    </div>
+    </>
   );
 }
 
-/**
- * Renders the properties page, displaying a list of properties with optional filters and a search form.
- * @example
- * PropertiesPage({ searchParams: { location: 'New York' } })
- * // Renders a list of properties filtered by the New York location
- * @param {Object} searchParams - An object containing search parameters to filter properties.
- * @returns {JSX.Element} A JSX element representing the properties page.
- */
 export default function PropertiesPage({ searchParams }: PropertiesPageProps) {
   const hasFilters = Object.keys(searchParams).length > 0;
+  const numericSearchParams: SearchParams = {
+    ...searchParams,
+    guests: searchParams.guests ? Number(searchParams.guests) : undefined,
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,28 +99,29 @@ export default function PropertiesPage({ searchParams }: PropertiesPageProps) {
             <p className="text-lg text-gray-600">
               {hasFilters 
                 ? 'Propiedades que coinciden con tu búsqueda'
-                : 'Descubre nuestra colección completa de 16 propiedades excepcionales'
+                : 'Descubre nuestra colección completa de propiedades excepcionales' 
               }
             </p>
           </div>
-
-          <SearchForm />
+           <SearchForm />
         </div>
       </div>
 
       {/* Properties Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Suspense 
-          fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.from({ length: 6 }, (_, i) => (
-                <PropertySkeleton key={i} />
-              ))}
-            </div>
-          }
-        >
-          <PropertiesList searchParams={searchParams} />
-        </Suspense>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Suspense 
+            fallback={
+              <>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <PropertySkeleton key={i} />
+                ))}
+              </>
+            }
+          >
+            <PropertiesList searchParams={numericSearchParams} /> 
+          </Suspense>
+        </div>
       </div>
     </div>
   );
