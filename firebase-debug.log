@@ -55,3 +55,22 @@ You're about to initialize a Firebase project in this directory:
     at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
 [error] 
 [error] Error: An unexpected error has occurred.
+[debug] [2025-11-06T21:41:36.811Z] ----------------------------------------------------------------------
+[debug] [2025-11-06T21:41:36.815Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Simon\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2025-11-06T21:41:36.816Z] CLI Version:   14.24.0
+[debug] [2025-11-06T21:41:36.816Z] Platform:      win32
+[debug] [2025-11-06T21:41:36.816Z] Node Version:  v22.18.0
+[debug] [2025-11-06T21:41:36.816Z] Time:          Thu Nov 06 2025 16:41:36 GMT-0500 (hora estándar oriental)
+[debug] [2025-11-06T21:41:36.817Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Simon\Desktop\Proyectos\project
+
