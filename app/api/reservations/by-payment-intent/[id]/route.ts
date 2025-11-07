@@ -1,14 +1,17 @@
-// Archivo: app/api/reservations/by-payment-intent/[id]/route.ts
+// Archivo: app/api/reservations/by-payment-intent/[id]/route.ts (Corregido)
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getReservationByPaymentIntentId } from '@/lib/firebase/reservations';
+import { Reservation } from '@/lib/types';
 
-interface Params {
-  params: { id: string };
-}
+// CORREGIDO: Eliminamos la 'interface RouteContext' separada
+// y tipamos 'context' directamente en la función.
 
-export async function GET(request: Request, { params }: Params) {
-  const { id } = params; // Este es el payment_intent_id
+export async function GET(
+  request: NextRequest, 
+  context: { params: { id: string } } // Esta es la forma estándar
+) {
+  const { id } = context.params; // Obtenemos 'id' desde 'context.params'
 
   if (!id) {
     return NextResponse.json({ error: 'Payment Intent ID es requerido' }, { status: 400 });
@@ -21,7 +24,9 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Reservación no encontrada' }, { status: 404 });
     }
 
+    // Devolvemos la reservación completa
     return NextResponse.json(reservation);
+    
   } catch (error) {
     console.error('Error fetching reservation:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
