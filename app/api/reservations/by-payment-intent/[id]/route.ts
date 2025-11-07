@@ -9,7 +9,7 @@ import { Reservation } from '@/lib/types';
 
 export async function GET(
   request: NextRequest, 
-  context: { params: { id: string } } // Esta es la forma estándar
+  context: { params: { id: string } }, // Esta es la forma estándar
 ) {
   const { id } = context.params; // Obtenemos 'id' desde 'context.params'
 
