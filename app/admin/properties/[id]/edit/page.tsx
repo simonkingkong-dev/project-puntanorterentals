@@ -1,21 +1,21 @@
-// Archivo: app/admin/properties/[id]/edit/page.tsx
-
 import { notFound } from "next/navigation";
-import { getPropertyById } from "@/lib/firebase/properties"; // Función que ya creamos
+import { getPropertyById } from "@/lib/firebase/properties"; 
 import AdminLayout from "@/app/admin/layout";
-import PropertyEditForm from "./edit-form"; // El formulario que crearemos a continuación
+import PropertyEditForm from "./edit-form"; 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 interface EditPropertyPageProps {
-  params: {
-    id: string; // Next.js nos da el [id] de la URL aquí
-  };
+  // CORREGIDO: params ahora es una Promesa en Next.js 15+
+  params: Promise<{
+    id: string; 
+  }>;
 }
 
 export default async function EditPropertyPage({ params }: EditPropertyPageProps) {
-  const { id } = params;
+  // CORREGIDO: Debemos esperar (await) los params antes de desestructurar
+  const { id } = await params;
   
   // 1. Obtenemos los datos de la propiedad específica
   const property = await getPropertyById(id);

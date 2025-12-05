@@ -10,7 +10,6 @@ import AvailabilityCalendar from '@/components/ui/availability-calendar';
 import ReservationForm from '@/components/ui/reservation-form';
 import { getPropertyBySlug } from '@/lib/firebase/properties';
 
-// Mapeo de íconos (ajustado para coincidir con tu mock)
 const amenityIcons: { [key: string]: any } = {
   'WiFi de alta velocidad': Wifi,
   'Aire acondicionado': Home,
@@ -22,20 +21,22 @@ const amenityIcons: { [key: string]: any } = {
   'Servicio de limpieza': Home,
   'Seguridad 24/7': Shield,
   'Acceso a playa': Waves,
-  default: Home, // Icono por defecto
+  default: Home,
 };
 
 interface PropertyPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 /**
  * Genera Metadata dinámica para SEO
  */
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
-  const property = await getPropertyBySlug(params.slug);
+  // CORREGIDO: Esperar params
+  const { slug } = await params;
+  const property = await getPropertyBySlug(slug);
 
   if (!property) {
     return {
@@ -51,7 +52,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
       description: property.description.slice(0, 160) + '...',
       images: [
         {
-          url: property.images[0] || '', // Usa la primera imagen
+          url: property.images[0] || '',
           width: 1200,
           height: 630,
           alt: property.title,
@@ -65,10 +66,10 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
  * La página ahora es 'async' y obtiene datos reales
  */
 export default async function PropertyPage({ params }: PropertyPageProps) {
-  // Obtenemos la propiedad real de Firebase usando el slug de la URL
-  const property = await getPropertyBySlug(params.slug);
+  // CORREGIDO: Esperar params
+  const { slug } = await params;
+  const property = await getPropertyBySlug(slug);
 
-  // Si no se encuentra la propiedad, mostramos la página 404
   if (!property) {
     notFound();
   }

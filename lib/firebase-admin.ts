@@ -1,3 +1,6 @@
+console.log("DEBUG ENV:", process.env.FIREBASE_PRIVATE_KEY ? "CARGADA" : "VACÍA");
+console.log("DEBUG PATH:", process.cwd()); // Te dirá desde dónde se está ejecutando
+
 import "server-only";
 import admin from 'firebase-admin';
 
@@ -27,10 +30,20 @@ export function createFirebaseAdminApp(config: FirebaseAdminConfig) {
   });
 }
 
+// --- VALIDACIÓN DE SEGURIDAD ---
+// Si falta alguna variable, lanzamos un error claro en lugar de que explote el código después.
+if (!process.env.FIREBASE_PRIVATE_KEY) {
+  throw new Error('❌ FALTA LA VARIABLE DE ENTORNO: FIREBASE_PRIVATE_KEY en .env.local');
+}
+if (!process.env.FIREBASE_CLIENT_EMAIL) {
+  throw new Error('❌ FALTA LA VARIABLE DE ENTORNO: FIREBASE_CLIENT_EMAIL en .env.local');
+}
+// ------------------------------
+
 const adminApp = createFirebaseAdminApp({
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY!,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY!, // Ahora estamos seguros de que existe
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
 });
 
