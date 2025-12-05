@@ -8,14 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-// CORREGIDO: Añadimos Loader2 para el estado de carga
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
-// CORREGIDO: Aseguramos la ruta correcta al layout del admin
 import AdminLayout from '@/app/admin/layout';
 import Link from 'next/link';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la función real de Firebase
-import { createService } from '@/lib/firebase/services';
+// CORREGIDO: Importamos la Server Action
+import { handleCreateService } from '../actions';
 
 export default function NewServicePage() {
   const router = useRouter();
@@ -28,9 +26,6 @@ export default function NewServicePage() {
     featured: false,
   });
 
-  /**
-   * Handles the form submission for creating a new service.
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -39,24 +34,29 @@ export default function NewServicePage() {
       // Validar formulario
       if (!formData.title || !formData.description || !formData.image || !formData.externalLink) {
         toast.error('Por favor completa todos los campos requeridos');
-        setIsLoading(false); // Detener loading si falla
+        setIsLoading(false);
         return;
       }
       
-      // CORREGIDO: Llamamos a la función real de Firebase
-      await createService(formData);
+      // Llamamos a la Server Action de Admin
+      const result = await handleCreateService(formData);
+
+      // Manejo de error si la acción falla
+      if (result && !result.success) {
+        toast.error(result.error || "Error al crear el servicio");
+        setIsLoading(false);
+        return;
+      }
       
       toast.success('Servicio creado exitosamente');
-      router.push('/admin/services'); // Redirigimos al listado
+      // No necesitamos router.push porque la acción hace redirect
     
     } catch (error) {
       console.error('Error creando el servicio:', error);
-      toast.error('Error al crear el servicio. Por favor intenta nuevamente.');
-    } finally {
+      toast.error('Error inesperado. Revisa la consola.');
       setIsLoading(false);
     }
   };
-
 
   return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -75,7 +75,6 @@ export default function NewServicePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Información del Servicio</CardTitle>

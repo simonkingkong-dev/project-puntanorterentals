@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-// CORREGIDO: Añadimos Loader2
 import { ArrowLeft, Save, Star, Loader2, User } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout'; // CORREGIDO: Ruta del layout
+import AdminLayout from '@/app/admin/layout';
 import Link from 'next/link';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la función real de Firebase
-import { createTestimonial } from '@/lib/firebase/content';
+// CORREGIDO: Importamos la Server Action
+import { handleCreateTestimonial } from '../actions';
 
 export default function NewTestimonialPage() {
   const router = useRouter();
@@ -33,29 +32,33 @@ export default function NewTestimonialPage() {
     setIsLoading(true);
 
     try {
-      // Validate form
+      // Validaciones
       if (!formData.name || !formData.text) {
         toast.error('Por favor completa el nombre y el testimonio');
-        setIsLoading(false); // Detenemos loading
+        setIsLoading(false);
         return;
       }
 
       if (formData.rating < 1 || formData.rating > 5) {
         toast.error('La calificación debe estar entre 1 y 5 estrellas');
-        setIsLoading(false); // Detenemos loading
+        setIsLoading(false);
         return;
       }
       
-      // CORREGIDO: Reemplazamos el console.log con la llamada real [cite: 422]
-      // Tu función 'createTestimonial' ya añade el 'createdAt'
-      await createTestimonial(formData);
+      // Llamamos a la Server Action de Admin
+      const result = await handleCreateTestimonial(formData);
+      
+      if (result && !result.success) {
+        toast.error(result.error || "Error al crear el testimonio");
+        setIsLoading(false);
+        return;
+      }
       
       toast.success('Testimonio creado exitosamente');
-      router.push('/admin/testimonials');
+
     } catch (error) {
       console.error('Error creando el testimonio:', error);
-      toast.error('Error creando el testimonio');
-    } finally {
+      toast.error('Error inesperado al crear el testimonio');
       setIsLoading(false);
     }
    };
@@ -77,7 +80,7 @@ export default function NewTestimonialPage() {
                   : 'text-gray-300 hover:text-yellow-200'
               }`}
             />
-           </button>
+          </button>
         ))}
         <span className="ml-2 text-sm text-gray-600">
           ({formData.rating}/5)
@@ -88,8 +91,7 @@ export default function NewTestimonialPage() {
 
   return (
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-         <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link href="/admin/testimonials">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -103,7 +105,6 @@ export default function NewTestimonialPage() {
         </div>
 
        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Información del Cliente</CardTitle>
@@ -124,17 +125,17 @@ export default function NewTestimonialPage() {
                 <div className="space-y-2">
                   <Label htmlFor="location">Ubicación (Opcional)</Label>
                   <Input
-                    id="location"
+                     id="location"
                      value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="Ciudad de México"
-                   />
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="image">URL de la Foto (Opcional)</Label>
-                 <Input
+                <Input
                   id="image"
                   type="url"
                   value={formData.image}
@@ -148,7 +149,6 @@ export default function NewTestimonialPage() {
             </CardContent>
           </Card>
 
-           {/* Testimonial Content */}
           <Card>
             <CardHeader>
               <CardTitle>Contenido del Testimonio</CardTitle>
@@ -178,7 +178,7 @@ export default function NewTestimonialPage() {
                     checked={formData.featured}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
                   />
-                   <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600">
                     {formData.featured ? 'Se mostrará en la página principal' : 'Testimonio regular'}
                   </span>
                  </div>
@@ -186,7 +186,6 @@ export default function NewTestimonialPage() {
             </CardContent>
           </Card>
 
-          {/* Preview */}
           <Card>
             <CardHeader>
                <CardTitle>Vista Previa</CardTitle>
@@ -202,20 +201,19 @@ export default function NewTestimonialPage() {
                     />
                   ) : (
                      <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      {/* CORREGIDO: Usamos User como ícono por defecto */}
                       <User className="w-6 h-6 text-gray-600" />
                     </div>
                   )}
                   <div>
-                     <h4 className="font-semibold">{formData.name || 'Nombre del Cliente'}</h4>
+                    <h4 className="font-semibold">{formData.name || 'Nombre del Cliente'}</h4>
                     {formData.location && (
                       <p className="text-sm text-gray-600">{formData.location}</p>
                     )}
-                   </div>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-1 mb-2">
-                   {Array.from({ length: 5 }, (_, i) => (
+                  {Array.from({ length: 5 }, (_, i) => (
                     <Star
                       key={i}
                        className={`w-4 h-4 ${
@@ -232,7 +230,6 @@ export default function NewTestimonialPage() {
             </CardContent>
           </Card>
 
-          {/* Submit */}
            <div className="flex gap-4">
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? (

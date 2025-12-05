@@ -9,14 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// CORREGIDO: Añadimos Loader2 para el estado de carga
 import { ArrowLeft, Save, Wifi, Car, Utensils, Home, Waves, Shield, Star, Zap, Coffee, Loader2 } from 'lucide-react';
-// CORREGIDO: Aseguramos la ruta correcta al layout del admin
 import AdminLayout from '@/app/admin/layout'; 
 import Link from 'next/link';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la función real de Firebase para crear
-import { createGlobalAmenity } from '@/lib/firebase/content';
+// CORREGIDO: Importamos la Server Action
+import { handleCreateAmenity } from '../actions';
 
 const availableIcons = [
   { value: 'wifi', label: 'WiFi', icon: Wifi },
@@ -30,13 +28,6 @@ const availableIcons = [
   { value: 'coffee', label: 'Café/Desayuno', icon: Coffee },
 ];
 
-/**
- * Renders a page for creating a new amenity with a form, preview, and submission handling.
- * @example
- * NewAmenityPage()
- * A JSX component for the new amenity page is rendered.
- * @returns {JSX.Element} Renders the New Amenity creation page component.
- */
 export default function NewAmenityPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -48,37 +39,32 @@ export default function NewAmenityPage() {
     order: 1,
   });
 
-  /**
-   * Handles form submission by creating a new amenity and provides feedback to the user.
-   * @example
-   * sync(e)
-   * // Redirects to '/admin/amenities' after successful creation
-   * @param {React.FormEvent} e - The form event triggered by submission.
-   * @returns {void} This function does not return a value, but navigates and displays success or error messages.
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Validate form
+      // Validaciones
       if (!formData.title || !formData.description) {
         toast.error('Por favor completa todos los campos requeridos');
-        setIsLoading(false); // CORREGIDO: Detenemos el loading si la validación falla
+        setIsLoading(false); 
         return;
       }
       
-      // CORREGIDO: Reemplazamos el console.log con la llamada real a Firebase.
-      // Tu función 'createGlobalAmenity' ya se encarga de añadir el 'createdAt'.
-      await createGlobalAmenity(formData);
+      // Llamamos a la Server Action de Admin
+      const result = await handleCreateAmenity(formData);
+      
+      if (result && !result.success) {
+        toast.error(result.error || "Error al crear la amenidad");
+        setIsLoading(false);
+        return;
+      }
       
       toast.success('Amenidad creada exitosamente');
-      router.push('/admin/amenities'); // Redirigimos al listado
-    
+
     } catch (error) {
-      console.error('Error creando la amenidad:', error); // Mantenemos el log para debug
-      toast.error('Error creando la amenidad');
-    } finally {
+      console.error('Error creando la amenidad:', error); 
+      toast.error('Error inesperado al crear la amenidad');
       setIsLoading(false);
     }
   };
@@ -108,6 +94,7 @@ export default function NewAmenityPage() {
             <CardHeader>
                <CardTitle>Información Básica</CardTitle>
             </CardHeader>
+      
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
@@ -115,7 +102,7 @@ export default function NewAmenityPage() {
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                     placeholder="WiFi de Alta Velocidad"
+                  placeholder="WiFi de Alta Velocidad"
                   required
                 />
               </div>
@@ -134,17 +121,17 @@ export default function NewAmenityPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                   <Label htmlFor="icon">Icono</Label>
+                  <Label htmlFor="icon">Icono</Label>
                   <Select value={formData.icon} onValueChange={(value) => setFormData(prev => ({ ...prev, icon: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un icono" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableIcons.map((icon) => (
-                         <SelectItem key={icon.value} value={icon.value}>
+                        <SelectItem key={icon.value} value={icon.value}>
                           <div className="flex items-center gap-2">
                             <icon.icon className="w-4 h-4" />
-                               {icon.label}
+                            {icon.label}
                           </div>
                         </SelectItem>
                        ))}
@@ -154,12 +141,12 @@ export default function NewAmenityPage() {
 
                  <div className="space-y-2">
                   <Label htmlFor="order">Orden de Visualización</Label>
-                  <Input
+                   <Input
                     id="order"
-                     type="number"
+                    type="number"
                     min="1"
                     value={formData.order}
-                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))} // Aseguramos que sea un número
+                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))}
                   />
                 </div>
               </div>
@@ -179,13 +166,13 @@ export default function NewAmenityPage() {
             </CardContent>
           </Card>
 
-           {/* Preview */}
+          {/* Preview */}
           <Card>
             <CardHeader>
               <CardTitle>Vista Previa</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="flex items-center gap-4 p-4 border rounded-lg">
+              <div className="flex items-center gap-4 p-4 border rounded-lg">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <IconComponent className="w-6 h-6 text-blue-600" />
                 </div>
@@ -211,7 +198,6 @@ export default function NewAmenityPage() {
 
           {/* Submit */}
           <div className="flex gap-4">
-            {/* CORREGIDO: El botón ahora reacciona a 'isLoading' */}
              <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? (
                 <>
@@ -225,12 +211,11 @@ export default function NewAmenityPage() {
                 </>
               )}
             </Button>
-            {/* CORREGIDO: Deshabilitamos el botón de cancelar mientras se guarda */}
             <Button asChild variant="outline" disabled={isLoading}>
                <Link href="/admin/amenities">Cancelar</Link>
             </Button>
           </div>
-        </form>
+      </form>
       </div>
   );
 }
