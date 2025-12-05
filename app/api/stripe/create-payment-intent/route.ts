@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  // CORREGIDO: Usamos la misma versión que en el webhook para evitar errores de TS
+  apiVersion: '2025-08-27.basil' as any,
 });
 
 export async function POST(request: NextRequest) {
@@ -33,7 +34,6 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
-
   } catch (error) {
     console.error('Error creating payment intent:', error);
     return NextResponse.json(

@@ -1,21 +1,14 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Car, Edit, Home, Plus, Shield, Trash2, Utensils, Waves, Wifi } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
-import { getGlobalAmenities } from '@/lib/firebase/content';
-import { GlobalAmenity } from '@/lib/types';
-
-// CORREGIDO: Ya no importamos 'handleDeleteAmenity' aquí
-// CORREGIDO: Importamos el nuevo componente cliente
+import { Car, Edit, Home, Plus, Shield, Utensils, Waves, Wifi } from 'lucide-react';
+// CORREGIDO: Usar Admin Query
+import { getAdminGlobalAmenities } from '@/lib/firebase-admin-queries';
 import DeleteAmenityButton from './delete-amenity-button'; 
 
-export const metadata: Metadata = {
-  title: 'Amenidades Globales - Admin Panel',
-  robots: 'noindex, nofollow',
-};
+// CORREGIDO: Forzar renderizado dinámico
+export const dynamic = 'force-dynamic';
 
 const iconMap: { [key: string]: any } = {
   'wifi': Wifi,
@@ -27,12 +20,10 @@ const iconMap: { [key: string]: any } = {
 };
 
 export default async function AdminAmenitiesPage() {
-  const globalAmenities: GlobalAmenity[] = (await getGlobalAmenities()) ?? [];
+  const globalAmenities = await getAdminGlobalAmenities();
 
   return (
       <div className="space-y-6">
-        {/* ... (Tu Header y Stats se quedan igual) ... */}
-        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -79,10 +70,8 @@ export default async function AdminAmenitiesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {globalAmenities
               .sort((a, b) => a.order - b.order) 
-              .map((amenity: GlobalAmenity) => {
+              .map((amenity) => {
                 const Icon = iconMap[amenity.icon] || Shield;
-                
-                // CORREGIDO: Eliminamos la acción 'deleteActionWithId'
                 
                 return (
                   <Card key={amenity.id}>
@@ -111,11 +100,7 @@ export default async function AdminAmenitiesPage() {
                             </Link>
                           </Button>
                           
-                          {/* --- CORRECCIÓN CLAVE --- */}
-                          {/* Reemplazamos el <form> por el nuevo Client Component */}
                           <DeleteAmenityButton amenityId={amenity.id} />
-                          {/* --- FIN DE LA CORRECCIÓN --- */}
-
                         </div>
                       </div>
                     </CardContent>
@@ -125,7 +110,6 @@ export default async function AdminAmenitiesPage() {
             }
           </div>
         ) : (
-          // Estado Vacío (sin cambios)
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">

@@ -1,20 +1,15 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Star, User } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
+import { Plus, Edit, Star, User } from 'lucide-react';
 import Image from 'next/image';
-import { getTestimonials } from '@/lib/firebase/content';
-import { Testimonial } from '@/lib/types';
-// CORREGIDO: Importamos el nuevo componente cliente
+// CORREGIDO: Usar Admin Query
+import { getAdminTestimonials } from '@/lib/firebase-admin-queries';
 import DeleteTestimonialButton from './delete-testimonials-button';
 
-export const metadata: Metadata = {
-  title: 'Testimonios - Admin Panel',
-  robots: 'noindex, nofollow',
-};
+// CORREGIDO: Forzar renderizado dinámico
+export const dynamic = 'force-dynamic';
 
 const renderStars = (rating: number) => {
   return Array.from({ length: 5 }, (_, i) => (
@@ -28,12 +23,10 @@ const renderStars = (rating: number) => {
 };
 
 export default async function AdminTestimonialsPage() {
-  const testimonials: Testimonial[] = (await getTestimonials()) ?? [];
+  const testimonials = await getAdminTestimonials();
 
   return (
       <div className="space-y-6">
-        {/* ... (Header y Stats se quedan igual) ... */}
-
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -84,7 +77,6 @@ export default async function AdminTestimonialsPage() {
             </CardContent>
           </Card>
         </div>
-
 
         {/* Testimonials Grid */}
         {testimonials.length > 0 ? (
@@ -143,17 +135,13 @@ export default async function AdminTestimonialsPage() {
                       </Link>
                     </Button>
                     
-                    {/* --- CORRECCIÓN CLAVE --- */}
                     <DeleteTestimonialButton testimonialId={testimonial.id} />
-                    {/* --- FIN DE LA CORRECCIÓN --- */}
-
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          // Estado Vacío
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">

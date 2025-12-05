@@ -1,32 +1,23 @@
-// Archivo: app/admin/services/page.tsx (CORREGIDO)
-
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
-// CORREGIDO: Eliminar esta línea
-// import AdminLayout from '@/app/admin/layout';
+import { Plus, Edit, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
-import { getServices } from '@/lib/firebase/services';
-import { Service } from '@/lib/types';
+// CORREGIDO: Usar Admin Query
+import { getAdminServices } from '@/lib/firebase-admin-queries';
 import DeleteServiceButton from './delete-service-button'; 
 
-export const metadata: Metadata = {
-  title: 'Servicios - Admin Panel',
-  robots: 'noindex, nofollow',
-};
+// CORREGIDO: Forzar renderizado dinámico
+export const dynamic = 'force-dynamic';
 
 export default async function AdminServicesPage() {
-  const services: Service[] = (await getServices()) ?? [];
+  const services = await getAdminServices();
   const featuredServices = services.filter(service => service.featured);
   const regularServices = services.filter(service => !service.featured);
 
   return (
-    // CORREGIDO: Eliminar la etiqueta <AdminLayout> de aquí
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Servicios</h1>
@@ -42,7 +33,6 @@ export default async function AdminServicesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* ... (tus cards de stats) ... */}
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-blue-600">{services.length}</div>
@@ -122,7 +112,6 @@ export default async function AdminServicesPage() {
           ))}
         </div>
       ) : (
-        // Estado Vacío
         <Card>
           <CardContent className="p-12 text-center">
             <div className="text-gray-400 mb-4">
@@ -144,6 +133,5 @@ export default async function AdminServicesPage() {
         </Card>
       )}
     </div>
-    // CORREGIDO: Eliminar la etiqueta </AdminLayout> de aquí
   );
 }

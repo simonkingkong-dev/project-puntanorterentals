@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
-import { Property, Reservation, Service, GlobalAmenity } from "@/lib/types";
+import { Property, Reservation, Service, GlobalAmenity, Testimonial } from "@/lib/types";
 
 // --- PROPIEDADES ---
 export const getAdminProperties = async (): Promise<Property[]> => {
@@ -61,6 +61,21 @@ export const getAdminGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
     })) as GlobalAmenity[];
   } catch (error) {
     console.error('Admin: Error fetching amenities', error);
+    return [];
+  }
+};
+
+// --- TESTIMONIOS (AÑADIR ESTO AL FINAL) ---
+export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
+  try {
+    const snapshot = await adminDb.collection('testimonials').orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    })) as Testimonial[];
+  } catch (error) {
+    console.error('Admin: Error fetching testimonials', error);
     return [];
   }
 };

@@ -1,17 +1,14 @@
-// Archivo: app/api/reservations/by-payment-intent/[id]/route.ts (Corregido)
+// Archivo: app/api/reservations/by-payment-intent/[id]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getReservationByPaymentIntentId } from '@/lib/firebase/reservations';
-import { Reservation } from '@/lib/types';
-
-// CORREGIDO: Eliminamos la 'interface RouteContext' separada
-// y tipamos 'context' directamente en la función.
 
 export async function GET(
   request: NextRequest, 
-  context: { params: { id: string } }, // Esta es la forma estándar
+  context: { params: Promise<{ id: string }> } // CORREGIDO: params es una Promesa
 ) {
-  const { id } = context.params; // Obtenemos 'id' desde 'context.params'
+  // CORREGIDO: Esperamos la promesa antes de usar el ID
+  const { id } = await context.params; 
 
   if (!id) {
     return NextResponse.json({ error: 'Payment Intent ID es requerido' }, { status: 400 });

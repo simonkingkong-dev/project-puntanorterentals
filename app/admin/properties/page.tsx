@@ -1,26 +1,21 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, MapPin, Users, Building } from 'lucide-react';
+import { Plus, Edit, MapPin, Users, Building } from 'lucide-react';
 import Image from 'next/image';
-import { getProperties } from '@/lib/firebase/properties';
-import { Property } from '@/lib/types';
-import DeletePropertyButton from './delete-property-button'; // Importamos el botón de borrado
+// CORREGIDO: Usar Admin Query
+import { getAdminProperties } from '@/lib/firebase-admin-queries';
+import DeletePropertyButton from './delete-property-button';
 
-export const metadata: Metadata = {
-  title: 'Propiedades - Admin Panel',
-  robots: 'noindex, nofollow',
-};
+// CORREGIDO: Forzar renderizado dinámico para ver cambios al instante
+export const dynamic = 'force-dynamic';
 
 export default async function AdminPropertiesPage() {
-  const properties: Property[] = (await getProperties()) ?? [];
+  const properties = await getAdminProperties();
 
   return (
-    // El <AdminLayout> se aplica automáticamente
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Propiedades</h1>
@@ -34,7 +29,6 @@ export default async function AdminPropertiesPage() {
         </Button>
       </div>
 
-      {/* Properties Grid */}
       {properties.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {properties.map((property) => (
@@ -49,9 +43,7 @@ export default async function AdminPropertiesPage() {
                 />
                 <div className="absolute top-2 right-2 flex gap-2">
                   {property.featured && (
-                    <Badge className="bg-orange-500 hover:bg-orange-600">
-                      Destacado
-                    </Badge>
+                    <Badge className="bg-orange-500 hover:bg-orange-600">Destacado</Badge>
                   )}
                 </div>
               </div>
@@ -72,9 +64,7 @@ export default async function AdminPropertiesPage() {
               
               <CardContent className="pt-0">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-gray-900">
-                    ${property.pricePerNight}
-                  </span>
+                  <span className="text-2xl font-bold text-gray-900">${property.pricePerNight}</span>
                   <span className="text-sm text-gray-500">por noche</span>
                 </div>
                 
@@ -85,28 +75,19 @@ export default async function AdminPropertiesPage() {
                       Editar
                     </Link>
                   </Button>
-                  
-                  {/* Botón de Borrar con confirmación */}
                   <DeletePropertyButton propertyId={property.id} />
-
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        // Estado Vacío
         <Card>
           <CardContent className="p-12 text-center">
             <div className="text-gray-400 mb-4">
               <Building className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No hay propiedades registradas
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Comienza agregando tu primera propiedad.
-            </p> 
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay propiedades registradas</h3>
             <Button asChild>
               <Link href="/admin/properties/new">
                 <Plus className="w-4 h-4 mr-2" />
