@@ -1,52 +1,77 @@
 // Archivo: app/admin/properties/actions.ts
 
-"use server"; 
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deleteProperty, updateProperty } from "@/lib/firebase/properties"; 
-import { Property } from "@/lib/types"; 
+import { adminDb } from "@/lib/firebase-admin"; // <--- Importamos el Admin SDK
+import { Property } from "@/lib/types";
 
-// --- NUEVA FUNCIÓN DE ACTUALIZACIÓN ---
+// --- CREAR (NUEVA FUNCIÓN) ---
+// Necesitaremos esto para que la página de "Nueva Propiedad" funcione con Admin
+export async function handleCreateProperty(formData: Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'slug' | 'availability'>) {
+  try {
+    // Generamos el slug automáticamente si no viene (seguridad extra)
+    const slug = formData.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
 
-// Definimos el tipo de datos que esperamos del formulario de edición
+    const newProperty = {
+      ...formData,
+      slug,
+      availability: {}, // Inicializamos disponibilidad vacía
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Usamos adminDb para crear el documento
+    await adminDb.collection('properties').add(newProperty);
+
+    revalidatePath("/admin/properties");
+    // Redireccionamos después del éxito fuera del try-catch para evitar conflictos de Next.js
+  } catch (error) {
+    console.error("Error creating property:", error);
+    return { success: false, error: "Error al crear la propiedad." };
+  }
+  
+  redirect("/admin/properties");
+}
+
+
+// --- ACTUALIZAR ---
+
 export type UpdatePropertyFormData = Partial<Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'slug' | 'availability'>>;
 
 export async function handleUpdateProperty(propertyId: string, formData: UpdatePropertyFormData) {
-  if (!propertyId) {
-    return { success: false, error: "ID de propiedad no provisto." };
-  }
+  if (!propertyId) return { success: false, error: "ID requerido" };
 
   try {
-    // 1. Llama a Firebase para actualizar
-    // El slug y la disponibilidad se manejan por separado, no en este formulario.
-    await updateProperty(propertyId, formData);
-    
-    // 2. Refresca la lista en la página de propiedades
-    revalidatePath("/admin/properties"); 
-    // También refresca la página de edición
-    revalidatePath(`/admin/properties/${propertyId}/edit`); 
-    
+    // Usamos adminDb para actualizar
+    await adminDb.collection('properties').doc(propertyId).update({
+      ...formData,
+      updatedAt: new Date(),
+    });
+
+    revalidatePath("/admin/properties");
+    revalidatePath(`/admin/properties/${propertyId}/edit`);
   } catch (error) {
     console.error("Error updating property:", error);
     return { success: false, error: "Error al actualizar la propiedad." };
   }
 
-  // 3. Redirige al usuario de vuelta a la lista
   redirect("/admin/properties");
 }
 
 
-// --- FUNCIÓN DE BORRADO EXISTENTE ---
+// --- BORRAR ---
 
 export async function handleDeleteProperty(propertyId: string) {
-  if (!propertyId) {
-    return { success: false, error: "ID de propiedad no provisto." };
-  }
+  if (!propertyId) return { success: false, error: "ID requerido" };
 
   try {
-    await deleteProperty(propertyId);
-    revalidatePath("/admin/properties"); 
+    await adminDb.collection('properties').doc(propertyId).delete();
+    revalidatePath("/admin/properties");
     return { success: true };
   } catch (error) {
     console.error("Error deleting property:", error);

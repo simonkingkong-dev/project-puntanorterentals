@@ -1,4 +1,4 @@
-// Archivo: app/admin/properties/new/page.tsx (Actualización Completa)
+// Archivo: app/admin/properties/new/page.tsx
 
 "use client";
 
@@ -15,11 +15,10 @@ import { ArrowLeft, Plus, X, Loader2, Save } from 'lucide-react';
 import AdminLayout from '@/app/admin/layout';
 import Link from 'next/link';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la Server Action (que espera URLs)
-import { createProperty } from '@/lib/firebase/properties';
-// CORREGIDO: Importamos la nueva función de subida
+// CORREGIDO: Importamos la Server Action del Admin (que usa firebase-admin)
+import { handleCreateProperty } from '../actions'; 
+// Importamos la función de subida (Nota: esto sigue siendo cliente, asegúrate de que tus reglas de Storage lo permitan o sean públicas por ahora)
 import { uploadImageToStorage } from '@/lib/firebase/storage';
-// CORREGIDO: Importamos el nuevo uploader y su tipo de archivo
 import ImageUploader, { FileWithPreview } from '@/components/admin/image-uploader';
 import { Property } from '@/lib/types';
 
@@ -33,7 +32,7 @@ export default function NewPropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   
-  // CORREGIDO: El estado del formulario ya no maneja 'images'
+  // El estado del formulario
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -44,7 +43,7 @@ export default function NewPropertyPage() {
     amenities: [] as string[],
   });
   
-  // CORREGIDO: Nuevo estado para manejar los archivos en cola
+  // Estado para manejar los archivos en cola
   const [imageFiles, setImageFiles] = useState<FileWithPreview[]>([]);
   const [newAmenity, setNewAmenity] = useState('');
 
@@ -59,7 +58,7 @@ export default function NewPropertyPage() {
       return;
     }
 
-    // CORREGIDO: Nueva validación de imágenes
+    // Validación de imágenes
     if (imageFiles.length === 0) {
       toast.error('Agrega al menos una imagen');
       setIsLoading(false);
@@ -67,45 +66,52 @@ export default function NewPropertyPage() {
     }
 
     try {
-      // --- NUEVA LÓGICA DE SUBIDA ---
-      // 1. Subir todas las imágenes en cola a Firebase Storage
+      // 1. Subir todas las imágenes en cola a Firebase Storage (Cliente)
       toast.info("Subiendo imágenes... esto puede tardar un momento.");
       const uploadPromises = imageFiles.map(file => uploadImageToStorage(file, 'properties'));
-      // Esperamos a que todas las imágenes se suban
+      
+      // Esperamos a que todas las imágenes se suban y obtenemos las URLs
       const imageUrls = await Promise.all(uploadPromises);
-      // --- FIN DE LÓGICA DE SUBIDA ---
 
-      // Create slug
+      // Generamos el slug básico para el objeto (aunque el server action lo regenera por seguridad)
       const slug = formData.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      // 2. Preparamos el objeto final para Firestore (ahora con las URLs)
+      // 2. Preparamos el objeto final.
+      // NOTA: 'availability' se inicializa vacío. Las fechas se manejan como Objetos Date.
       const propertyData: Omit<Property, 'id'> = {
         ...formData,
-        images: imageUrls, // <-- Usamos las URLs de Storage
+        images: imageUrls, 
         slug,
         availability: {},
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // 3. Llamamos a la Server Action (esto no cambia)
-      await createProperty(propertyData);
+      // 3. Llamamos a la Server Action de Admin
+      // Esta función se ejecuta en el servidor con permisos de administrador
+      const result = await handleCreateProperty(propertyData);
       
+      // Si la acción devuelve un error, lo mostramos
+      if (result && !result.success) {
+         toast.error(result.error || "Error desconocido al crear la propiedad");
+         setIsLoading(false);
+         return;
+      }
+      
+      // Si todo sale bien, la Server Action se encarga del redirect.
       toast.success('Propiedad creada exitosamente');
-      router.push('/admin/properties');
 
     } catch (error) {
       console.error('Error creando la propiedad:', error);
       toast.error('Error al crear la propiedad. Revisa la consola.');
-    } finally {
       setIsLoading(false);
     }
   };
 
-  // --- Lógica de Amenidades (sin cambios) ---
+  // --- Lógica de Amenidades ---
   const addAmenity = (amenity: string) => {
     if (amenity && !formData.amenities.includes(amenity)) {
       setFormData(prev => ({
@@ -121,13 +127,11 @@ export default function NewPropertyPage() {
       amenities: prev.amenities.filter(a => a !== amenity)
     }));
   };
-  // --- Fin Lógica de Amenidades ---
-
 
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header (sin cambios) */}
+        {/* Header */}
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link href="/admin/properties">
@@ -142,14 +146,13 @@ export default function NewPropertyPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Card de Información Básica (sin cambios) */}
+          {/* Card de Información Básica */}
           <Card>
             <CardHeader><CardTitle>Información Básica</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {/* ... (inputs de title, location, description, guests, price, featured) ... */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título *</Label>
+                   <Label htmlFor="title">Título *</Label>
                    <Input id="title" value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} required />
                 </div>
                 <div className="space-y-2">
@@ -157,19 +160,22 @@ export default function NewPropertyPage() {
                   <Input id="location" value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} required />
                 </div>
               </div>
-               <div className="space-y-2">
+             
+              <div className="space-y-2">
                 <Label htmlFor="description">Descripción *</Label>
                 <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={4} required />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
+                 <div className="space-y-2">
                    <Label htmlFor="maxGuests">Máximo de Huéspedes</Label>
                   <Input id="maxGuests" type="number" min="1" value={formData.maxGuests} onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 1 }))} />
                 </div>
+    
                 <div className="space-y-2">
                    <Label htmlFor="pricePerNight">Precio por Noche ($)</Label>
                   <Input id="pricePerNight" type="number" min="1" value={formData.pricePerNight} onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) || 1 }))} />
                  </div>
+ 
                 <div className="space-y-2">
                   <Label>Propiedad Destacada</Label>
                   <div className="flex items-center space-x-2">
@@ -181,16 +187,15 @@ export default function NewPropertyPage() {
             </CardContent>
           </Card>
 
-          {/* Card de Amenidades (sin cambios) */}
+          {/* Card de Amenidades */}
           <Card>
             <CardHeader><CardTitle>Amenidades</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {/* ... (lógica de badges y botones de amenidades) ... */}
               {formData.amenities.length > 0 && (
                 <div className="space-y-2">
                   <Label>Amenidades Seleccionadas</Label>
                   <div className="flex flex-wrap gap-2">
-                     {formData.amenities.map((amenity) => (
+                    {formData.amenities.map((amenity) => (
                       <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
                         {amenity}
                          <button type="button" onClick={() => removeAmenity(amenity)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
@@ -206,7 +211,7 @@ export default function NewPropertyPage() {
                       <Button key={amenity} type="button" variant="outline" size="sm" onClick={() => addAmenity(amenity)}>
                         <Plus className="w-3 h-3 mr-1" />
                         {amenity}
-                       </Button>
+                      </Button>
                     ))}
                 </div>
               </div>
@@ -215,29 +220,28 @@ export default function NewPropertyPage() {
                 <div className="flex gap-2">
                   <Input value={newAmenity} onChange={(e) => setNewAmenity(e.target.value)} placeholder="Nombre de la amenidad" />
                    <Button type="button" onClick={() => { addAmenity(newAmenity); setNewAmenity(''); }} disabled={!newAmenity}>
-                    <Plus className="w-4 h-4" />
+                     <Plus className="w-4 h-4" />
                    </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* --- CORREGIDO: Card de Imágenes --- */}
+          {/* Card de Imágenes */}
           <Card>
              <CardHeader>
               <CardTitle>Galería de Imágenes</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Usamos el nuevo componente. Pasamos el estado y la función para actualizarlo */}
               <ImageUploader
                 files={imageFiles}
                 onFilesChange={setImageFiles}
-                folder="properties" // Define la carpeta en Firebase Storage
-              />
+                folder="properties"
+               />
             </CardContent>
            </Card>
 
-          {/* Submit (sin cambios) */}
+          {/* Submit */}
           <div className="flex gap-4">
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? (
