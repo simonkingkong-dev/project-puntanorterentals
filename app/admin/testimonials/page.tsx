@@ -124,7 +124,7 @@ export default async function AdminTestimonialsPage() {
                   </div>
                   
                   <p className="text-gray-700 line-clamp-3">
-                    "{testimonial.text}"
+                    &ldquo;{testimonial.text}&rdquo;
                   </p>
                   
                   <div className="flex gap-2 pt-2">

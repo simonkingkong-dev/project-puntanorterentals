@@ -74,6 +74,7 @@ export default function ImageUploader({
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {files.map(file => (
               <div key={file.name} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Preview usa blob URL */}
                 <img src={file.preview} alt={file.name} className="w-full h-24 object-cover rounded" />
                 <Button
                   type="button"
@@ -97,6 +98,7 @@ export default function ImageUploader({
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {existingImages.map((url) => (
               <div key={url} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Galería de URLs existentes en admin */}
                 <img src={url} alt="Imagen de la propiedad" className="w-full h-24 object-cover rounded" />
                 {onRemoveExistingImage && (
                   <Button

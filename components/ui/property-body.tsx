@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { Property } from '@/lib/types';
+import type { LucideIcon } from 'lucide-react';
 import { Wifi, Car, Utensils, Home, Waves, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import AvailabilityCalendar from '@/components/ui/availability-calendar';
 import ReservationForm from '@/components/ui/reservation-form';
 
-// Mapeo de íconos
-const amenityIcons: { [key: string]: any } = {
+const amenityIcons: Record<string, LucideIcon> = {
   'WiFi de alta velocidad': Wifi,
   'Aire acondicionado': Home,
   'Cocina equipada': Utensils,

@@ -99,11 +99,9 @@ function PaymentContent() {
   const searchParams = useSearchParams();
   const reservationId = searchParams.get('reservation');
   const [clientSecret, setClientSecret] = useState<string>('');
+  const [amount, setAmount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-
-  // Mock payment amount for demo
-  const amount = 350; // This would come from the reservation data in production
 
   useEffect(() => {
     if (!reservationId) {
@@ -112,18 +110,30 @@ function PaymentContent() {
       return;
     }
 
-    // Create payment intent
-    fetch('/api/stripe/create-payment-intent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount,
-        currency: 'usd',
-        reservationId,
-      }),
-    })
+    // 1. Obtener la reserva (incluye totalAmount)
+    fetch(`/api/reservations/${reservationId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        const totalAmount = data.totalAmount ?? 0;
+        if (!totalAmount || totalAmount < 0.5) {
+          throw new Error('Monto de la reserva no válido');
+        }
+        setAmount(totalAmount);
+
+        // 2. Crear Payment Intent con el monto real
+        return fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: totalAmount,
+            currency: 'usd',
+            reservationId,
+          }),
+        });
+      })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -137,7 +147,7 @@ function PaymentContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [reservationId, amount]);
+  }, [reservationId]);
 
   if (loading) {
     return (
@@ -168,6 +178,10 @@ function PaymentContent() {
     );
   }
 
+  const displayAmount = amount ?? 0;
+  const serviceFee = Math.round(displayAmount * 0.1);
+  const subtotal = displayAmount - serviceFee;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Payment Summary */}
@@ -178,15 +192,15 @@ function PaymentContent() {
         <CardContent className="space-y-4">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>${amount - Math.round(amount * 0.1)}</span>
+            <span>${subtotal}</span>
           </div>
           <div className="flex justify-between">
             <span>Tarifa de servicio</span>
-            <span>${Math.round(amount * 0.1)}</span>
+            <span>${serviceFee}</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
             <span>Total</span>
-            <span>${amount}</span>
+            <span>${displayAmount}</span>
           </div>
         </CardContent>
       </Card>

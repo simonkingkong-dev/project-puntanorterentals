@@ -7,11 +7,12 @@ const OUTPUT = path.join(ROOT, 'export_all_code.txt');
 // items to export (folders or individual files, relative to project root)
 const TO_EXPORT = [
   '.bolt',
-  'app',
   '.vscode',
+  'app',
   'components',
   'hooks',
   'lib',
+  'scripts',
   '.eslintrc.json',
   '.firebaserc',
   '.gitignore',

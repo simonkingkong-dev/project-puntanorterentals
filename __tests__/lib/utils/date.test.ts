@@ -2,14 +2,15 @@ import { generateDateRange, calculateNights, isDateAvailable } from '@/lib/utils
 
 describe('generateDateRange', () => {
   it('generates inclusive date strings from start to end', () => {
-    const start = new Date('2025-01-10');
-    const end = new Date('2025-01-12');
+    // Usar Date(año, mes, día) para hora local y evitar diferencias por zona horaria
+    const start = new Date(2025, 0, 10); // 10 enero 2025
+    const end = new Date(2025, 0, 12);   // 12 enero 2025
     const range = generateDateRange(start, end);
     expect(range).toEqual(['2025-01-10', '2025-01-11', '2025-01-12']);
   });
 
   it('returns single day when start equals end', () => {
-    const d = new Date('2025-06-15');
+    const d = new Date(2025, 5, 15); // 15 junio 2025 (mes 5 = junio)
     expect(generateDateRange(d, d)).toEqual(['2025-06-15']);
   });
 });

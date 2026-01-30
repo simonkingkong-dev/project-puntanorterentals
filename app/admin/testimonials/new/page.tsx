@@ -194,6 +194,7 @@ export default function NewTestimonialPage() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                    {formData.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Vista previa con data/blob URL
                     <img
                       src={formData.image}
                        alt={formData.name}
@@ -224,7 +225,7 @@ export default function NewTestimonialPage() {
                 </div>
                 
                 <p className="text-gray-700 italic">
-                   "{formData.text || 'El testimonio aparecerá aquí...'}"
+                  &ldquo;{formData.text || 'El testimonio aparecerá aquí...'}&rdquo;
                 </p>
               </div>
             </CardContent>

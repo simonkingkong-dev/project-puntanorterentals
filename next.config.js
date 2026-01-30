@@ -1,23 +1,30 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  
-  // CORREGIDO: Eliminamos el bloque 'eslint' obsoleto
-  
-  // CORREGIDO: Habilitamos la optimización de imágenes
+  // Eliminamos 'output: export' para permitir SSR y funciones dinámicas en Firebase App Hosting
+  reactStrictMode: true,
   images: {
-    // Ya no usamos 'unoptimized: true'
-    // En su lugar, especificamos los dominios de donde vendrán tus imágenes
+    // Habilitamos la optimización de imágenes (crucial para performance)
+    unoptimized: false, 
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.pexels.com', // Para las imágenes de Pexels
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', // Para tus imágenes de Firebase Storage
-      },
-      // Si usas otro servicio de imágenes, añade su hostname aquí
+        hostname: 'images.unsplash.com', // Por si usas placeholders
+        port: '',
+        pathname: '/**',
+      }
     ],
+  },
+  // Experimental: Optimización de trazas para reducir tamaño de cold starts
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 };
 

@@ -2,15 +2,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import type { LucideIcon } from 'lucide-react';
 import { Car, Edit, Home, Plus, Shield, Utensils, Waves, Wifi } from 'lucide-react';
-// CORREGIDO: Usar Admin Query
 import { getAdminGlobalAmenities } from '@/lib/firebase-admin-queries';
-import DeleteAmenityButton from './delete-amenity-button'; 
+import DeleteAmenityButton from './delete-amenity-button';
 
-// CORREGIDO: Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 
-const iconMap: { [key: string]: any } = {
+const iconMap: Record<string, LucideIcon> = {
   'wifi': Wifi,
   'car': Car,
   'utensils': Utensils,

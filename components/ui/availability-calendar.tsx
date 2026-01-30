@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Property } from '@/lib/types';
-import { addDays, format, isAfter, isBefore } from 'date-fns';
+import { Day } from 'react-day-picker';
+import { format, isBefore, isAfter, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface AvailabilityCalendarProps {
   property: Property;
@@ -13,144 +15,152 @@ interface AvailabilityCalendarProps {
   selectedDates?: { checkIn?: Date; checkOut?: Date };
 }
 
-/**
- * Renders an availability calendar for selecting property stay dates.
- * @example
- * AvailabilityCalendar({ property: someProperty, onDateSelect: handleDateSelect, selectedDates: someSelectedDates })
- * // Returns a JSX element representing the availability calendar
- * @param {Object} {property} - The property object containing availability information.
- * @param {Function} {onDateSelect} - Callback function invoked when a date range is selected.
- * @param {Object} {selectedDates} - An object with `checkIn` and `checkOut` dates representing the currently selected date range.
- * @returns {JSX.Element} JSX component rendering the availability calendar.
- */
-export default function AvailabilityCalendar({ 
-  property, 
+/** Compara fechas a nivel de día (ignora hora) */
+function isSameDayOrBetween(date: Date, from: Date, to: Date): boolean {
+  const d = startOfDay(date);
+  const a = startOfDay(from);
+  const b = startOfDay(to);
+  const [start, end] = a <= b ? [a, b] : [b, a];
+  return d >= start && d <= end;
+}
+
+export default function AvailabilityCalendar({
+  property,
   onDateSelect,
-  selectedDates 
+  selectedDates,
 }: AvailabilityCalendarProps) {
-  const [selectingRange, setSelectingRange] = useState(false);
-  const [tempCheckIn, setTempCheckIn] = useState<Date | undefined>();
+  const [hoveredDate, setHoveredDate] = useState<Date | undefined>();
+  const [rangeFrom, setRangeFrom] = useState<Date | undefined>();
 
-  const isDateDisabled = (date: Date): boolean => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    const isUnavailable = property.availability[dateString] === false;
-    const isPast = isBefore(date, new Date());
-    
-    return isPast || isUnavailable;
-  };
+  const isDateDisabled = useCallback(
+    (date: Date): boolean => {
+      const dateString = format(date, 'yyyy-MM-dd');
+      const isUnavailable = property.availability[dateString] === false;
+      const isPast = isBefore(date, startOfDay(new Date()));
+      return isPast || isUnavailable;
+    },
+    [property.availability]
+  );
 
-  /**
-   * Handles the selection of a date range for check-in and check-out.
-   * @example
-   * handleDateSelection(new Date('2023-01-01'))
-   * // Starts selecting range or completes it with the given date.
-   * @param {Date | undefined} date - The date selected by the user, used to determine check-in or check-out.
-   * @returns {void} Modifies the state by updating temporary check-in, range selection status, and potentially calls the onDateSelect function.
-   */
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-
-    if (!selectingRange) {
-      // Start selecting range
-      setTempCheckIn(date);
-      setSelectingRange(true);
-    } else {
-      // Complete range selection
-      if (tempCheckIn && isAfter(date, tempCheckIn)) {
-        onDateSelect({
-          checkIn: tempCheckIn,
-          checkOut: date
-        });
-      } else if (tempCheckIn && isBefore(date, tempCheckIn)) {
-        onDateSelect({
-          checkIn: date,
-          checkOut: tempCheckIn
-        });
+  const handleSelect = useCallback(
+    (range: { from?: Date; to?: Date } | undefined) => {
+      if (!range?.from) {
+        setRangeFrom(undefined);
+        setHoveredDate(undefined);
+        return;
       }
-      setSelectingRange(false);
-      setTempCheckIn(undefined);
-    }
-  };
+      if (range.to) {
+        const fromDay = startOfDay(range.from);
+        const toDay = startOfDay(range.to);
+        if (fromDay.getTime() === toDay.getTime()) {
+          toast.info('La fecha de salida debe ser posterior a la de entrada.');
+          return;
+        }
+        onDateSelect({
+          checkIn: range.from,
+          checkOut: range.to,
+        });
+        setRangeFrom(undefined);
+        setHoveredDate(undefined);
+      } else {
+        setRangeFrom(range.from);
+      }
+    },
+    [onDateSelect]
+  );
 
-  /**
-   * Determines the CSS class for a given date based on availability and selection range.
-   * @example
-   * getDateClass(new Date('2023-10-22'));
-   * // Returns a class string like 'bg-red-100 text-red-800 line-through', 'bg-orange-500 text-white', etc.
-   * @param {Date} date - The date for which to determine the class.
-   * @returns {string} CSS class string representing the availability or selection state for the given date.
-   */
-  const getDateStyle = (date: Date) => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    
-    if (property.availability[dateString] === false) {
-      return 'bg-red-100 text-red-800 line-through';
-    }
-    
+  const selectedRange = (() => {
     if (selectedDates?.checkIn && selectedDates?.checkOut) {
-      const isInRange = isAfter(date, selectedDates.checkIn) && isBefore(date, selectedDates.checkOut);
-      const isSelected = date.getTime() === selectedDates.checkIn.getTime() || 
-                        date.getTime() === selectedDates.checkOut.getTime();
-      
-      if (isSelected) return 'bg-orange-500 text-white';
-      if (isInRange) return 'bg-orange-100 text-orange-800';
+      return { from: selectedDates.checkIn, to: selectedDates.checkOut };
     }
-    
-    if (tempCheckIn && date.getTime() === tempCheckIn.getTime()) {
-      return 'bg-orange-500 text-white';
+    if (rangeFrom) {
+      return { from: rangeFrom, to: undefined };
     }
-    
-    return '';
-  };
+    return undefined;
+  })();
+
+  const DayWithHover = useCallback(
+    (props: { date: Date; displayMonth: Date }) => (
+      <div
+        className="contents"
+        onMouseEnter={() => setHoveredDate(props.date)}
+        onMouseLeave={() => setHoveredDate(undefined)}
+      >
+        <Day {...props} />
+      </div>
+    ),
+    []
+  );
+
+  const isSelectingRange = Boolean(rangeFrom && !selectedRange?.to);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Disponibilidad</CardTitle>
         <p className="text-sm text-gray-600">
-          {selectingRange 
-            ? 'Selecciona la fecha de salida' 
+          {isSelectingRange
+            ? 'Selecciona la fecha de salida (o haz clic en otra fecha para cambiar la entrada)'
             : 'Selecciona las fechas de tu estancia'}
         </p>
       </CardHeader>
       <CardContent>
         <Calendar
-          mode="single"
-          selected={selectedDates?.checkIn}
-          onSelect={handleDateSelect}
+          mode="range"
+          selected={selectedRange}
+          onSelect={handleSelect}
           disabled={isDateDisabled}
           locale={es}
+          numberOfMonths={3}
           className="w-full"
           classNames={{
-            day_selected: "bg-orange-500 text-white hover:bg-orange-600",
-            day_today: "bg-orange-100 text-orange-900",
-            day_disabled: "text-gray-400 opacity-50",
+            day_selected: 'bg-orange-500 text-white hover:bg-orange-600',
+            day_range_start: 'bg-orange-500 text-white rounded-l-md',
+            day_range_end: 'bg-orange-500 text-white rounded-r-md',
+            day_range_middle: 'bg-orange-100 text-orange-800 rounded-none',
+            day_today: 'bg-orange-100 text-orange-900 font-semibold',
+            day_disabled: 'text-gray-400 opacity-50',
+            day_outside: 'text-muted-foreground opacity-50',
+          }}
+          modifiers={{
+            range_preview:
+              rangeFrom && hoveredDate
+                ? (date) => isSameDayOrBetween(date, rangeFrom, hoveredDate)
+                : undefined,
+          }}
+          modifiersClassNames={{
+            range_preview: 'bg-orange-100/80 text-orange-800',
+          }}
+          components={{
+            Day: DayWithHover,
           }}
         />
-        
+
         <div className="mt-4 space-y-2 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-500 rounded"></div>
+            <div className="w-4 h-4 bg-orange-500 rounded" />
             <span>Fechas seleccionadas</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-            <span>No disponible</span>
+            <div className="w-4 h-4 bg-orange-100 border border-orange-300 rounded" />
+            <span>Vista previa al pasar el cursor</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-            <span>Disponible</span>
+            <div className="w-4 h-4 bg-red-100 border border-red-300 rounded" />
+            <span>No disponible</span>
           </div>
         </div>
-        
+
         {selectedDates?.checkIn && selectedDates?.checkOut && (
           <div className="mt-4 p-4 bg-orange-50 rounded-lg">
             <h4 className="font-semibold text-orange-900">Fechas seleccionadas:</h4>
             <p className="text-sm text-orange-800">
-              <strong>Entrada:</strong> {format(selectedDates.checkIn, 'dd MMMM yyyy', { locale: es })}
+              <strong>Entrada:</strong>{' '}
+              {format(selectedDates.checkIn, 'dd MMMM yyyy', { locale: es })}
             </p>
             <p className="text-sm text-orange-800">
-              <strong>Salida:</strong> {format(selectedDates.checkOut, 'dd MMMM yyyy', { locale: es })}
+              <strong>Salida:</strong>{' '}
+              {format(selectedDates.checkOut, 'dd MMMM yyyy', { locale: es })}
             </p>
           </div>
         )}
