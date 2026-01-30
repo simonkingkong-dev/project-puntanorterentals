@@ -35,20 +35,30 @@ Una aplicación web full-stack moderna para gestión de propiedades vacacionales
 ## 📁 Estructura del Proyecto
 
 ```
-├── app/                          # App Router de Next.js
-│   ├── api/                      # API Routes
-│   │   └── stripe/              # Endpoints de Stripe
-│   ├── properties/              # Páginas de propiedades
-│   ├── services/                # Página de servicios
-│   ├── payment/                 # Sistema de pagos
-│   └── globals.css              # Estilos globales
-├── components/                   # Componentes React
-│   ├── layout/                  # Componentes de layout
-│   └── ui/                      # Componentes UI reutilizables
-├── lib/                         # Utilidades y configuraciones
-│   ├── firebase/                # Funciones de Firebase
-│   ├── utils/                   # Utilidades generales
-│   └── types.ts                 # Tipos TypeScript
+├── app/
+│   ├── (public)/                # Rutas públicas (Header/Footer)
+│   │   ├── page.tsx             # Inicio
+│   │   ├── contact/ about/ help/ terms/ privacy/ cancellation/
+│   │   ├── properties/          # Listado y detalle por slug
+│   │   ├── services/            # Esqueleto (fuera del menú)
+│   │   └── payment/             # Pago y éxito
+│   ├── admin/                   # Panel de administración (login, propiedades, reservas, etc.)
+│   ├── api/
+│   │   ├── admin/               # login, logout
+│   │   ├── reservations/        # [id], by-payment-intent/[id]
+│   │   └── stripe/             # create-payment-intent, webhook
+│   ├── layout.tsx, not-found.tsx, error.tsx
+│   └── globals.css
+├── components/
+│   ├── layout/                  # header, footer
+│   ├── admin/                   # sidebar, header, image-uploader
+│   └── ui/                      # shadcn + property-card, search-form, reservation-form, etc.
+├── lib/
+│   ├── firebase/                # properties, reservations, services, content, storage
+│   ├── firebase-admin.ts, firebase-admin-queries.ts
+│   ├── auth/admin/              # credenciales y sesión admin
+│   ├── mail.ts, stripe.ts, types.ts, utils/
+│   └── firebase.ts              # Cliente Firebase (singleton)
 ```
 
 ## 🔧 Instalación y Configuración
@@ -56,7 +66,7 @@ Una aplicación web full-stack moderna para gestión de propiedades vacacionales
 ### 1. Clonar el repositorio
 ```bash
 git clone [repository-url]
-cd casa-alkimia
+cd punta-norte-rentals
 ```
 
 ### 2. Instalar dependencias
@@ -187,7 +197,7 @@ service cloud.firestore {
 ## 💳 Integración con Stripe
 
 ### Configuración de Webhooks
-Configura un webhook en Stripe Dashboard apuntando a:
+Configura un **único** webhook en Stripe Dashboard apuntando a:
 ```
 https://your-domain.com/api/stripe/webhook
 ```
@@ -280,7 +290,7 @@ CVC: Cualquier 3 dígitos
 
 ## 📈 Funcionalidades Futuras
 
-- [ ] Panel de administración completo
+- [x] Panel de administración completo (propiedades, reservas, servicios, testimonios, amenidades, contenido, contacto)
 - [ ] Sistema de reviews y calificaciones
 - [ ] Chat en tiempo real con soporte
 - [ ] Integración con calendarios externos
@@ -303,7 +313,7 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 ## 📞 Soporte
 
 Para soporte técnico:
-- Email: dev@casaalkimia.com
+- Email: hola@puntanorterentals.com (o el configurado en el panel Admin > Contacto)
 - Issues: [GitHub Issues](repository-url/issues)
 
 ---

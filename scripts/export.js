@@ -12,7 +12,6 @@ const TO_EXPORT = [
   'components',
   'hooks',
   'lib',
-  '.env.local',
   '.eslintrc.json',
   '.firebaserc',
   '.gitignore',
@@ -28,6 +27,7 @@ const TO_EXPORT = [
   'postcss.config.js',
   'proxy.ts',
   'README.md',
+  'storage.rules',
   'tailwind.config.ts',
   'tsconfig.json',
 ];

@@ -79,3 +79,64 @@ export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
     return [];
   }
 };
+
+// --- RESERVA POR PAYMENT INTENT (para API pública) ---
+export type ReservationWithPropertyTitle = Reservation & { propertyTitle?: string };
+
+export const getReservationByPaymentIntentIdAdmin = async (
+  paymentIntentId: string
+): Promise<ReservationWithPropertyTitle | null> => {
+  try {
+    const snapshot = await adminDb
+      .collection('reservations')
+      .where('stripePaymentId', '==', paymentIntentId)
+      .limit(1)
+      .get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    const propertyId = data.propertyId as string | undefined;
+    let propertyTitle: string | undefined;
+    if (propertyId) {
+      const propSnap = await adminDb.collection('properties').doc(propertyId).get();
+      propertyTitle = propSnap.exists ? (propSnap.data()?.title as string) : undefined;
+    }
+    return {
+      id: doc.id,
+      ...data,
+      checkIn: data.checkIn?.toDate?.() ?? new Date(data.checkIn),
+      checkOut: data.checkOut?.toDate?.() ?? new Date(data.checkOut),
+      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      propertyTitle,
+    } as ReservationWithPropertyTitle;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin: Error fetching reservation by payment intent', error);
+    }
+    return null;
+  }
+};
+
+// --- DISPONIBILIDAD DE PROPIEDAD (para webhook Stripe) ---
+/**
+ * Marca un rango de fechas como disponibles o no en una propiedad.
+ * Usado por el webhook cuando se confirma un pago para bloquear fechas.
+ */
+export const updatePropertyAvailabilityAdmin = async (
+  propertyId: string,
+  dates: string[],
+  available: boolean
+): Promise<void> => {
+  const propertyRef = adminDb.collection('properties').doc(propertyId);
+  const snap = await propertyRef.get();
+  if (!snap.exists) {
+    throw new Error(`Property ${propertyId} not found`);
+  }
+  const current = (snap.data()?.availability as Record<string, boolean>) || {};
+  const updated = { ...current };
+  dates.forEach((d) => (updated[d] = available));
+  await propertyRef.update({
+    availability: updated,
+    updatedAt: new Date(),
+  });
+};

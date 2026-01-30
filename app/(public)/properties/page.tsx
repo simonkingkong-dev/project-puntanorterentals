@@ -52,7 +52,9 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
       properties = await getProperties();
     }
   } catch (error) {
-    console.error("Error fetching properties:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("[Properties]", error);
+    }
     properties = [];
   }
 

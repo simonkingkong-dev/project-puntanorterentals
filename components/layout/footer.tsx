@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import { getContactInfo } from '@/lib/firebase/content';
 
-export default function Footer() {
+export default async function Footer() {
+  const contact = await getContactInfo();
+  const social = contact?.socialMedia ?? {};
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -21,15 +25,27 @@ export default function Footer() {
               Propiedades vacacionales excepcionales que crean recuerdos inolvidables.
             </p>
             <div className="flex space-x-4">
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Facebook className="w-5 h-5" />
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram className="w-5 h-5" />
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="w-5 h-5" />
-              </Link>
+              {social.facebook ? (
+                <Link href={social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
+                  <Facebook className="w-5 h-5" />
+                </Link>
+              ) : (
+                <span className="text-gray-500"><Facebook className="w-5 h-5" /></span>
+              )}
+              {social.instagram ? (
+                <Link href={social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
+                  <Instagram className="w-5 h-5" />
+                </Link>
+              ) : (
+                <span className="text-gray-500"><Instagram className="w-5 h-5" /></span>
+              )}
+              {social.twitter ? (
+                <Link href={social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Twitter">
+                  <Twitter className="w-5 h-5" />
+                </Link>
+              ) : (
+                <span className="text-gray-500"><Twitter className="w-5 h-5" /></span>
+              )}
             </div>
           </div>
 
@@ -40,11 +56,6 @@ export default function Footer() {
               <li>
                 <Link href="/properties" className="text-gray-400 hover:text-white transition-colors">
                   Propiedades
-                </Link>
-              </li>
-              <li>
-                <Link href="/services" className="text-gray-400 hover:text-white transition-colors">
-                  Experiencias
                 </Link>
               </li>
               <li>
@@ -92,16 +103,24 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Contacto</h3>
             <ul className="space-y-3">
               <li className="flex items-center space-x-3">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">Isla Mujeres, México</span>
+                <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-gray-400 text-sm">{contact?.address ?? '—'}</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">+52 998 401 3206</span>
+                <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                {contact?.phone ? (
+                  <a href={`tel:${contact.phone}`} className="text-gray-400 text-sm hover:text-white">{contact.phone}</a>
+                ) : (
+                  <span className="text-gray-400 text-sm">—</span>
+                )}
               </li>
               <li className="flex items-center space-x-3">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400 text-sm">hola@puntanorterentals.com</span>
+                <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                {contact?.email ? (
+                  <a href={`mailto:${contact.email}`} className="text-gray-400 text-sm hover:text-white">{contact.email}</a>
+                ) : (
+                  <span className="text-gray-400 text-sm">—</span>
+                )}
               </li>
             </ul>
           </div>
@@ -110,7 +129,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2025 Punta Norte Rentals. Todos los derechos reservados.
+              {contact?.copyright ?? '© 2025 Punta Norte Rentals. Todos los derechos reservados.'}
             </p>
             <p className="text-gray-400 text-sm mt-2 md:mt-0">
               Creado con ❤️ para viajeros excepcionales

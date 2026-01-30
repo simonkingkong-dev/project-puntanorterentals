@@ -3,15 +3,30 @@ import { Reservation } from './types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: true, // true para 465, false para otros puertos
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+function getTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !port || !user || !pass) {
+    throw new Error(
+      'Variables de email faltantes. Añade SMTP_HOST, SMTP_PORT, SMTP_USER y SMTP_PASS en .env.local (ver .env.local.example).'
+    );
+  }
+  return nodemailer.createTransport({
+    host,
+    port: Number(port),
+    secure: true,
+    auth: { user, pass },
+  });
+}
+
+let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
+
+function getOrCreateTransporter() {
+  if (!transporter) transporter = getTransporter();
+  return transporter;
+}
 
 export async function sendConfirmationEmail(reservation: Reservation) {
   const { guestName, guestEmail, checkIn, checkOut, totalAmount, id } = reservation;
@@ -19,8 +34,9 @@ export async function sendConfirmationEmail(reservation: Reservation) {
   const formattedCheckIn = format(new Date(checkIn), "d 'de' MMMM, yyyy", { locale: es });
   const formattedCheckOut = format(new Date(checkOut), "d 'de' MMMM, yyyy", { locale: es });
 
+  const transport = getOrCreateTransporter();
   try {
-    await transporter.sendMail({
+    await transport.sendMail({
       from: `"Punta Norte Rentals" <${process.env.SMTP_USER}>`,
       to: guestEmail,
       subject: "¡Tu reserva está confirmada! 🌴",
@@ -43,9 +59,11 @@ export async function sendConfirmationEmail(reservation: Reservation) {
         </div>
       `,
     });
-    console.log(`Email de confirmación enviado a ${guestEmail}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Mail] Confirmación enviada a ${guestEmail}`);
+    }
   } catch (error) {
-    console.error("Error enviando email:", error);
+    console.error('[Mail] Error enviando email:', error);
     // No lanzamos error para no romper el flujo del webhook, pero lo registramos
   }
 }

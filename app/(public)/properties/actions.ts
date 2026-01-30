@@ -3,11 +3,13 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { Reservation } from "@/lib/types";
 
-// Definimos los datos que esperamos recibir del formulario
-// Omitimos campos que el servidor genera (id, status, fechas de creación)
-type CreateReservationData = Omit<Reservation, 'id' | 'createdAt' | 'status' | 'stripePaymentId'>;
+/** Datos que el formulario envía; el servidor genera id, status, createdAt, stripePaymentId */
+export type CreateReservationInput = Omit<
+  Reservation,
+  'id' | 'createdAt' | 'status' | 'stripePaymentId'
+>;
 
-export async function handleCreatePublicReservation(data: CreateReservationData) {
+export async function handleCreatePublicReservation(data: CreateReservationInput) {
   try {
     // 1. Validar datos básicos (opcional pero recomendado)
     if (!data.propertyId || !data.guestEmail || !data.totalAmount) {
@@ -32,8 +34,11 @@ export async function handleCreatePublicReservation(data: CreateReservationData)
     // 4. Retornar el ID para que el front-end pueda iniciar el pago
     return { success: true, reservationId: docRef.id };
 
-  } catch (error: any) {
-    console.error("Error creating public reservation:", error);
-    return { success: false, error: error.message || "Error al procesar la reserva" };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error al procesar la reserva";
+    if (process.env.NODE_ENV === 'development') {
+      console.error("[handleCreatePublicReservation]", error);
+    }
+    return { success: false, error: message };
   }
 }

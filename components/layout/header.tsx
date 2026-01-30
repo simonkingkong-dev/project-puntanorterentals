@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Home, Building, Compass } from 'lucide-react';
+import { Menu, Home, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Propiedades', href: '/properties', icon: Building },
-  { name: 'Experiencias', href: '/services', icon: Compass },
 ];
 
 export default function Header() {

@@ -1,21 +1,18 @@
-// Archivo: app/api/reservations/by-payment-intent/[id]/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getReservationByPaymentIntentId } from '@/lib/firebase/reservations';
+import { getReservationByPaymentIntentIdAdmin } from '@/lib/firebase-admin-queries';
 
 export async function GET(
-  request: NextRequest, 
-  context: { params: Promise<{ id: string }> } // CORREGIDO: params es una Promesa
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  // CORREGIDO: Esperamos la promesa antes de usar el ID
-  const { id } = await context.params; 
+  const { id } = await context.params;
 
   if (!id) {
     return NextResponse.json({ error: 'Payment Intent ID es requerido' }, { status: 400 });
   }
 
   try {
-    const reservation = await getReservationByPaymentIntentId(id);
+    const reservation = await getReservationByPaymentIntentIdAdmin(id);
 
     if (!reservation) {
       return NextResponse.json({ error: 'Reservación no encontrada' }, { status: 404 });

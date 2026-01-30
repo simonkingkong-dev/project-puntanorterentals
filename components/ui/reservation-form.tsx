@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { calculateNights } from '@/lib/utils/date';
-import { handleCreatePublicReservation } from '@/app/(public)/properties/actions';
+import { handleCreatePublicReservation, type CreateReservationInput } from '@/app/(public)/properties/actions';
 import { updatePropertyAvailability } from '@/lib/firebase/properties';
 import { generateDateRange } from '@/lib/utils/date';
 import { CreditCard, Loader2, Users, Calendar } from 'lucide-react';
@@ -103,9 +103,9 @@ export default function ReservationForm({
       
       onReservationComplete?.();
 
-    } catch (error: any) {
-      console.error('Error creating reservation:', error);
-      toast.error(error.message || 'Error al crear la reserva. Por favor intenta nuevamente.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al crear la reserva. Por favor intenta nuevamente.';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

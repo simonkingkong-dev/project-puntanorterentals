@@ -1,6 +1,3 @@
-console.log("DEBUG ENV:", process.env.FIREBASE_PRIVATE_KEY ? "CARGADA" : "VACÍA");
-console.log("DEBUG PATH:", process.cwd()); // Te dirá desde dónde se está ejecutando
-
 import "server-only";
 import admin from 'firebase-admin';
 
@@ -50,3 +47,11 @@ const adminApp = createFirebaseAdminApp({
 export const adminDb = adminApp.firestore();
 export const adminAuth = adminApp.auth();
 export const adminStorage = adminApp.storage();
+
+// Debug solo en desarrollo (opcional; útil al configurar Firebase por primera vez)
+if (process.env.NODE_ENV === 'development' && typeof process !== 'undefined') {
+  const hasKey = Boolean(process.env.FIREBASE_PRIVATE_KEY);
+  if (!hasKey) {
+    console.warn('[Firebase Admin] FIREBASE_PRIVATE_KEY no está definida. El admin fallará en rutas que la usen.');
+  }
+}

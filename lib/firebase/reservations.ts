@@ -125,7 +125,9 @@ export const getReservationByPaymentIntentId = async (paymentIntentId: string): 
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
-      console.warn(`No reservation found for paymentIntentId: ${paymentIntentId}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[Reservations] No reservation for paymentIntentId: ${paymentIntentId}`);
+      }
       return null;
     }
     

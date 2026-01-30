@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // CORREGIDO: Usamos la misma versión que en el webhook para evitar errores de TS
-  apiVersion: '2025-08-27.basil' as any,
-});
+import { stripe } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
     const { amount, currency = 'usd', reservationId } = await request.json();
 
-    // Validate amount
-    if (!amount || amount < 50) {
+    // Validate amount (Stripe minimum is $0.50 USD)
+    if (!amount || amount < 0.5) {
       return NextResponse.json(
         { error: 'El monto debe ser de al menos $0.50 USD' },
         { status: 400 }

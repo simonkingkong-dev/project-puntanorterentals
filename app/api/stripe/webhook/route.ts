@@ -1,14 +1,12 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
+import { stripe } from '@/lib/stripe';
 import { adminDb } from '@/lib/firebase-admin';
 import { sendConfirmationEmail } from '@/lib/mail';
 import { Reservation } from '@/lib/types';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // CORREGIDO: Actualizamos la versión a la que exige tu librería instalada
-  apiVersion: '2025-08-27.basil' as any, 
-});
+import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
+import { generateDateRange } from '@/lib/utils/date';
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -20,9 +18,12 @@ export async function POST(request: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
-  } catch (err: any) {
-    console.error(`Webhook Error: ${err.message}`);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid signature';
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Stripe Webhook]', err);
+    }
+    return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
 
   // Manejar el evento
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
 
     if (reservationId) {
       try {
-        console.log(`Procesando reserva: ${reservationId}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Webhook] Procesando reserva: ${reservationId}`);
+        }
 
         // 1. Actualizar estado a 'confirmed' usando Admin SDK
         const reservationRef = adminDb.collection('reservations').doc(reservationId);
@@ -47,19 +50,32 @@ export async function POST(request: Request) {
         const reservationSnap = await reservationRef.get();
         
         if (reservationSnap.exists) {
+          const data = reservationSnap.data()!;
+          const checkIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
+          const checkOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+          const propertyId = data.propertyId as string;
+
           const reservationData = {
              id: reservationSnap.id,
-             ...reservationSnap.data(),
-             checkIn: reservationSnap.data()?.checkIn.toDate(),
-             checkOut: reservationSnap.data()?.checkOut.toDate(),
-             createdAt: reservationSnap.data()?.createdAt.toDate(),
+             ...data,
+             checkIn,
+             checkOut,
+             createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
           } as Reservation;
 
-          // 3. Enviar correo
+          // 3. Bloquear fechas en la propiedad
+          if (propertyId) {
+            const dateStrings = generateDateRange(checkIn, checkOut);
+            await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+          }
+
+          // 4. Enviar correo
           await sendConfirmationEmail(reservationData);
         }
 
-        console.log(`Reserva ${reservationId} confirmada y correo enviado.`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Webhook] Reserva ${reservationId} confirmada.`);
+        }
       } catch (error) {
         console.error('Error actualizando reserva:', error);
         return NextResponse.json({ error: 'Error updating reservation' }, { status: 500 });

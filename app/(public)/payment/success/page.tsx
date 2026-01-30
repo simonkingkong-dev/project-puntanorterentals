@@ -12,46 +12,79 @@ import { Reservation } from '@/lib/types'; // Importamos el tipo
 import { format } from 'date-fns'; // Para formatear fechas
 import { es } from 'date-fns/locale';
 
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
-  
-  // CORREGIDO: Usamos 'useState' para los datos de la reserva
-  const [reservationData, setReservationData] = useState<Reservation | null>(null);
+  const [reservationData, setReservationData] = useState<(Reservation & { propertyTitle?: string }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
-    if (paymentIntentId) {
-      // Función para fetchear los datos de la reserva
-      const fetchReservation = async () => {
-        try {
-          const response = await fetch(`/api/reservations/by-payment-intent/${paymentIntentId}`);
-          if (!response.ok) {
-            throw new Error('No pudimos encontrar los detalles de tu reservación.');
-          }
-          const data: Reservation = await response.json();
-          setReservationData(data);
-        } catch (err: any) {
-          setError(err.message || 'Ocurrió un error.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      fetchReservation();
-    } else {
+    if (!paymentIntentId) {
       setError('ID de pago no encontrado.');
       setLoading(false);
+      return;
     }
+
+    const fetchReservation = async () => {
+      try {
+        const response = await fetch(`/api/reservations/by-payment-intent/${paymentIntentId}`);
+        if (!response.ok) {
+          if (response.status === 404) return null;
+          throw new Error('No pudimos encontrar los detalles de tu reservación.');
+        }
+        return (await response.json()) as Reservation & { propertyTitle?: string };
+      } catch {
+        return null;
+      }
+    };
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const tryOnce = async (attempt: number) => {
+      const data = await fetchReservation();
+      if (cancelled) return;
+      if (data) {
+        setReservationData(data);
+        setLoading(false);
+        setPolling(false);
+        return;
+      }
+      if (attempt >= POLL_MAX_ATTEMPTS - 1) {
+        setError('La confirmación está tardando más de lo habitual. Revisa tu correo; si el pago fue exitoso, recibirás la confirmación ahí.');
+        setLoading(false);
+        setPolling(false);
+        return;
+      }
+      setPolling(true);
+      timeoutId = setTimeout(() => tryOnce(attempt + 1), POLL_INTERVAL_MS);
+    };
+
+    tryOnce(0);
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [paymentIntentId]);
 
-  // Estado de Carga
+  // Estado de Carga (inicial o polling)
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-gray-400 mb-4" />
-        <p className="text-lg text-gray-600">Cargando confirmación...</p>
+        <p className="text-lg text-gray-600">
+          {polling ? 'Procesando tu pago... Un momento.' : 'Cargando confirmación...'}
+        </p>
+        {polling && (
+          <p className="text-sm text-gray-500 mt-2">
+            El webhook puede tardar unos segundos en confirmar la reserva.
+          </p>
+        )}
       </div>
     );
   }
@@ -97,9 +130,7 @@ function SuccessContent() {
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">
-              {/* NOTA: Para el título de la propiedad, necesitaríamos otro fetch o incluirlo en el objeto Reservation */}
-              {/* Por ahora, mostramos el ID de la propiedad */}
-              Propiedad ID: ...{reservationData.propertyId.slice(-10)}
+              {reservationData.propertyTitle ?? `Propiedad ...${reservationData.propertyId.slice(-8)}`}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

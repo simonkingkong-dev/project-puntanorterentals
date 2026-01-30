@@ -5,207 +5,176 @@ import { Button } from '@/components/ui/button';
 import SearchForm from '@/components/ui/search-form';
 import PropertyCard from '@/components/ui/property-card';
 import ServiceCard from '@/components/ui/service-card';
-// CORREGIDO: Nos aseguramos de que las funciones reales estén importadas
 import { getFeaturedProperties } from '@/lib/firebase/properties';
 import { getFeaturedServices } from '@/lib/firebase/services';
 
-// CORREGIDO: Ya no necesitamos los datos mock, por lo que se pueden eliminar.
-// const mockFeaturedProperties = [ ... ];
-// const mockFeaturedServices = [ ... ];
+export const dynamic = 'force-dynamic'; // Asegura que se obtengan datos frescos en cada request
 
 /**
  * Renders the home page with featured properties, services, and promotional sections.
- * @example
- * HomePage()
- * <JSX.Element>
- * @param None
- * @returns {JSX.Element} The JSX layout of the home page, including hero, featured properties, services, and call-to-action sections.
  */
 export default async function HomePage() {
-  // CORREGIDO: Reemplazamos los datos mock por llamadas asíncronas a Firebase.
-  const featuredProperties = await getFeaturedProperties();
-  const featuredServices = await getFeaturedServices();
+  // Ejecutamos las peticiones en paralelo para mejorar la velocidad de carga
+  const [featuredProperties, featuredServices] = await Promise.all([
+    getFeaturedProperties().catch((err) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("[Home] Error fetching properties:", err);
+      }
+      return [];
+    }),
+    getFeaturedServices().catch((err) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("[Home] Error fetching services:", err);
+      }
+      return [];
+    })
+  ]);
 
   return (
-    <div className="space-y-20">
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-screen">
+      <section className="relative h-[600px] flex items-center justify-center">
         <div className="absolute inset-0">
           <Image
-            src="https://images.pexels.com/photos/1179156/pexels-photo-1179156.jpeg"
-            alt="Vista panorámica de playa tropical"
+            src="https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=2070&auto=format&fit=crop"
+            alt="Punta Norte Hero"
             fill
-            className="object-cover"
+            className="object-cover brightness-50"
             priority
           />
-          <div className="absolute inset-0 bg-black/40" />
         </div>
-        
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-white px-4">
-          <div className="text-center space-y-6 mb-12">
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-              Descubre Tu
-              <span className="block bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
-                Escape Perfecto
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto text-gray-200">
-              Propiedades vacacionales excepcionales en los destinos más hermosos. 
-              Crea recuerdos que durarán toda la vida.
-            </p>
-          </div>
-
-          {/* Search Form */}
-          <SearchForm />
-
-          {/* Stats */}
-          {/* NOTA: Estos números (16, 500+, 4.9) siguen siendo estáticos. */}
-          {/* Más adelante, podríamos hacer que "16" sea dinámico contando las propiedades. */}
-          <div className="grid grid-cols-3 gap-8 mt-12 text-center">
-            <div>
-              <div className="text-3xl font-bold">16</div>
-              <div className="text-sm text-gray-300">Propiedades Únicas</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold">500+</div>
-              <div className="text-sm text-gray-300">huéspedes Felices</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold">4.9</div>
-              <div className="text-sm text-gray-300 flex items-center justify-center gap-1">
-                <Star className="w-4 h-4 fill-current" />
-                Calificación
-              </div>
-            </div>
+        <div className="relative z-10 container mx-auto px-4 text-center text-white">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Vive el lujo en Punta Norte
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
+            Descubre propiedades vacacionales y servicios premium para tu estancia perfecta.
+          </p>
+          <div className="bg-white/10 backdrop-blur-md p-6 rounded-lg max-w-4xl mx-auto">
+            <SearchForm />
           </div>
         </div>
       </section>
 
-      {/* Featured Properties */}
-      {/* CORREGIDO: Ahora 'featuredProperties' viene de Firebase */}
-      {featuredProperties.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Propiedades Destacadas
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Selecciona entre nuestras propiedades más populares, cada una cuidadosamente 
-              elegida para ofrecerte una experiencia inolvidable.
-            </p>
+      {/* Featured Properties Section */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-3xl font-bold mb-4">Propiedades destacadas</h2>
+              <p className="text-muted-foreground max-w-2xl">
+                Explora nuestra selección de alojamientos premium, con las mejores amenidades y ubicaciones.
+              </p>
+            </div>
+            <Link href="/properties">
+              <Button variant="outline" className="hidden md:flex">
+                Ver todas las propiedades <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {featuredProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
+          {featuredProperties.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredProperties.map((property) => (
+                <PropertyCard key={property.id} property={property} />
+              ))}
+            </div>
+          ) : (
+             <div className="text-center py-12 border rounded-lg bg-muted/20">
+                <p className="text-muted-foreground">No hay propiedades destacadas en este momento.</p>
+             </div>
+          )}
+          
+          <div className="mt-8 text-center md:hidden">
+            <Link href="/properties">
+              <Button variant="outline" className="w-full">
+                Ver todas las propiedades <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
+        </div>
+      </section>
 
-          <div className="text-center">
-            <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-              <Link href="/properties">
-                Ver Todas las Propiedades
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-      )}
-
-      {/* Features Section */}
-      <section className="bg-gradient-to-r from-orange-50 to-red-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Services Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              ¿Por Qué Elegirnos?
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Nos dedicamos a crear experiencias excepcionales que van más allá del alojamiento tradicional.
+            <h2 className="text-3xl font-bold mb-4">Premium Services</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Enhance your stay with our curated selection of concierge services and experiences.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <MapPin className="w-8 h-8 text-white" />
+          {featuredServices.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredServices.map((service) => (
+                <ServiceCard key={service.id} service={service} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Services currently being updated.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Trust/Info Section */}
+      <section className="py-20 bg-primary text-primary-foreground">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div className="space-y-4">
+              <div className="bg-primary-foreground/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                <Star className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">Ubicaciones Premium</h3>
-              <p className="text-gray-600">
-                Propiedades estratégicamente ubicadas en los destinos más deseados, 
-                con acceso privilegiado a las mejores atracciones.
+              <h3 className="text-xl font-bold">Calidad premium</h3>
+              <p className="text-primary-foreground/80">
+                Cada propiedad es revisada en persona para garantizar el máximo confort y lujo.
               </p>
             </div>
-
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Star className="w-8 h-8 text-white" />
+            <div className="space-y-4">
+              <div className="bg-primary-foreground/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                <Users className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">Calidad Garantizada</h3>
-              <p className="text-gray-600">
-                Cada propiedad es cuidadosamente seleccionada e inspeccionada para 
-                asegurar los más altos estándares de calidad y comodidad.
+              <h3 className="text-xl font-bold">Conserjería 24/7</h3>
+              <p className="text-primary-foreground/80">
+                Nuestro equipo está disponible en todo momento para ayudarte con lo que necesites.
               </p>
             </div>
-
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Users className="w-8 h-8 text-white" />
+            <div className="space-y-4">
+              <div className="bg-primary-foreground/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                <MapPin className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">Servicio Personalizado</h3>
-              <p className="text-gray-600">
-                Nuestro equipo está disponible 24/7 para asegurar que tu experiencia 
-                sea perfecta desde el momento de la reserva hasta tu partida.
+              <h3 className="text-xl font-bold">Ubicaciones privilegiadas</h3>
+              <p className="text-primary-foreground/80">
+                En las zonas más deseadas, con vistas increíbles y fácil acceso a atracciones locales.
               </p>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Featured Services */}
-      {/* CORREGIDO: Ahora 'featuredServices' viene de Firebase */}
-      {featuredServices.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Experiencias Únicas
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Complementa tu estancia con experiencias locales auténticas y memorables.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {featuredServices.map((service) => (
-              <ServiceCard key={service.id} service={service} />
-            ))}
-          </div>
-
-          <div className="text-center">
-            <Button asChild variant="outline" size="lg">
-              <Link href="/services">
-                Ver Todas las Experiencias
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-      )}
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-gray-900 to-black py-20">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            ¿Listo Para Tu Próxima Aventura?
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            ¿Listo para una experiencia inolvidable?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Descubre propiedades increíbles y comienza a planificar el viaje de tus sueños hoy mismo.
+          <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
+            Reserva tu alojamiento soñado hoy o contáctanos para planear tu escapada perfecta.
           </p>
-          <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/properties">
-              Explorar Propiedades
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <Button size="lg" className="w-full sm:w-auto">
+                Ver propiedades
+              </Button>
             </Link>
-          </Button>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                Contactar
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
     </div>
