@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,15 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { calculateNights } from '@/lib/utils/date';
-import { handleCreatePublicReservation, type CreateReservationInput } from '@/app/(public)/properties/actions';
-import { updatePropertyAvailability } from '@/lib/firebase/properties';
-import { generateDateRange } from '@/lib/utils/date';
-import { CreditCard, Loader2, Users, Calendar } from 'lucide-react';
+import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
+import { useCart } from '@/lib/cart-context';
+import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+
+function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
+  return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+}
 
 interface ReservationFormProps {
   property: Property;
-  selectedDates?: { checkIn: Date; checkOut: Date };
+  selectedDates?: { checkIn?: Date; checkOut?: Date };
   onReservationComplete?: () => void;
 }
 
@@ -37,7 +41,10 @@ export default function ReservationForm({
   onReservationComplete 
 }: ReservationFormProps) {
   const router = useRouter();
+  const { cart, setDraft } = useCart();
   const [isLoading, setIsLoading] = useState(false);
+  const [datesUnavailable, setDatesUnavailable] = useState(false);
+  const [showOverlapMessage, setShowOverlapMessage] = useState(false);
   const [formData, setFormData] = useState({
     guestName: '',
     guestEmail: '',
@@ -45,7 +52,13 @@ export default function ReservationForm({
     guests: 1,
   });
 
-  const nights = selectedDates ? calculateNights(selectedDates.checkIn, selectedDates.checkOut) : 0;
+  const hasFullRange = Boolean(selectedDates?.checkIn && selectedDates?.checkOut);
+  const nights = hasFullRange && selectedDates ? calculateNights(selectedDates.checkIn!, selectedDates.checkOut!) : 0;
+
+  useEffect(() => {
+    setDatesUnavailable(false);
+    setShowOverlapMessage(false);
+  }, [selectedDates?.checkIn?.getTime(), selectedDates?.checkOut?.getTime()]);
   const subtotal = nights * property.pricePerNight;
   const fees = Math.round(subtotal * 0.1); // 10% service fee
   const total = subtotal + fees;
@@ -61,7 +74,7 @@ export default function ReservationForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDates) {
+    if (!hasFullRange || !selectedDates?.checkIn || !selectedDates?.checkOut) {
       toast.error('Por favor selecciona las fechas de tu estancia');
       return;
     }
@@ -71,53 +84,99 @@ export default function ReservationForm({
       return;
     }
 
+    const cartItemsWithSameProperty = cart?.filter((c) => c.propertyId === property.id && c.checkIn && c.checkOut) ?? [];
+    for (const c of cartItemsWithSameProperty) {
+      const cartStart = new Date(c.checkIn);
+      const cartEnd = new Date(c.checkOut);
+      if (dateRangesOverlap(selectedDates.checkIn, selectedDates.checkOut, cartStart, cartEnd)) {
+        setShowOverlapMessage(true);
+        return;
+      }
+    }
+
     setIsLoading(true);
+    setDatesUnavailable(false);
+    setShowOverlapMessage(false);
 
     try {
-      // 1. Llamar a la Server Action (Backend Seguro)
-      const result = await handleCreatePublicReservation({
+      const { available } = await checkPropertyAvailability(
+        property.id,
+        selectedDates.checkIn,
+        selectedDates.checkOut
+      );
+      if (!available) {
+        setDatesUnavailable(true);
+        setIsLoading(false);
+        return;
+      }
+
+      setDraft({
         propertyId: property.id,
+        slug: property.slug,
+        checkIn: selectedDates.checkIn.toISOString(),
+        checkOut: selectedDates.checkOut.toISOString(),
+        guests: formData.guests,
         guestName: formData.guestName,
         guestEmail: formData.guestEmail,
         guestPhone: formData.guestPhone,
-        checkIn: selectedDates.checkIn,
-        checkOut: selectedDates.checkOut,
-        guests: formData.guests,
         totalAmount: total,
-        // status, stripePaymentId y createdAt se manejan en el servidor
-      } as any); // Type cast rápido para evitar conflictos de tipos estrictos por ahora
-
-      if (!result.success || !result.reservationId) {
-        throw new Error(result.error);
-      }
-
-      // 2. Bloquear fechas (Esto idealmente también debería ser server-side, 
-      // pero por ahora dejémoslo aquí o el server action no bloqueará visualmente al instante)
-      // NOTA: Para producción real, mueve esto al Server Action también.
-      // Por ahora, asumimos que el webhook de Stripe confirmará y bloqueará definitivamente.
-
-      toast.success('Reserva creada. Redirigiendo al pago...');
-      
-      // 3. Redirigir al pago con el ID generado por el servidor
-      router.push(`/payment?reservation=${result.reservationId}`);
-      
+      });
+      toast.success('Redirigiendo al pago...');
+      router.push('/payment');
       onReservationComplete?.();
-
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Error al crear la reserva. Por favor intenta nuevamente.';
+      const message = error instanceof Error ? error.message : 'Error al preparar la reserva. Por favor intenta nuevamente.';
       toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!selectedDates) {
+  if (!selectedDates?.checkIn || !selectedDates?.checkOut) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center py-8">
             <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600">Selecciona las fechas en el calendario para continuar</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (datesUnavailable) {
+    return (
+      <Card className="border-amber-200 bg-amber-50">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-10 w-10 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-900">Las fechas no están disponibles</p>
+              <p className="text-sm text-amber-800 mt-1">Pueden estar reservadas o confirmadas por otro huésped. Elige otras fechas para esta propiedad.</p>
+              <Button asChild className="mt-4">
+                <Link href={`/properties/${property.slug}`}>Ir a la propiedad</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (showOverlapMessage) {
+    return (
+      <Card className="border-orange-200 bg-orange-50">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-3">
+            <ShoppingCart className="h-10 w-10 text-orange-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-orange-900">Ya tienes una reserva similar</p>
+              <p className="text-sm text-orange-800 mt-1">Las fechas que elegiste se superponen con una reserva que ya tienes en el carrito (en proceso o en hold). ¿Quieres continuar con esa reserva?</p>
+              <Button asChild className="mt-4 bg-orange-500 hover:bg-orange-600">
+                <Link href="/cart">Continuar al carrito</Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -238,10 +297,10 @@ export default function ReservationForm({
           </Button>
         </form>
 
-        <div className="text-xs text-gray-600 space-y-1">
-          <p>• No se cobrará hasta confirmar la reserva</p>
-          <p>• Cancelación gratuita 24 horas antes</p>
-          <p>• Confirmación inmediata por email</p>
+        <div className="text-xs text-gray-600 space-y-1.5">
+          <p>• Tu reserva queda confirmada al completar el pago de forma segura.</p>
+          <p>• Puedes cancelar sin costo hasta 2 horas después de pagar; después aplican las políticas de cancelación.</p>
+          <p>• Te enviamos la confirmación por email al instante.</p>
         </div>
       </CardContent>
     </Card>

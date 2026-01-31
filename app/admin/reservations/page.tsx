@@ -1,13 +1,13 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Edit, Trash2, Filter, Calendar } from 'lucide-react';
-// CORREGIDO: Usar Admin Query
+import { Plus } from 'lucide-react';
 import { getAdminReservations } from '@/lib/firebase-admin-queries';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import ReservationRowActions from './reservation-row-actions';
 
 // CORREGIDO: Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
@@ -64,12 +64,13 @@ export default async function AdminReservationsPage() {
                   <TableHead>Fechas</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reservations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">No hay reservaciones.</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center">No hay reservaciones.</TableCell>
                   </TableRow>
                 ) : (
                   reservations.map((reservation) => (
@@ -87,7 +88,10 @@ export default async function AdminReservationsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">${reservation.totalAmount}</TableCell>
-                      <TableCell>{getStatusBadge(reservation.status)}</TableCell>
+                      <TableCell>{getStatusBadge(reservation.status, reservation)}</TableCell>
+                      <TableCell className="text-right">
+                        <ReservationRowActions reservationId={reservation.id} status={reservation.status} />
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

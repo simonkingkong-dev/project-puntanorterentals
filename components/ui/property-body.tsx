@@ -27,8 +27,9 @@ interface PropertyBodyProps {
 }
 
 export default function PropertyBody({ property }: PropertyBodyProps) {
-  // AQUÍ ESTÁ LA SOLUCIÓN: El estado vive en el cliente
-  const [selectedDates, setSelectedDates] = useState<{ checkIn: Date; checkOut: Date } | undefined>();
+  const [selectedDates, setSelectedDates] = useState<{ checkIn: Date; checkOut?: Date } | undefined>();
+
+  // El borrador se añade al carrito solo al hacer "Continuar al Pago" desde el formulario.
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

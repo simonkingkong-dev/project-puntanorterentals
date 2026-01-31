@@ -2,43 +2,162 @@
 
 import { adminDb } from "@/lib/firebase-admin";
 import { Reservation } from "@/lib/types";
+import { generateDateRange } from "@/lib/utils/date";
 
-/** Datos que el formulario envía; el servidor genera id, status, createdAt, stripePaymentId */
+const PENDING_RESERVATION_MINUTES = 10;
+
+/** Datos que el formulario envía; el servidor genera id, status, createdAt, stripePaymentId, expiresAt, clientToken, datesHeld */
 export type CreateReservationInput = Omit<
   Reservation,
-  'id' | 'createdAt' | 'status' | 'stripePaymentId'
+  'id' | 'createdAt' | 'status' | 'stripePaymentId' | 'expiresAt' | 'clientToken' | 'datesHeld'
 >;
 
-export async function handleCreatePublicReservation(data: CreateReservationInput) {
+/** Parámetro adicional: token del cliente desde la cookie (mismo huésped). Si hay reserva pendiente del mismo huésped con fechas superpuestas, se libera antes de crear la nueva. */
+export type CreateReservationOptions = CreateReservationInput & { existingClientToken?: string };
+
+function dateRangesOverlap(
+  aStart: Date,
+  aEnd: Date,
+  bStart: Date,
+  bEnd: Date
+): boolean {
+  return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+}
+
+/** Libera reservas pendientes del mismo huésped (mismo clientToken) para la misma propiedad con fechas superpuestas. */
+async function releaseSameGuestOverlappingPending(
+  propertyId: string,
+  newCheckIn: Date,
+  newCheckOut: Date,
+  existingClientToken: string
+) {
+  const { releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
+  const snapshot = await adminDb
+    .collection("reservations")
+    .where("propertyId", "==", propertyId)
+    .where("status", "==", "pending")
+    .where("clientToken", "==", existingClientToken)
+    .get();
+
+  for (const doc of snapshot.docs) {
+    const d = doc.data();
+    const resCheckIn = d.checkIn?.toDate?.() ?? new Date(d.checkIn);
+    const resCheckOut = d.checkOut?.toDate?.() ?? new Date(d.checkOut);
+    if (dateRangesOverlap(newCheckIn, newCheckOut, resCheckIn, resCheckOut)) {
+      try {
+        await releasePendingReservationAdmin(doc.id);
+      } catch {
+        // ignore per-reservation
+      }
+    }
+  }
+}
+
+export async function handleCreatePublicReservation(
+  options: CreateReservationOptions
+) {
+  const { existingClientToken, ...data } = options;
   try {
-    // 1. Validar datos básicos (opcional pero recomendado)
     if (!data.propertyId || !data.guestEmail || !data.totalAmount) {
       throw new Error("Faltan datos obligatorios para la reserva");
     }
 
-    // 2. Preparar el objeto para Firestore
-    // Convertimos las fechas a objetos Date nativos si vienen como strings, 
-    // aunque desde el componente ya deberían ser Date.
+    const checkIn = new Date(data.checkIn);
+    const checkOut = new Date(data.checkOut);
+
+    if (existingClientToken?.trim()) {
+      await releaseSameGuestOverlappingPending(
+        data.propertyId,
+        checkIn,
+        checkOut,
+        existingClientToken.trim()
+      );
+    }
+
+    const expiresAt = new Date(Date.now() + PENDING_RESERVATION_MINUTES * 60 * 1000);
+    const clientToken = crypto.randomUUID();
+
     const newReservation = {
       ...data,
-      status: 'pending', // Siempre nace pendiente de pago
+      status: 'pending',
       createdAt: new Date(),
-      // Aseguramos que checkIn/checkOut sean fechas válidas
-      checkIn: new Date(data.checkIn),
-      checkOut: new Date(data.checkOut),
+      checkIn,
+      checkOut,
+      expiresAt,
+      clientToken,
     };
 
-    // 3. Escribir en Firestore usando Admin SDK (Se salta las reglas de seguridad)
     const docRef = await adminDb.collection('reservations').add(newReservation);
 
-    // 4. Retornar el ID para que el front-end pueda iniciar el pago
-    return { success: true, reservationId: docRef.id };
-
+    return { success: true, reservationId: docRef.id, clientToken };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error al procesar la reserva";
     if (process.env.NODE_ENV === 'development') {
       console.error("[handleCreatePublicReservation]", error);
     }
     return { success: false, error: message };
+  }
+}
+
+/** Libera reservas pendientes expiradas que tenían las fechas bloqueadas (hold), para que las fechas queden libres de nuevo. */
+async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: string[]) {
+  const { getPropertyByIdAdmin, releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
+  const now = new Date();
+  const dateSet = new Set(dateStrings);
+  const snapshot = await adminDb
+    .collection("reservations")
+    .where("propertyId", "==", propertyId)
+    .where("status", "==", "pending")
+    .where("datesHeld", "==", true)
+    .get();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const expiresAt = data.expiresAt?.toDate?.() ?? new Date(data.expiresAt);
+    if (expiresAt >= now) continue;
+    const resCheckIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
+    const resCheckOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+    const resDates = generateDateRange(resCheckIn, resCheckOut);
+    const overlaps = resDates.some((d) => dateSet.has(d));
+    if (overlaps) {
+      try {
+        await releasePendingReservationAdmin(doc.id);
+      } catch {
+        // ignore per-reservation errors
+      }
+    }
+  }
+}
+
+/** Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
+ * Las fechas solo se bloquean al entrar en la página de pago (hold). Si hay reservas pendientes
+ * expiradas que tenían las fechas bloqueadas, se liberan antes de comprobar.
+ */
+export async function checkPropertyAvailability(
+  propertyId: string,
+  checkIn: Date,
+  checkOut: Date
+): Promise<{ available: boolean; error?: string }> {
+  try {
+    const { getPropertyByIdAdmin } = await import("@/lib/firebase-admin-queries");
+    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
+
+    let property = await getPropertyByIdAdmin(propertyId);
+    if (!property) return { available: false, error: "Propiedad no encontrada" };
+
+    const hasUnavailable = dateStrings.some((d) => property!.availability[d] === false);
+    if (hasUnavailable) {
+      await releaseExpiredHoldsForDates(propertyId, dateStrings);
+      property = await getPropertyByIdAdmin(propertyId);
+      if (!property) return { available: false, error: "Propiedad no encontrada" };
+    }
+
+    for (const d of dateStrings) {
+      if (property.availability[d] === false) return { available: false };
+    }
+    return { available: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error al verificar disponibilidad";
+    return { available: false, error: msg };
   }
 }

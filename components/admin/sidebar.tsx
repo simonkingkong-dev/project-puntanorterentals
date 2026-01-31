@@ -29,6 +29,7 @@ const navigation = [
   { name: 'Contenidos', href: '/admin/content', icon: FileText },
   { name: 'Propiedades', href: '/admin/properties', icon: Building },
   { name: 'Reservas', href: '/admin/reservations', icon: Calendar },
+  { name: 'Solicitudes / Reembolsos', href: '/admin/modification-requests', icon: FileText },
   { name: 'Servicios', href: '/admin/services', icon: Compass },
   { name: 'Testimonios', href: '/admin/testimonials', icon: MessageSquare },
   { name: 'Amenidades', href: '/admin/amenities', icon: Star },

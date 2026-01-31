@@ -68,7 +68,7 @@ export const getPropertyById = async (id: string): Promise<Property | null> => {
     const docRef = doc(db, PROPERTIES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return null;
     }
     
@@ -161,7 +161,7 @@ export const updatePropertyAvailability = async (
     const propertyRef = doc(db, PROPERTIES_COLLECTION, propertyId);
     const property = await getDoc(propertyRef);
     
-    if (!property.exists()) {
+    if (!property.exists) {
       throw new Error('Property not found');
     }
     

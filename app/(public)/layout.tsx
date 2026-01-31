@@ -1,10 +1,7 @@
-// Archivo: app/(public)/layout.tsx (El layout para páginas públicas)
-
 import React from 'react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-
-// No necesitas Metadata ni Inter aquí, ya están en el raíz.
+import { CartProvider } from '@/lib/cart-context';
 
 export default function PublicLayout({
   children,
@@ -12,13 +9,12 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Usamos un Fragmento o un <div>, pero NUNCA <html> o <body>
-    <>
+    <CartProvider>
       <Header />
       <main className="flex-1">
         {children}
       </main>
       <Footer />
-    </>
+    </CartProvider>
   );
 }

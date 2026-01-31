@@ -87,7 +87,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     const docRef = doc(db, SERVICES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return null;
     }
 

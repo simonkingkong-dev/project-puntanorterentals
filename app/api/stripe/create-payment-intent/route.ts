@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, currency = 'usd', reservationId } = await request.json();
+    const { amount, currency = 'usd', reservationId, modification } = await request.json();
 
     // Validate amount (Stripe minimum is $0.50 USD)
     if (!amount || amount < 0.5) {
@@ -14,15 +14,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment intent
+    const metadata: Record<string, string> = { reservationId: reservationId || '' };
+    if (modification === true || modification === '1') metadata.modification = '1';
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
       automatic_payment_methods: {
         enabled: true,
       },
-      metadata: {
-        reservationId: reservationId || '',
-      },
+      metadata,
     });
 
     return NextResponse.json({

@@ -73,7 +73,7 @@ export const getTestimonialById = async (id: string): Promise<Testimonial | null
     const docRef = doc(db, TESTIMONIALS_COLLECTION, id);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return null;
     }
 
@@ -162,7 +162,7 @@ export const getGlobalAmenityById = async (id: string): Promise<GlobalAmenity | 
     const docRef = doc(db, GLOBAL_AMENITIES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return null;
     }
 

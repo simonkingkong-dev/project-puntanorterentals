@@ -33,49 +33,43 @@ export async function POST(request: Request) {
 
     if (reservationId) {
       try {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[Webhook] Procesando reserva: ${reservationId}`);
+        const reservationRef = adminDb.collection('reservations').doc(reservationId);
+        const reservationSnap = await reservationRef.get();
+        if (!reservationSnap.exists) return NextResponse.json({ received: true });
+
+        const data = reservationSnap.data()!;
+        if (data.status === 'confirmed') {
+          return NextResponse.json({ received: true });
         }
 
-        // 1. Actualizar estado a 'confirmed' usando Admin SDK
-        const reservationRef = adminDb.collection('reservations').doc(reservationId);
-        
+        const confirmedAt = new Date();
+        const modifyToken = crypto.randomUUID();
         await reservationRef.update({
           status: 'confirmed',
           stripePaymentId: paymentIntent.id,
+          confirmedAt,
+          modifyToken,
           updatedAt: new Date(),
         });
 
-        // 2. Obtener datos para el email
-        const reservationSnap = await reservationRef.get();
-        
-        if (reservationSnap.exists) {
-          const data = reservationSnap.data()!;
-          const checkIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
-          const checkOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
-          const propertyId = data.propertyId as string;
+        const checkIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
+        const checkOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+        const propertyId = data.propertyId as string;
 
-          const reservationData = {
-             id: reservationSnap.id,
-             ...data,
-             checkIn,
-             checkOut,
-             createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
-          } as Reservation;
+        const reservationData = {
+          id: reservationSnap.id,
+          ...data,
+          checkIn,
+          checkOut,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+        } as Reservation;
 
-          // 3. Bloquear fechas en la propiedad
-          if (propertyId) {
-            const dateStrings = generateDateRange(checkIn, checkOut);
-            await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
-          }
-
-          // 4. Enviar correo
-          await sendConfirmationEmail(reservationData);
+        if (propertyId) {
+          const dateStrings = generateDateRange(checkIn, checkOut);
+          await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[Webhook] Reserva ${reservationId} confirmada.`);
-        }
+        await sendConfirmationEmail(reservationData);
       } catch (error) {
         console.error('Error actualizando reserva:', error);
         return NextResponse.json({ error: 'Error updating reservation' }, { status: 500 });

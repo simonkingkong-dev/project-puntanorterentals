@@ -15,62 +15,113 @@ import { es } from 'date-fns/locale';
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
 
+type ReservationWithTitle = Reservation & { propertyTitle?: string };
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
-  const [reservationData, setReservationData] = useState<(Reservation & { propertyTitle?: string }) | null>(null);
+  const reservationId = searchParams.get('reservation');
+  const [reservationData, setReservationData] = useState<ReservationWithTitle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
+  /** true = mostramos la reserva pero con mensaje "procesando" (webhook aún no corrió, p. ej. en local) */
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
 
   useEffect(() => {
-    if (!paymentIntentId) {
-      setError('ID de pago no encontrado.');
-      setLoading(false);
-      return;
-    }
-
-    const fetchReservation = async () => {
+    const confirmByPaymentIntent = async (): Promise<ReservationWithTitle | null> => {
       try {
-        const response = await fetch(`/api/reservations/by-payment-intent/${paymentIntentId}`);
-        if (!response.ok) {
-          if (response.status === 404) return null;
-          throw new Error('No pudimos encontrar los detalles de tu reservación.');
-        }
-        return (await response.json()) as Reservation & { propertyTitle?: string };
+        const response = await fetch('/api/reservations/confirm-by-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+        });
+        if (!response.ok) return null;
+        return (await response.json()) as ReservationWithTitle;
       } catch {
         return null;
       }
     };
 
+    const fetchByPaymentIntent = async (): Promise<ReservationWithTitle | null> => {
+      try {
+        const response = await fetch(`/api/reservations/by-payment-intent/${paymentIntentId}`);
+        if (!response.ok) return response.status === 404 ? null : null;
+        return (await response.json()) as ReservationWithTitle;
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchByReservationId = async (): Promise<ReservationWithTitle | null> => {
+      if (!reservationId) return null;
+      try {
+        const response = await fetch(`/api/reservations/${reservationId}/confirmation`);
+        if (!response.ok) return null;
+        return (await response.json()) as ReservationWithTitle;
+      } catch {
+        return null;
+      }
+    };
+
+    if (!paymentIntentId && !reservationId) {
+      setError('ID de pago o reserva no encontrado.');
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
 
-    const tryOnce = async (attempt: number) => {
-      const data = await fetchReservation();
-      if (cancelled) return;
-      if (data) {
-        setReservationData(data);
-        setLoading(false);
-        setPolling(false);
+    const run = async (attempt: number) => {
+      if (paymentIntentId) {
+        const confirmed = await confirmByPaymentIntent();
+        if (cancelled) return;
+        if (confirmed) {
+          setReservationData(confirmed);
+          setLoading(false);
+          setPolling(false);
+          return;
+        }
+        const data = await fetchByPaymentIntent();
+        if (cancelled) return;
+        if (data) {
+          setReservationData(data);
+          setLoading(false);
+          setPolling(false);
+          return;
+        }
+      }
+
+      if (paymentIntentId && attempt < POLL_MAX_ATTEMPTS - 1) {
+        setPolling(true);
+        timeoutId = setTimeout(() => run(attempt + 1), POLL_INTERVAL_MS);
         return;
       }
-      if (attempt >= POLL_MAX_ATTEMPTS - 1) {
-        setError('La confirmación está tardando más de lo habitual. Revisa tu correo; si el pago fue exitoso, recibirás la confirmación ahí.');
-        setLoading(false);
-        setPolling(false);
-        return;
+
+      if (reservationId) {
+        const fallback = await fetchByReservationId();
+        if (cancelled) return;
+        if (fallback) {
+          setReservationData(fallback);
+          setPendingConfirmation(true);
+          setLoading(false);
+          setPolling(false);
+          return;
+        }
       }
-      setPolling(true);
-      timeoutId = setTimeout(() => tryOnce(attempt + 1), POLL_INTERVAL_MS);
+
+      setError('La confirmación está tardando más de lo habitual. Revisa tu correo; si el pago fue exitoso, recibirás la confirmación ahí.');
+      setLoading(false);
+      setPolling(false);
     };
 
-    tryOnce(0);
+    run(0);
     return () => {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [paymentIntentId]);
+  }, [paymentIntentId, reservationId]);
 
   // Estado de Carga (inicial o polling)
   if (loading) {
@@ -104,20 +155,22 @@ function SuccessContent() {
     );
   }
 
-  // Estado de Éxito (ahora con datos reales)
+  // Estado de Éxito (datos cargados por payment_intent o por reservationId)
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Success Message */}
-      <Card className="text-center border-green-200 bg-green-50">
+      {/* Success / Processing Message */}
+      <Card className={`text-center ${pendingConfirmation ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
         <CardContent className="pt-6">
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${pendingConfirmation ? 'bg-amber-500' : 'bg-green-500'}`}>
             <Check className="w-8 h-8 text-white" />
-           </div>
-          <h2 className="text-2xl font-bold text-green-800 mb-2">
-            ¡Pago Exitoso!
+          </div>
+          <h2 className={`text-2xl font-bold mb-2 ${pendingConfirmation ? 'text-amber-800' : 'text-green-800'}`}>
+            {pendingConfirmation ? 'Pago recibido' : '¡Pago Exitoso!'}
           </h2>
-          <p className="text-green-700">
-            Tu reserva ha sido confirmada. Recibirás un correo de confirmación en breve.
+          <p className={pendingConfirmation ? 'text-amber-700' : 'text-green-700'}>
+            {pendingConfirmation
+              ? 'Tu pago está siendo procesado. Si el pago fue exitoso, recibirás la confirmación por correo en breve. En desarrollo local, configura el webhook con Stripe CLI para ver la confirmación al instante.'
+              : 'Tu reserva ha sido confirmada. Recibirás un correo de confirmación en breve.'}
           </p>
         </CardContent>
       </Card>
