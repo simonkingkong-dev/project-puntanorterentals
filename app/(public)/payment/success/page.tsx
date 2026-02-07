@@ -183,7 +183,7 @@ function SuccessContent() {
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">
-              {reservationData.propertyTitle ?? `Propiedad ...${reservationData.propertyId.slice(-8)}`}
+              {reservationData.propertyTitle ?? 'Tu reserva'}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

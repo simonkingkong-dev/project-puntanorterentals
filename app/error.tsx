@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Home, RefreshCw } from 'lucide-react';
+import Header from '@/components/layout/header';
+import FooterStatic from '@/components/layout/footer-static';
 
 export default function Error({
   error,
@@ -19,7 +21,9 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
+      <main className="flex-1 min-h-[80vh] flex flex-col items-center justify-center px-4 text-center">
       <div className="space-y-6 max-w-md">
         <h1 className="text-2xl font-bold text-gray-900">Algo salió mal</h1>
         <p className="text-muted-foreground">
@@ -38,6 +42,8 @@ export default function Error({
           </Link>
         </div>
       </div>
+      </main>
+      <FooterStatic />
     </div>
   );
 }

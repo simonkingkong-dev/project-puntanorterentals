@@ -48,7 +48,7 @@ export default function DeleteTestimonialButton({ testimonialId }: DeleteTestimo
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
+          <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
           <AlertDialogDescription>
             Esta acción no se puede deshacer. Esto borrará permanentemente el testimonio
             de la base de datos.

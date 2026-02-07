@@ -33,21 +33,6 @@ type ReservationStatus = {
   modifyToken: string | null;
 };
 
-type RecoveredReservation = {
-  id: string;
-  propertyId: string;
-  propertySlug?: string;
-  propertyTitle?: string;
-  checkIn: string;
-  checkOut: string;
-  guests: number;
-  totalAmount: number;
-  status: string;
-  expiresAt: string | null;
-  confirmedAt: string | null;
-  modifyToken: string | null;
-};
-
 function formatTimeLeft(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -98,6 +83,10 @@ function CartItemCard({
         };
         setReservationStatus(status);
         if (data.status === 'cancelled') {
+          onRemove(key);
+          return;
+        }
+        if (data.status === 'confirmed') {
           onRemove(key);
           return;
         }
@@ -295,7 +284,7 @@ function CartItemCard({
             )}
             {isDraftItem && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-amber-100 text-amber-800">
-                Borrador
+                Incompleta
               </div>
             )}
           </div>
@@ -328,7 +317,6 @@ export default function CartPage() {
   const { cart, removeFromCart, setCart } = useCart();
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
-  const [recoveryList, setRecoveryList] = useState<RecoveredReservation[] | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const seenKeys = new Set<string>();
@@ -351,7 +339,7 @@ export default function CartPage() {
         <ShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
         <h2 className="text-xl font-semibold text-gray-700 mb-2">Tu carrito está vacío</h2>
         <p className="text-gray-500 text-center mb-6">
-          Selecciona fechas en una propiedad y vuelve aquí para ver el resumen.
+          Selecciona fechas en una propiedad y vuelve aquí para ver el resumen. Las reservas confirmadas están en Mis reservas.
         </p>
         <div className="w-full space-y-4 mb-6">
           <Label htmlFor="recovery-email" className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -359,7 +347,7 @@ export default function CartPage() {
             Recuperar reservas con tu email
           </Label>
           <p className="text-xs text-gray-500">
-            Si limpiaste cookies, ingresa el email que usaste al reservar para ver tus reservas confirmadas o en hold.
+            Si limpiaste cookies, ingresa el email que usaste al reservar para recuperar tus reservas en hold o expiradas.
           </p>
           <div className="flex gap-2">
             <Input
@@ -370,7 +358,6 @@ export default function CartPage() {
               onChange={(e) => {
                 setRecoveryEmail(e.target.value);
                 setRecoveryError(null);
-                setRecoveryList(null);
               }}
               className="flex-1"
             />
@@ -383,13 +370,23 @@ export default function CartPage() {
                 if (!email) return;
                 setRecoveryLoading(true);
                 setRecoveryError(null);
-                setRecoveryList(null);
                 try {
-                  const res = await fetch(`/api/reservations/by-email?email=${encodeURIComponent(email)}`);
+                  const res = await fetch(`/api/reservations/by-email?email=${encodeURIComponent(email)}&for=cart`);
                   const data = await res.json();
                   if (!res.ok) throw new Error(data.error ?? 'Error al buscar');
-                  setRecoveryList(data.reservations ?? []);
-                  if (!data.reservations?.length) setRecoveryError('No se encontraron reservas con ese email.');
+                  const reservations = data.reservations ?? [];
+                  if (reservations.length === 0) {
+                    setRecoveryError('No se encontraron reservas con ese email.');
+                  } else {
+                    const cartItems = reservations.map((r) => ({
+                      propertyId: r.propertyId,
+                      slug: r.propertySlug ?? '',
+                      checkIn: r.checkIn,
+                      checkOut: r.checkOut,
+                      reservationId: r.id,
+                    }));
+                    setCart(cartItems);
+                  }
                 } catch (err) {
                   setRecoveryError(err instanceof Error ? err.message : 'Error al buscar reservas');
                 } finally {
@@ -401,55 +398,15 @@ export default function CartPage() {
             </Button>
           </div>
           {recoveryError && <p className="text-sm text-red-600">{recoveryError}</p>}
-          {recoveryList && recoveryList.length > 0 && (
-            <div className="space-y-2 mt-4">
-              <p className="text-sm font-medium text-gray-700">Tus reservas:</p>
-              {recoveryList.map((r) => (
-                <Card key={r.id} className="p-3">
-                  <div className="flex flex-col gap-2">
-                    <div className="font-medium text-gray-900">{r.propertyTitle ?? 'Propiedad'}</div>
-                    <div className="text-sm text-gray-600">
-                      {format(new Date(r.checkIn), 'dd MMM yyyy', { locale: es })} – {format(new Date(r.checkOut), 'dd MMM yyyy', { locale: es })}
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          'text-xs font-medium px-2 py-0.5 rounded',
-                          r.status === 'confirmed' && 'bg-green-100 text-green-800',
-                          r.status === 'pending' && 'bg-gray-100 text-gray-700'
-                        )}
-                      >
-                        {r.status === 'confirmed' ? 'Confirmada' : 'En hold'}
-                      </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                        onClick={() => {
-                          setCart([{
-                            propertyId: r.propertyId,
-                            slug: r.propertySlug ?? '',
-                            checkIn: r.checkIn,
-                            checkOut: r.checkOut,
-                            reservationId: r.id,
-                          }]);
-                          setRecoveryList(null);
-                          setRecoveryEmail('');
-                        }}
-                      >
-                        Ver en carrito
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
         </div>
-        <Button asChild>
-          <Link href="/properties">Ver propiedades</Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button asChild>
+            <Link href="/properties">Ver propiedades</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/my-reservations">Mis reservas</Link>
+          </Button>
+        </div>
       </div>
     );
   }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Property } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
 import { Wifi, Car, Utensils, Home, Waves, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import AvailabilityCalendar from '@/components/ui/availability-calendar';
 import ReservationForm from '@/components/ui/reservation-form';
+import { useCart } from '@/lib/cart-context';
 
 const amenityIcons: Record<string, LucideIcon> = {
   'WiFi de alta velocidad': Wifi,
@@ -28,8 +29,18 @@ interface PropertyBodyProps {
 
 export default function PropertyBody({ property }: PropertyBodyProps) {
   const [selectedDates, setSelectedDates] = useState<{ checkIn: Date; checkOut?: Date } | undefined>();
+  const { addToCart } = useCart();
 
-  // El borrador se añade al carrito solo al hacer "Continuar al Pago" desde el formulario.
+  // Añadir como "incompleta" al carrito cuando el usuario selecciona fechas (sin pasar aún a pago)
+  useEffect(() => {
+    if (!selectedDates?.checkIn || !selectedDates?.checkOut) return;
+    addToCart({
+      propertyId: property.id,
+      slug: property.slug,
+      checkIn: selectedDates.checkIn.toISOString(),
+      checkOut: selectedDates.checkOut.toISOString(),
+    });
+  }, [selectedDates?.checkIn?.getTime(), selectedDates?.checkOut?.getTime(), property.id, property.slug, addToCart]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

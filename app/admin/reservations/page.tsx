@@ -88,7 +88,7 @@ export default async function AdminReservationsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">${reservation.totalAmount}</TableCell>
-                      <TableCell>{getStatusBadge(reservation.status, reservation)}</TableCell>
+                      <TableCell>{getStatusBadge(reservation.status)}</TableCell>
                       <TableCell className="text-right">
                         <ReservationRowActions reservationId={reservation.id} status={reservation.status} />
                       </TableCell>

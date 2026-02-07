@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Info, Save } from 'lucide-react';
+import { Home, Info, Save, type LucideIcon } from 'lucide-react';
 import AdminLayout from '@/app/admin/layout';
 import { toast } from 'sonner';
 import { getSiteContent, updateSiteContent } from '@/lib/firebase/content';
@@ -15,7 +15,7 @@ import { getSiteContent, updateSiteContent } from '@/lib/firebase/content';
 interface ContentSection {
   section: string;
   title: string;
-  icon: any;
+  icon: LucideIcon;
   fields: {
     key: string;
     label: string;

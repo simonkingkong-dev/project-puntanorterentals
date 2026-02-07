@@ -147,7 +147,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const hasDraft = cart.some(isDraft);
   const getDraft = useCallback(() => cart.find(isDraft), [cart]);
 
-  const cartCount = cart.filter((i) => i.reservationId).length;
+  const cartCount = cart.length;
   const hasCartItem = cart.length > 0;
 
   return (

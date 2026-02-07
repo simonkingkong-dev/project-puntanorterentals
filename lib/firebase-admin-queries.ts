@@ -35,17 +35,20 @@ export const getAdminProperties = async (): Promise<Property[]> => {
   }
 };
 
-// --- RESERVAS (ESTA ES LA QUE TE FALLABA) ---
+// --- RESERVAS ---
+// Solo confirmadas y canceladas (no pending, no incomplete)
 export const getAdminReservations = async (): Promise<Reservation[]> => {
   try {
     const snapshot = await adminDb.collection('reservations').orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      checkIn: doc.data().checkIn?.toDate() || new Date(),
-      checkOut: doc.data().checkOut?.toDate() || new Date(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Reservation[];
+    return snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        checkIn: doc.data().checkIn?.toDate() || new Date(),
+        checkOut: doc.data().checkOut?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as Reservation[]
+      .filter(r => r.status === 'confirmed' || r.status === 'cancelled');
   } catch (error) {
     console.error('Admin: Error fetching reservations', error);
     return [];

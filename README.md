@@ -1,6 +1,6 @@
 # Punta Norte Rentals - Aplicación Web de Alquiler de Propiedades Vacacionales
 
-Una aplicación web full-stack moderna para gestión de propiedades vacacionales, construida con Next.js 14, Firebase, y Stripe. Diseño inspirado en Lonely Planet con funcionalidad robusta para reservas y pagos.
+Una aplicación web full-stack moderna para gestión de propiedades vacacionales, construida con Next.js 16, Firebase, y Stripe. Diseño inspirado en Lonely Planet con funcionalidad robusta para reservas y pagos.
 
 ## 🚀 Características Principales
 
@@ -15,7 +15,7 @@ Una aplicación web full-stack moderna para gestión de propiedades vacacionales
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
-- **Next.js 14** con App Router
+- **Next.js 16** con App Router
 - **React 18** con TypeScript
 - **Tailwind CSS** para estilos
 - **shadcn/ui** para componentes UI

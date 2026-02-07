@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Home, Building, ShoppingCart } from 'lucide-react';
+import { Menu, Home, Building, ShoppingCart, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { useCart } from '@/lib/cart-context';
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Propiedades', href: '/properties', icon: Building },
+  { name: 'Mis reservas', href: '/my-reservations', icon: Calendar },
 ];
 
 function CartLink({ className }: { className?: string }) {

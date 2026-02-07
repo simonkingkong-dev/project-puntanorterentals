@@ -97,8 +97,8 @@ export const updateReservationStatus = async (
 ): Promise<void> => {
   try {
     const reservationRef = doc(db, RESERVATIONS_COLLECTION, reservationId);
-    const updateData: any = { status };
-    
+    const updateData: { status: Reservation['status']; stripePaymentId?: string } = { status };
+
     if (stripePaymentId) {
       updateData.stripePaymentId = stripePaymentId;
     }

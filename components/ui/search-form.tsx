@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, Users, Search, MapPin } from 'lucide-react';
+import { CalendarDays, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /**
- * Displays a search form for users to find properties based on location, check-in and check-out dates, and number of guests.
+ * Displays a search form for users to find properties based on check-in and check-out dates, and number of guests.
  * @example
  * SearchForm()
- * Renders a form with inputs for location, check-in and check-out dates, and guest selection.
+ * Renders a form with inputs for check-in and check-out dates, and guest selection.
  * @returns {JSX.Element} A JSX element containing the search form UI.
  */
 export default function SearchForm() {
@@ -21,7 +21,6 @@ export default function SearchForm() {
     checkIn: '',
     checkOut: '',
     guests: '',
-    location: '',
   });
 
   const handleSearch = () => {
@@ -39,22 +38,7 @@ export default function SearchForm() {
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
       <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Location */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Destino
-            </label>
-            <Input
-              type="text"
-              placeholder="¿A dónde vas?"
-              value={searchParams.location}
-              onChange={(e) => setSearchParams({ ...searchParams, location: e.target.value })}
-              className="h-12"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Check In */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">

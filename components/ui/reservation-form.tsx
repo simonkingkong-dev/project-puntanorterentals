@@ -88,6 +88,7 @@ export default function ReservationForm({
     for (const c of cartItemsWithSameProperty) {
       const cartStart = new Date(c.checkIn);
       const cartEnd = new Date(c.checkOut);
+      if (cartStart.getTime() === selectedDates.checkIn.getTime() && cartEnd.getTime() === selectedDates.checkOut.getTime()) continue;
       if (dateRangesOverlap(selectedDates.checkIn, selectedDates.checkOut, cartStart, cartEnd)) {
         setShowOverlapMessage(true);
         return;

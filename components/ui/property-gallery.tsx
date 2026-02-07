@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface PropertyGalleryProps {
   images: string[];
@@ -154,6 +154,9 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-7xl w-full h-full p-0 bg-black">
+          <DialogTitle className="sr-only">
+            Galería de imágenes - {title}
+          </DialogTitle>
           <div className="relative w-full h-full flex items-center justify-center">
             <Button
               variant="ghost"

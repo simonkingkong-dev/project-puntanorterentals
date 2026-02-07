@@ -213,6 +213,8 @@ export default function AvailabilityCalendar({
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto pb-2 pr-2">
+          <div className="min-w-max">
         <Calendar
           mode="range"
           selected={selectedRange}
@@ -249,6 +251,8 @@ export default function AvailabilityCalendar({
             Day: DayWithHover,
           }}
         />
+          </div>
+        </div>
 
         <div className="mt-4 space-y-1 text-sm text-gray-700">
           <p>

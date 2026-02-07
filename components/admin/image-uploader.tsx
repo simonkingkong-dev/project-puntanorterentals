@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { UploadCloud, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ export default function ImageUploader({
   folder // <-- No usamos 'folder' aquí, pero es necesario para que Typescript lo acepte
 }: ImageUploaderProps) {
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any) => {
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
       toast.error(fileRejections[0].errors[0].message);
       return;
