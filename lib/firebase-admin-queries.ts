@@ -36,6 +36,33 @@ export const getAdminProperties = async (): Promise<Property[]> => {
 };
 
 // --- RESERVAS ---
+
+/** Reservas confirmadas de una propiedad (para feed iCal público) */
+export const getConfirmedReservationsByPropertyAdmin = async (
+  propertyId: string
+): Promise<Reservation[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('reservations')
+      .where('propertyId', '==', propertyId)
+      .where('status', '==', 'confirmed')
+      .get();
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        checkIn: data.checkIn?.toDate?.() ?? new Date(data.checkIn),
+        checkOut: data.checkOut?.toDate?.() ?? new Date(data.checkOut),
+        createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      } as Reservation;
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching reservations by property', error);
+    return [];
+  }
+};
+
 // Solo confirmadas y canceladas (no pending, no incomplete)
 export const getAdminReservations = async (): Promise<Reservation[]> => {
   try {

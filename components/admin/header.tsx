@@ -20,7 +20,7 @@ export default function AdminHeader({}: AdminHeaderProps) { // Se quita 'toggleS
   const title = getTitleFromPathname(pathname); // 'title' ahora es el subtítulo
 
   return (
-    <header className="sticky top-0 z-20 h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 lg:px-6">
+    <header className="sticky top-0 z-20 h-16 min-h-16 max-h-16 flex-shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
       
       {/* CORREGIDO: Eliminamos el botón de menú y lo reemplazamos */}
       <div className="flex flex-col">

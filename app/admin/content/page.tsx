@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Home, Info, Save, type LucideIcon } from 'lucide-react';
 import AdminLayout from '@/app/admin/layout';
 import { toast } from 'sonner';
-import { getSiteContent, updateSiteContent } from '@/lib/firebase/content';
+import { getSiteContent } from '@/lib/firebase/content';
+import { updateSiteContentAdmin } from './actions';
 
 interface ContentSection {
   section: string;
@@ -192,14 +193,20 @@ export default function AdminContentPage() {
       const sectionConfig = contentSections.find(s => s.section === section);
       if (!sectionConfig) return;
 
-      const promises = sectionConfig.fields.map(field => {
-        const fullKey = `${section}_${field.key}`;
-        const value = contentData[fullKey] || '';
-        return updateSiteContent(section, field.key, value, field.type);
-      });
+      const results = await Promise.all(
+        sectionConfig.fields.map(field => {
+          const fullKey = `${section}_${field.key}`;
+          const value = contentData[fullKey] || '';
+          return updateSiteContentAdmin(section, field.key, value, field.type);
+        })
+      );
 
-      await Promise.all(promises);
-      toast.success('Contenido guardado exitosamente');
+      const failed = results.find(r => !r.success);
+      if (failed) {
+        toast.error(failed.error ?? 'Error guardando contenido');
+      } else {
+        toast.success('Contenido guardado exitosamente');
+      }
     } catch (error) {
       toast.error('Error guardando contenido');
     } finally {

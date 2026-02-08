@@ -70,7 +70,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
           
           {/* CORREGIDO: Nuevo Header del Sidebar con el botón */}
           <div className={cn(
-            "flex flex-col items-center justify-center p-4 h-16 border-b",
+            "flex flex-col items-center justify-center p-4 h-16 min-h-16 max-h-16 flex-shrink-0 border-b border-gray-200",
             isOpen ? "items-start" : "items-center" // Alinear al inicio cuando está abierto
           )}>
             <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
