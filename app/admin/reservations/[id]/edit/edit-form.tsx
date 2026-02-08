@@ -8,9 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Reservation } from "@/lib/types";
-import { updateReservationAdmin, UpdateReservationFormData } from "../../actions";
+import { updateReservationAdmin } from "../../actions";
 
 type ReservationWithTitle = Reservation & { propertyTitle?: string };
+
+type EditFormState = {
+  guestName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  checkIn?: string;  // YYYY-MM-DD for input[type=date]
+  checkOut?: string;
+  guests?: number;
+  totalAmount?: number;
+};
 
 interface ReservationEditFormProps {
   initialData: ReservationWithTitle;
@@ -25,7 +35,7 @@ function toInputDate(d: Date): string {
 
 export default function ReservationEditForm({ initialData }: ReservationEditFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState<UpdateReservationFormData>({
+  const [formData, setFormData] = useState<EditFormState>({
     guestName: initialData.guestName,
     guestEmail: initialData.guestEmail,
     guestPhone: initialData.guestPhone,
@@ -41,8 +51,8 @@ export default function ReservationEditForm({ initialData }: ReservationEditForm
       try {
         await updateReservationAdmin(initialData.id, {
           ...formData,
-          checkIn: formData.checkIn ? new Date(formData.checkIn as string) : undefined,
-          checkOut: formData.checkOut ? new Date(formData.checkOut as string) : undefined,
+          checkIn: formData.checkIn ? new Date(formData.checkIn) : undefined,
+          checkOut: formData.checkOut ? new Date(formData.checkOut) : undefined,
         });
         toast.success("Reserva actualizada.");
       } catch {
