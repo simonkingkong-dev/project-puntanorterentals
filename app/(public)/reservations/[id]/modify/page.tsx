@@ -52,7 +52,7 @@ export default function ModifyReservationPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { setCart } = useCart();
+  const { setCart, removeFromCart } = useCart();
   const id = params?.id as string;
   const token = searchParams?.get("token") ?? "";
 
