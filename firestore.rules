@@ -3,37 +3,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // REGLA PÚBLICA: Cualquiera puede leer propiedades, servicios, testimonios, etc.
+    // Colecciones públicas: lectura abierta, escritura solo vía Admin SDK
     match /properties/{docId} {
       allow read: if true;
-      allow write: if request.auth != null; // Solo usuarios autenticados (tu admin) pueden escribir
+      allow write: if false;
     }
     match /services/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     match /testimonials/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     match /globalAmenities/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     match /siteContent/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     match /contactInfo/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
-    // Reservaciones: solo lectura propia (guestEmail) o admin; escritura solo autenticado (admin en la práctica)
+    // Reservaciones: sin acceso directo desde cliente (todo vía Admin SDK)
     match /reservations/{docId} {
-      allow read: if request.auth != null
-        && (resource.data.guestEmail == request.auth.token.email || request.auth.token.admin == true);
-      allow write: if request.auth != null;
+      allow read, write: if false;
+    }
+
+    // Solo Admin SDK accede
+    match /modificationRequests/{docId} {
+      allow read, write: if false;
+    }
+    match /refundRequests/{docId} {
+      allow read, write: if false;
     }
   }
 }

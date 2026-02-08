@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
 import AdminLayout from '@/app/admin/layout';
-import { getContactInfo } from '@/lib/firebase/content';
+import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { ContactInfo } from '@/lib/types';
 import ContactForm from '@/app/admin/contact/contact-form'; // 1. Importamos el nuevo componente de formulario
 
@@ -18,7 +18,7 @@ export default async function AdminContactPage() {
   
   // 2. Cargamos los datos en el servidor
   let contactData: Omit<ContactInfo, 'id' | 'updatedAt'>;
-  const info = await getContactInfo();
+  const info = await getContactInfoAdmin();
 
   if (info) {
     contactData = {

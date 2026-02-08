@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Save, Globe, Mail, Phone, MapPin, Building, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la función para *actualizar*
-import { updateContactInfo } from '@/lib/firebase/content';
+import { updateContactInfoAdmin } from '@/app/admin/contact/actions';
 import { ContactInfo } from '@/lib/types';
 
 interface ContactFormProps {
@@ -45,10 +44,13 @@ export default function ContactForm({ initialData }: ContactFormProps) {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Esta función (updateContactInfo) ahora sí escribirá en Firebase
-      await updateContactInfo(contactData);
-      toast.success('Información de contacto guardada exitosamente');
-    } catch (error) {
+      const result = await updateContactInfoAdmin(contactData);
+      if (result.success) {
+        toast.success('Información de contacto guardada exitosamente');
+      } else {
+        toast.error(result.error ?? 'Error guardando información de contacto');
+      }
+    } catch {
       toast.error('Error guardando información de contacto');
     } finally {
       setIsLoading(false);

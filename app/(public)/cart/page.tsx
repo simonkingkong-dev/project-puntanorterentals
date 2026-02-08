@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -56,7 +56,13 @@ function CartItemCard({
 
   useEffect(() => {
     if (!item.slug) return;
-    getPropertyBySlug(item.slug).then(setProperty);
+    let cancelled = false;
+    getPropertyBySlug(item.slug).then((p) => {
+      if (!cancelled) setProperty(p);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [item.slug]);
 
   useEffect(() => {
@@ -65,10 +71,12 @@ function CartItemCard({
       setSecondsLeft(null);
       return;
     }
+    const controller = new AbortController();
     setStatusLoading(true);
-    fetch(`/api/reservations/${item.reservationId}/status`)
+    fetch(`/api/reservations/${item.reservationId}/status`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
+        if (controller.signal.aborted) return;
         if (data.error) {
           setReservationStatus({ status: 'cancelled', expiresAt: null, confirmedAt: null, modifyToken: null });
           setSecondsLeft(null);
@@ -98,12 +106,16 @@ function CartItemCard({
           setSecondsLeft(null);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (controller.signal.aborted || err.name === 'AbortError') return;
         setReservationStatus({ status: 'cancelled', expiresAt: null, confirmedAt: null, modifyToken: null });
         setSecondsLeft(null);
         onRemove(key);
       })
-      .finally(() => setStatusLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setStatusLoading(false);
+      });
+    return () => controller.abort();
   }, [item.reservationId, key, onRemove]);
 
   useEffect(() => {
@@ -319,19 +331,21 @@ export default function CartPage() {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
-  const seenKeys = new Set<string>();
-  const uniqueCart = cart.filter((item) => {
-    const key = getCartItemKey(item);
-    if (seenKeys.has(key)) return false;
-    seenKeys.add(key);
-    return true;
-  });
+  const uniqueCart = useMemo(() => {
+    const seen = new Set<string>();
+    return cart.filter((item) => {
+      const k = getCartItemKey(item);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [cart]);
 
   useEffect(() => {
     if (uniqueCart.length < cart.length && cart.length > 0) {
       setCart(uniqueCart);
     }
-  }, [cart.length, uniqueCart.length, setCart]);
+  }, [cart, uniqueCart, setCart]);
 
   if (cart.length === 0) {
     return (
@@ -378,7 +392,7 @@ export default function CartPage() {
                   if (reservations.length === 0) {
                     setRecoveryError('No se encontraron reservas con ese email.');
                   } else {
-                    const cartItems = reservations.map((r) => ({
+                    const cartItems = (reservations as Array<{ id: string; propertyId: string; propertySlug?: string; checkIn: string; checkOut: string }>).map((r) => ({
                       propertyId: r.propertyId,
                       slug: r.propertySlug ?? '',
                       checkIn: r.checkIn,

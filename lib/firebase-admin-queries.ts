@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
-import { Property, Reservation, Service, GlobalAmenity, Testimonial } from "@/lib/types";
+import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo } from "@/lib/types";
 
 // --- PROPIEDADES ---
 export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property | null> => {
@@ -40,14 +40,14 @@ export const getAdminProperties = async (): Promise<Property[]> => {
 export const getAdminReservations = async (): Promise<Reservation[]> => {
   try {
     const snapshot = await adminDb.collection('reservations').orderBy('createdAt', 'desc').get();
-    return snapshot.docs
+    return (snapshot.docs
       .map(doc => ({
         id: doc.id,
         ...doc.data(),
         checkIn: doc.data().checkIn?.toDate() || new Date(),
         checkOut: doc.data().checkOut?.toDate() || new Date(),
         createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Reservation[]
+      })) as Reservation[])
       .filter(r => r.status === 'confirmed' || r.status === 'cancelled');
   } catch (error) {
     console.error('Admin: Error fetching reservations', error);
@@ -280,5 +280,23 @@ export const getAdminRefundRequests = async (): Promise<RefundRequestRow[]> => {
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching refund requests', error);
     return [];
+  }
+};
+
+// --- INFO DE CONTACTO ---
+export const getContactInfoAdmin = async (): Promise<ContactInfo | null> => {
+  try {
+    const snapshot = await adminDb.collection('contactInfo').limit(1).get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      updatedAt: data.updatedAt?.toDate?.() ?? new Date(data.updatedAt),
+    } as ContactInfo;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching contact info', error);
+    return null;
   }
 };

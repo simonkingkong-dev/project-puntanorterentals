@@ -126,9 +126,14 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
   const [property, setProperty] = useState<Property | null>(null);
 
   useEffect(() => {
-    if (reservation.propertySlug) {
-      getPropertyBySlug(reservation.propertySlug).then(setProperty);
-    }
+    if (!reservation.propertySlug) return;
+    let cancelled = false;
+    getPropertyBySlug(reservation.propertySlug).then((p) => {
+      if (!cancelled) setProperty(p);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [reservation.propertySlug]);
 
   const modifyHref =
