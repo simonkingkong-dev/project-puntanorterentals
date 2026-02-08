@@ -27,6 +27,7 @@ export default function ReservationRowActions({
   reservationId,
   status,
 }: ReservationRowActionsProps) {
+  const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);

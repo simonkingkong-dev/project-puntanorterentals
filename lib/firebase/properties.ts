@@ -72,11 +72,12 @@ export const getPropertyById = async (id: string): Promise<Property | null> => {
       return null;
     }
     
+    const d = docSnap.data();
     return {
       id: docSnap.id,
-      ...docSnap.data(),
-      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-      updatedAt: docSnap.data().updatedAt?.toDate() || new Date(),
+      ...d,
+      createdAt: d?.createdAt?.toDate?.() ?? new Date(),
+      updatedAt: d?.updatedAt?.toDate?.() ?? new Date(),
     } as Property;
   } catch (error) {
     console.error('Error fetching property by ID:', error);
@@ -165,7 +166,7 @@ export const updatePropertyAvailability = async (
       throw new Error('Property not found');
     }
     
-    const currentAvailability = property.data().availability || {};
+    const currentAvailability = property.data()?.availability ?? {};
     const updatedAvailability = { ...currentAvailability };
     
     dates.forEach(date => {

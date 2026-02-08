@@ -6,6 +6,15 @@ import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
 
+function toDateSafe(v: unknown): Date {
+  if (v instanceof Date) return v;
+  if (v && typeof v === 'object' && 'toDate' in v) {
+    const t = v as { toDate: () => Date };
+    if (typeof t.toDate === 'function') return t.toDate();
+  }
+  return new Date(v as string | number);
+}
+
 /**
  * POST /api/reservations/confirm-by-payment-intent
  * Verifica con Stripe que el pago fue exitoso y confirma la reserva al instante
@@ -51,8 +60,8 @@ export async function POST(request: NextRequest) {
       }
       const oldCheckIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
       const oldCheckOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
-      const newCheckIn = pending.newCheckIn?.toDate?.() ?? new Date(pending.newCheckIn);
-      const newCheckOut = pending.newCheckOut?.toDate?.() ?? new Date(pending.newCheckOut);
+      const newCheckIn = toDateSafe(pending.newCheckIn);
+      const newCheckOut = toDateSafe(pending.newCheckOut);
       const newGuests = pending.newGuests ?? data.guests ?? 1;
       const newTotal = Number(pending.newTotal) ?? data.totalAmount;
       const propertyId = data.propertyId as string;

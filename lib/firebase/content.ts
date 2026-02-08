@@ -77,10 +77,11 @@ export const getTestimonialById = async (id: string): Promise<Testimonial | null
       return null;
     }
 
+    const d = docSnap.data();
     return {
       id: docSnap.id,
-      ...docSnap.data(),
-      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+      ...d,
+      createdAt: d?.createdAt?.toDate?.() ?? new Date(),
     } as Testimonial;
   } catch (error) {
     console.error('Error fetching testimonial by ID:', error);
@@ -166,10 +167,11 @@ export const getGlobalAmenityById = async (id: string): Promise<GlobalAmenity | 
       return null;
     }
 
+    const d = docSnap.data();
     return {
       id: docSnap.id,
-      ...docSnap.data(),
-      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+      ...d,
+      createdAt: d?.createdAt?.toDate?.() ?? new Date(),
     } as GlobalAmenity;
   } catch (error) {
     console.error('Error fetching global amenity by ID:', error);

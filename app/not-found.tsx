@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Home, Search } from 'lucide-react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { CartProvider } from '@/lib/cart-context';
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
+    <CartProvider>
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <Header />
       <main className="flex-1 flex flex-col items-center justify-center px-4 text-center">
         <div className="space-y-6 max-w-md">
           <h1 className="text-9xl font-extrabold text-primary/20">404</h1>
@@ -33,5 +35,6 @@ export default function NotFound() {
       </main>
       <Footer />
     </div>
+    </CartProvider>
   );
 }

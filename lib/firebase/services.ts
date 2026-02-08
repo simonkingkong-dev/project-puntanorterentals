@@ -91,10 +91,11 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       return null;
     }
 
+    const d = docSnap.data();
     return {
       id: docSnap.id,
-      ...docSnap.data(),
-      createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+      ...d,
+      createdAt: d?.createdAt?.toDate?.() ?? new Date(),
     } as Service;
   } catch (error) {
     console.error('Error fetching service by ID:', error);
