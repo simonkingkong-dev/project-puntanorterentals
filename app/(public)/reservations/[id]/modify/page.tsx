@@ -217,14 +217,14 @@ export default function ModifyReservationPage() {
           newCheckIn: selectedDates.checkIn.toISOString(),
           newCheckOut: selectedDates.checkOut.toISOString(),
           newGuests: guests,
-          newTotal: newTotalHere,
+          newTotal,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Error al preparar modificación");
       const params = new URLSearchParams({
         reservation: id,
-        amount: priceDiffHere.toString(),
+        amount: priceDiff.toString(),
         modification: "1",
         token,
       });
