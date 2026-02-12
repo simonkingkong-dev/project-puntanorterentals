@@ -46,7 +46,7 @@ export default async function AdminPropertiesPage() {
             <Card key={property.id} className="overflow-hidden">
               <div className="relative h-48">
                 <Image
-                  src={property.images[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
+                  src={property.images?.[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
                   alt={property.title}
                   fill
                   className="object-cover"

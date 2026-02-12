@@ -132,29 +132,28 @@ export async function syncHostfullyProperties(): Promise<{
 
       const propData = mapHostfullyToProperty(raw);
 
-      const existing = await adminDb
-        .collection("properties")
-        .where("hostfullyPropertyId", "==", uid)
-        .limit(1)
-        .get();
-
       const dataToSave = {
         ...propData,
         hostfullyPropertyId: uid,
         updatedAt: now,
       };
 
-      if (existing.empty) {
-        await adminDb.collection("properties").add({
-          ...dataToSave,
-          createdAt: now,
-        });
-        created++;
-      } else {
-        const docId = existing.docs[0].id;
-        await adminDb.collection("properties").doc(docId).update(dataToSave);
-        updated++;
-      }
+      await adminDb.runTransaction(async (transaction) => {
+        const q = adminDb
+          .collection("properties")
+          .where("hostfullyPropertyId", "==", uid)
+          .limit(1);
+        const snapshot = await transaction.get(q);
+
+        if (snapshot.empty) {
+          const ref = adminDb.collection("properties").doc();
+          transaction.set(ref, { ...dataToSave, createdAt: now });
+          created++;
+        } else {
+          transaction.update(snapshot.docs[0].ref, dataToSave);
+          updated++;
+        }
+      });
     }
 
     revalidatePath("/admin/properties");

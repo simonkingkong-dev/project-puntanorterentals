@@ -37,15 +37,15 @@ function PropertySkeleton() {
 }
 
 async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
-  
+  const params = searchParams ?? {};
   let properties: Property[];
-  const hasSearchParams = Object.keys(searchParams).length > 0;
+  const hasSearchParams = Object.keys(params).length > 0;
 
   try {
     if (hasSearchParams) {
       const paramsForSearch: SearchParams = {
-        ...searchParams,
-        guests: searchParams.guests ? Number(searchParams.guests) : undefined,
+        ...params,
+        guests: params.guests ? Number(params.guests) : undefined,
       };
       properties = await searchPropertiesAdmin(paramsForSearch);
     } else {
@@ -83,7 +83,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
 }
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
-  const params = await searchParams;
+  const params = (await searchParams) ?? {};
   const hasFilters = Object.keys(params).length > 0;
   const numericSearchParams: SearchParams = {
     ...params,

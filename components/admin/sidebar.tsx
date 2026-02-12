@@ -47,8 +47,8 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
        const response = await fetch('/api/admin/logout', { method: 'POST' });
       if (response.ok) {
         toast.success('Sesión cerrada exitosamente');
-        router.push('/admin/login');
-        router.refresh(); 
+        await router.push('/admin/login');
+        router.refresh();
       } else {
         toast.error('Error al cerrar sesión desde la API'); 
       }

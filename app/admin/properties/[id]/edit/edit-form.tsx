@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +28,7 @@ interface PropertyEditFormProps {
 }
 
 export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   
   // 1. El estado del formulario principal
   const [formData, setFormData] = useState<Omit<UpdatePropertyFormData, 'images'>>({
@@ -45,7 +44,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
   // --- CORREGIDO: Estados separados para imágenes ---
   // Estado para las URLs de imágenes que ya están en Firebase
-  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData.images);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData.images ?? []);
   // Estado para los *archivos* nuevos que se van a subir
   const [newImageFiles, setNewImageFiles] = useState<FileWithPreview[]>([]);
   // ---
@@ -54,52 +53,42 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(async () => {
+    if ((existingImageUrls.length + newImageFiles.length) === 0) {
+      toast.error('Agrega al menos una imagen');
+      return;
+    }
+    setIsPending(true);
+    try {
+      let finalImageUrls = [...existingImageUrls];
 
-      // Validación
-      if ((existingImageUrls.length + newImageFiles.length) === 0) {
-        toast.error('Agrega al menos una imagen');
-        return;
+      if (newImageFiles.length > 0) {
+        toast.info("Subiendo nuevas imágenes...");
+        const uploadPromises = newImageFiles.map(file =>
+          uploadImageToStorage(file, 'properties')
+        );
+        const newUrls = await Promise.all(uploadPromises);
+        finalImageUrls = [...existingImageUrls, ...newUrls];
       }
 
-      try {
-        let finalImageUrls = [...existingImageUrls];
+      const propertyData: UpdatePropertyFormData = {
+        ...formData,
+        images: finalImageUrls,
+        hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
+      };
 
-        // --- LÓGICA DE SUBIDA ---
-        // 1. Subir solo los archivos *nuevos*
-        if (newImageFiles.length > 0) {
-          toast.info("Subiendo nuevas imágenes...");
-          const uploadPromises = newImageFiles.map(file => 
-            uploadImageToStorage(file, 'properties')
-          );
-          const newUrls = await Promise.all(uploadPromises);
-          // Combinar URLs viejas y nuevas
-          finalImageUrls = [...existingImageUrls, ...newUrls];
-        }
-        // --- FIN LÓGICA DE SUBIDA ---
+      const result = await handleUpdateProperty(initialData.id, propertyData);
 
-        // 2. Preparar el objeto final para la Server Action
-        const propertyData: UpdatePropertyFormData = {
-          ...formData,
-          images: finalImageUrls,
-          hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
-        };
-
-        // 3. Llamar a la Server Action
-        const result = await handleUpdateProperty(initialData.id, propertyData);
-        
-        if (result?.error) {
-          toast.error(result.error);
-        } else {
-          toast.success("Propiedad actualizada exitosamente.");
-          // La redirección ocurre en la Server Action
-        }
-
-      } catch (error) {
-        console.error("Error al actualizar la propiedad:", error);
-        toast.error("Error al subir las imágenes. Revisa la consola.");
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Propiedad actualizada exitosamente.");
       }
-    });
+    } catch (error) {
+      console.error("Error al actualizar la propiedad:", error);
+      toast.error("Error al subir las imágenes. Revisa la consola.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   // --- Lógica de Amenidades (sin cambios) ---

@@ -8,9 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Loader2, Mail, Pencil } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getPropertyBySlug } from '@/lib/firebase/properties';
+
+function formatDateSafe(value: string | undefined): string {
+  if (value == null || value === '') return '—';
+  const d = new Date(value);
+  return isValid(d) ? format(d, 'dd MMM yyyy', { locale: es }) : '—';
+}
 import { Property } from '@/lib/types';
 
 type ConfirmedReservation = {
@@ -143,9 +149,6 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
         ? `/properties/${reservation.propertySlug}`
         : '/properties';
 
-  const checkInDate = new Date(reservation.checkIn);
-  const checkOutDate = new Date(reservation.checkOut);
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -175,11 +178,11 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
           <div className="flex-1 min-w-0 space-y-1 text-sm text-gray-600">
             <p>
               <span className="text-gray-500">Check-in:</span>{' '}
-              {format(checkInDate, 'dd MMM yyyy', { locale: es })}
+              {formatDateSafe(reservation.checkIn)}
             </p>
             <p>
               <span className="text-gray-500">Check-out:</span>{' '}
-              {format(checkOutDate, 'dd MMM yyyy', { locale: es })}
+              {formatDateSafe(reservation.checkOut)}
             </p>
             <p>
               <span className="text-gray-500">Total:</span> ${reservation.totalAmount}

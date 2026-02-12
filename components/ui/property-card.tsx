@@ -28,7 +28,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white">
         <div className="relative h-64 overflow-hidden">
           <Image
-            src={property.images[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
+            src={property.images?.[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
             alt={property.title}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -72,14 +72,14 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               </div>
               
               <div className="flex flex-wrap gap-1">
-                {property.amenities.slice(0, 2).map((amenity, index) => (
+                {(property.amenities ?? []).slice(0, 2).map((amenity, index) => (
                   <Badge key={index} variant="secondary" className="text-xs">
                     {amenity}
                   </Badge>
                 ))}
-                {property.amenities.length > 2 && (
+                {(property.amenities?.length ?? 0) > 2 && (
                   <Badge variant="outline" className="text-xs">
-                    +{property.amenities.length - 2}
+                    +{(property.amenities?.length ?? 0) - 2}
                   </Badge>
                 )}
               </div>

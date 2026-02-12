@@ -44,6 +44,7 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
     currency === "MXN" && usdMxnRate != null
       ? Math.round(property.pricePerNight * usdMxnRate)
       : property.pricePerNight;
+  const displayCurrency = currency === "MXN" && usdMxnRate != null ? "MXN" : "USD";
 
   return (
     <div className="space-y-8">
@@ -69,7 +70,7 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
             <span>Hasta {property.maxGuests} huéspedes</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {formatPrice(pricePerNight, currency)} / noche
+            {formatPrice(pricePerNight, displayCurrency)} / noche
           </div>
         </div>
       </div>
