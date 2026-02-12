@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { getServiceById } from "@/lib/firebase/services";
-import AdminLayout from "@/app/admin/layout";
 import ServiceEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -23,8 +22,7 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
   }
 
   return (
-    <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link href="/admin/services">
@@ -40,6 +38,5 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
 
         <ServiceEditForm initialData={service} />
       </div>
-    </AdminLayout>
   );
 }

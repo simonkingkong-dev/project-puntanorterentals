@@ -14,6 +14,7 @@ import { calculateNights } from '@/lib/utils/date';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
+import type { Currency } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
@@ -24,6 +25,8 @@ interface ReservationFormProps {
   property: Property;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
   onReservationComplete?: () => void;
+  currency?: Currency;
+  pricePerNightDisplay?: number;
 }
 
 /**
@@ -35,10 +38,19 @@ interface ReservationFormProps {
  * @param {Function} {onReservationComplete} - A callback function that is executed once the reservation process is complete.
  * @returns {JSX.Element} The reservation form component to be rendered within a React application.
  */
+function formatPrice(amount: number, currency: Currency): string {
+  if (currency === 'MXN') {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
+  }
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
 export default function ReservationForm({ 
   property, 
   selectedDates,
-  onReservationComplete 
+  onReservationComplete,
+  currency = 'USD',
+  pricePerNightDisplay,
 }: ReservationFormProps) {
   const router = useRouter();
   const { cart, setDraft } = useCart();
@@ -59,7 +71,8 @@ export default function ReservationForm({
     setDatesUnavailable(false);
     setShowOverlapMessage(false);
   }, [selectedDates?.checkIn?.getTime(), selectedDates?.checkOut?.getTime()]);
-  const subtotal = nights * property.pricePerNight;
+  const pricePerNight = pricePerNightDisplay ?? property.pricePerNight;
+  const subtotal = nights * pricePerNight;
   const fees = Math.round(subtotal * 0.1); // 10% service fee
   const total = subtotal + fees;
 
@@ -262,20 +275,20 @@ export default function ReservationForm({
             <h3 className="font-semibold">Resumen de precios</h3>
             
             <div className="flex justify-between text-sm">
-              <span>${property.pricePerNight} × {nights} {nights === 1 ? 'noche' : 'noches'}</span>
-              <span>${subtotal}</span>
+              <span>{formatPrice(pricePerNight, currency)} × {nights} {nights === 1 ? 'noche' : 'noches'}</span>
+              <span>{formatPrice(subtotal, currency)}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span>Tarifa de servicio</span>
-              <span>${fees}</span>
+              <span>{formatPrice(fees, currency)}</span>
             </div>
             
             <Separator />
             
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>${total}</span>
+              <span>{formatPrice(total, currency)}</span>
             </div>
           </div>
 

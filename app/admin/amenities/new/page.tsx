@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, Wifi, Car, Utensils, Home, Waves, Shield, Star, Zap, Coffee, Loader2 } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout'; 
 import Link from 'next/link';
 import { toast } from 'sonner';
 // CORREGIDO: Importamos la Server Action

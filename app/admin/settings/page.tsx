@@ -7,8 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, Database, Mail, Save, Shield } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
-
 export const metadata: Metadata = {
   title: 'Configuración - Admin Panel',
   robots: 'noindex, nofollow',

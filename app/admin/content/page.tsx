@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Home, Info, Save, type LucideIcon } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
 import { toast } from 'sonner';
 import { getSiteContent } from '@/lib/firebase/content';
 import { updateSiteContentAdmin } from './actions';

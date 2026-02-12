@@ -68,6 +68,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
             alt={`${title} - Imagen principal`}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
+            unoptimized
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
           
@@ -113,6 +114,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
                 alt={`${title} - Imagen ${index + 2}`}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                unoptimized
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
             </div>
@@ -146,6 +148,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               alt={`${title} - Miniatura ${index + 1}`}
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
         ))}
@@ -173,6 +176,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
                 alt={`${title} - Imagen ${modalIndex + 1}`}
                 fill
                 className="object-contain"
+                unoptimized
               />
             </div>
 

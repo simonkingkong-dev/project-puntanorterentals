@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPropertyById } from "@/lib/firebase/properties"; 
-import AdminLayout from "@/app/admin/layout";
+import { getPropertyByIdAdmin } from "@/lib/firebase-admin-queries"; 
 import PropertyEditForm from "./edit-form"; 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -18,7 +17,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
   const { id } = await params;
   
   // 1. Obtenemos los datos de la propiedad específica
-  const property = await getPropertyById(id);
+  const property = await getPropertyByIdAdmin(id);
 
   // 2. Si no existe, mostramos un 404
   if (!property) {
@@ -26,8 +25,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
   }
 
   return (
-    <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
@@ -45,6 +43,5 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
         {/* 3. Pasamos los datos cargados al formulario (Client Component) */}
         <PropertyEditForm initialData={property} />
       </div>
-    </AdminLayout>
   );
 }

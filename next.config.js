@@ -17,6 +17,12 @@ const nextConfig = {
         hostname: 'images.unsplash.com', // Por si usas placeholders
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'orbirental-images.s3.amazonaws.com', // Hostfully / S3
+        port: '',
+        pathname: '/**',
       }
     ],
   },

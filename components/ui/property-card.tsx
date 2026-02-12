@@ -32,6 +32,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             alt={property.title}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
+            unoptimized
           />
           {property.featured && (
             <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600 text-white border-0">

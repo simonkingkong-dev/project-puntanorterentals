@@ -7,6 +7,7 @@ import { Wifi, Car, Utensils, Home, Waves, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import AvailabilityCalendar from '@/components/ui/availability-calendar';
 import ReservationForm from '@/components/ui/reservation-form';
+import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { useCart } from '@/lib/cart-context';
 
 const amenityIcons: Record<string, LucideIcon> = {
@@ -25,9 +26,19 @@ const amenityIcons: Record<string, LucideIcon> = {
 
 interface PropertyBodyProps {
   property: Property;
+  currency: Currency;
+  onCurrencyChange: (c: Currency) => void;
+  pricePerNightDisplay: number;
+  usdMxnRate: number | null;
 }
 
-export default function PropertyBody({ property }: PropertyBodyProps) {
+export default function PropertyBody({
+  property,
+  currency,
+  onCurrencyChange,
+  pricePerNightDisplay,
+  usdMxnRate,
+}: PropertyBodyProps) {
   const [selectedDates, setSelectedDates] = useState<{ checkIn: Date; checkOut?: Date } | undefined>();
   const { addToCart } = useCart();
 
@@ -78,12 +89,15 @@ export default function PropertyBody({ property }: PropertyBodyProps) {
 
         <Separator />
 
-        {/* Calendario */}
+        {/* Calendario y selector de moneda */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Disponibilidad</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Disponibilidad</h2>
+            <CurrencySelect value={currency} onValueChange={onCurrencyChange} />
+          </div>
           <AvailabilityCalendar
             property={property}
-            onDateSelect={setSelectedDates} // Ahora sí podemos pasar la función
+            onDateSelect={setSelectedDates}
             selectedDates={selectedDates}
           />
         </div>
@@ -94,7 +108,9 @@ export default function PropertyBody({ property }: PropertyBodyProps) {
         <div className="sticky top-24">
           <ReservationForm
             property={property}
-            selectedDates={selectedDates} // Pasamos las fechas seleccionadas al form
+            selectedDates={selectedDates}
+            currency={currency}
+            pricePerNightDisplay={pricePerNightDisplay}
           />
         </div>
       </div>

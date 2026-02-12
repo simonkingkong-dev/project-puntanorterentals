@@ -167,6 +167,7 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
                 alt={property.title ?? 'Propiedad'}
                 fill
                 className="object-cover"
+                unoptimized
                 sizes="80px"
               />
             </div>

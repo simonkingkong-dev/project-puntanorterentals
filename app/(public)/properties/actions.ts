@@ -130,8 +130,8 @@ async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: stri
 }
 
 /** Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
- * Las fechas solo se bloquean al entrar en la página de pago (hold). Si hay reservas pendientes
- * expiradas que tenían las fechas bloqueadas, se liberan antes de comprobar.
+ * Si la propiedad tiene hostfullyPropertyId, consulta disponibilidad al PMS (Hostfully).
+ * Si no, usa Firestore (availability + release de holds expirados).
  */
 export async function checkPropertyAvailability(
   propertyId: string,
@@ -140,20 +140,32 @@ export async function checkPropertyAvailability(
 ): Promise<{ available: boolean; error?: string }> {
   try {
     const { getPropertyByIdAdmin } = await import("@/lib/firebase-admin-queries");
-    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
-
-    let property = await getPropertyByIdAdmin(propertyId);
+    const property = await getPropertyByIdAdmin(propertyId);
     if (!property) return { available: false, error: "Propiedad no encontrada" };
 
-    const hasUnavailable = dateStrings.some((d) => property!.availability[d] === false);
+    // Prioridad 1: Hostfully (PMS) si la propiedad está vinculada
+    if (property.hostfullyPropertyId) {
+      const { checkHostfullyAvailability } = await import("@/lib/hostfully/client");
+      return checkHostfullyAvailability(
+        property.hostfullyPropertyId,
+        new Date(checkIn),
+        new Date(checkOut)
+      );
+    }
+
+    // Prioridad 2: Firestore
+    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
+    let prop = property;
+    const hasUnavailable = dateStrings.some((d) => prop.availability[d] === false);
     if (hasUnavailable) {
       await releaseExpiredHoldsForDates(propertyId, dateStrings);
-      property = await getPropertyByIdAdmin(propertyId);
-      if (!property) return { available: false, error: "Propiedad no encontrada" };
+      const refreshed = await getPropertyByIdAdmin(propertyId);
+      if (!refreshed) return { available: false, error: "Propiedad no encontrada" };
+      prop = refreshed;
     }
 
     for (const d of dateStrings) {
-      if (property.availability[d] === false) return { available: false };
+      if (prop.availability[d] === false) return { available: false };
     }
     return { available: true };
   } catch (e) {

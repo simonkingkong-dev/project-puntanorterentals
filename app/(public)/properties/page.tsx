@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import PropertyCard from '@/components/ui/property-card';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getProperties, searchProperties } from '@/lib/firebase/properties';
+import { getAdminProperties, searchPropertiesAdmin } from '@/lib/firebase-admin-queries';
 import { Property, SearchParams } from '@/lib/types';
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 interface PropertiesPageProps {
-  searchParams: SearchParams; 
+  searchParams: Promise<SearchParams>;
 }
 
 function PropertySkeleton() {
@@ -47,9 +47,9 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
         ...searchParams,
         guests: searchParams.guests ? Number(searchParams.guests) : undefined,
       };
-      properties = await searchProperties(paramsForSearch);
+      properties = await searchPropertiesAdmin(paramsForSearch);
     } else {
-      properties = await getProperties();
+      properties = await getAdminProperties();
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -82,11 +82,12 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
   );
 }
 
-export default function PropertiesPage({ searchParams }: PropertiesPageProps) {
-  const hasFilters = Object.keys(searchParams).length > 0;
+export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
+  const params = await searchParams;
+  const hasFilters = Object.keys(params).length > 0;
   const numericSearchParams: SearchParams = {
-    ...searchParams,
-    guests: searchParams.guests ? Number(searchParams.guests) : undefined,
+    ...params,
+    guests: params.guests ? Number(params.guests) : undefined,
   };
 
   return (

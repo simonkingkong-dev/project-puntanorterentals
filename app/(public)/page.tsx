@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button';
 import SearchForm from '@/components/ui/search-form';
 import PropertyCard from '@/components/ui/property-card';
 import ServiceCard from '@/components/ui/service-card';
-import { getFeaturedProperties } from '@/lib/firebase/properties';
-import { getFeaturedServices } from '@/lib/firebase/services';
-import { getSiteContentBySection } from '@/lib/firebase/content';
+import { getFeaturedPropertiesAdmin, getFeaturedServicesAdmin, getSiteContentBySectionAdmin } from '@/lib/firebase-admin-queries';
 
 export const dynamic = 'force-dynamic'; // Asegura que se obtengan datos frescos en cada request
 
@@ -21,19 +19,9 @@ function contentMap(items: { key: string; value: string }[]) {
 export default async function HomePage() {
   // Ejecutamos las peticiones en paralelo para mejorar la velocidad de carga
   const [featuredProperties, featuredServices, homepageContent] = await Promise.all([
-    getFeaturedProperties().catch((err) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("[Home] Error fetching properties:", err);
-      }
-      return [];
-    }),
-    getFeaturedServices().catch((err) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("[Home] Error fetching services:", err);
-      }
-      return [];
-    }),
-    getSiteContentBySection('homepage').catch(() => []),
+    getFeaturedPropertiesAdmin(),
+    getFeaturedServicesAdmin(),
+    getSiteContentBySectionAdmin('homepage'),
   ]);
 
   const c = contentMap(homepageContent);

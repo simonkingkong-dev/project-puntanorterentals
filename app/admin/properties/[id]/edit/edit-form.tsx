@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Save, Loader2, Plus, X } from 'lucide-react'; // 'Upload' no se usa aquí
+import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from "@/lib/types";
 // CORREGIDO: Importar Server Action, Uploader, y función de subida
@@ -40,6 +40,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     pricePerNight: initialData.pricePerNight,
     featured: initialData.featured,
     amenities: initialData.amenities,
+    hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
   });
 
   // --- CORREGIDO: Estados separados para imágenes ---
@@ -80,7 +81,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         // 2. Preparar el objeto final para la Server Action
         const propertyData: UpdatePropertyFormData = {
           ...formData,
-          images: finalImageUrls, // Pasamos la lista combinada
+          images: finalImageUrls,
+          hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
         };
 
         // 3. Llamar a la Server Action
@@ -206,7 +208,32 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         </CardContent>
       </Card>
 
-      {/* --- CORREGIDO: Card de Imágenes --- */}
+      {/* Integración Hostfully (PMS) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="w-5 h-5" />
+            Integración Hostfully (PMS)
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Si vinculas esta propiedad con Hostfully, la disponibilidad y el feed iCal se consultarán al PMS.
+            Deja vacío para usar Firestore.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="hostfullyPropertyId">UID de Propiedad en Hostfully</Label>
+            <Input
+              id="hostfullyPropertyId"
+              value={formData.hostfullyPropertyId ?? ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, hostfullyPropertyId: e.target.value }))}
+              placeholder="Ej: abc123-def456-..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card de Imágenes */}
       <Card>
          <CardHeader>
           <CardTitle>Galería de Imágenes</CardTitle>

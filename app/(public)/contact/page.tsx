@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Mail, MapPin, Phone } from 'lucide-react';
-import { getContactInfo } from '@/lib/firebase/content';
+import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const contact = await getContactInfo();
+  const contact = await getContactInfoAdmin();
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

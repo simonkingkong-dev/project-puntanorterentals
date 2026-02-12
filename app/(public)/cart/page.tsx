@@ -234,6 +234,7 @@ function CartItemCard({
                   alt={property.title ?? 'Propiedad'}
                   fill
                   className="object-cover"
+                  unoptimized
                   sizes="96px"
                 />
               ) : (

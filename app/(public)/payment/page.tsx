@@ -7,6 +7,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, Shield, Calendar } from 'lucide-react';
+import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -145,6 +146,8 @@ function PaymentContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [currency, setCurrency] = useState<Currency>('USD');
+  const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
 
   useEffect(() => {
     const draft = getDraft() || getDraftFromStorage();
@@ -294,6 +297,17 @@ function PaymentContent() {
   }, [reservationId, modification, amountParam, tokenParam, router, hydrated, getDraft, removeFromCart, addToCart, getItemByKey, updateCartItem]);
 
   useEffect(() => {
+    if (currency === 'MXN') {
+      fetch('/api/exchange-rate?from=USD&to=MXN')
+        .then((r) => r.json())
+        .then((data) => setUsdMxnRate(data.rate))
+        .catch(() => setUsdMxnRate(17.2));
+    } else {
+      setUsdMxnRate(null);
+    }
+  }, [currency]);
+
+  useEffect(() => {
     if (secondsLeft === null || secondsLeft <= 0) return;
     const t = setInterval(() => {
       setSecondsLeft((s) => (s != null && s > 0 ? s - 1 : 0));
@@ -338,9 +352,20 @@ function PaymentContent() {
     );
   }
 
-  const displayAmount = amount ?? 0;
-  const serviceFee = Math.round(displayAmount * 0.1);
-  const subtotal = displayAmount - serviceFee;
+  const displayAmountUsd = amount ?? 0;
+  const serviceFeeUsd = Math.round(displayAmountUsd * 0.1);
+  const subtotalUsd = displayAmountUsd - serviceFeeUsd;
+  const rate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
+  const displayAmount = Math.round(displayAmountUsd * rate);
+  const serviceFee = Math.round(serviceFeeUsd * rate);
+  const subtotal = Math.round(subtotalUsd * rate);
+
+  function formatPrice(val: number): string {
+    if (currency === 'MXN') {
+      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(val);
+    }
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+  }
   const checkInDate = reservationInfo?.checkIn ? new Date(reservationInfo.checkIn) : null;
   const checkOutDate = reservationInfo?.checkOut ? new Date(reservationInfo.checkOut) : null;
   const nights = checkInDate && checkOutDate ? calculateNights(checkInDate, checkOutDate) : 0;
@@ -410,21 +435,22 @@ function PaymentContent() {
 
       {/* Resumen de pago */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Resumen de Pago</CardTitle>
+          <CurrencySelect value={currency} onValueChange={setCurrency} />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>${subtotal}</span>
+            <span>{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tarifa de servicio</span>
-            <span>${serviceFee}</span>
+            <span>{formatPrice(serviceFee)}</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
             <span>Total</span>
-            <span>${displayAmount}</span>
+            <span>{formatPrice(displayAmount)}</span>
           </div>
         </CardContent>
       </Card>

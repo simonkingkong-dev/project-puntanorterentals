@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
-import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo } from "@/lib/types";
+import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo, SearchParams, SiteContent } from "@/lib/types";
 
 // --- PROPIEDADES ---
 export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property | null> => {
@@ -31,6 +31,77 @@ export const getAdminProperties = async (): Promise<Property[]> => {
     })) as Property[];
   } catch (error) {
     console.error('Admin: Error fetching properties', error);
+    return [];
+  }
+};
+
+/** Obtiene propiedad por slug (para página pública de detalle, usa Admin SDK en servidor). */
+export const getPropertyBySlugAdmin = async (slug: string): Promise<Property | null> => {
+  try {
+    const snapshot = await adminDb.collection('properties').where('slug', '==', slug).limit(1).get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      updatedAt: data.updatedAt?.toDate?.() ?? new Date(data.updatedAt),
+    } as Property;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching property by slug', error);
+    return null;
+  }
+};
+
+/** Propiedades destacadas (para homepage pública, usa Admin SDK en servidor). */
+export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('properties')
+      .where('featured', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+    })) as Property[];
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured properties', error);
+    return [];
+  }
+};
+
+/** Busca propiedades con filtros (usa Admin SDK en servidor). */
+export const searchPropertiesAdmin = async (params: SearchParams): Promise<Property[]> => {
+  try {
+    let properties = await getAdminProperties();
+    if (params.guests) {
+      properties = properties.filter(p => p.maxGuests >= params.guests!);
+    }
+    if (params.location) {
+      properties = properties.filter(p =>
+        p.location.toLowerCase().includes(params.location!.toLowerCase())
+      );
+    }
+    if (params.checkIn && params.checkOut) {
+      const checkIn = new Date(params.checkIn);
+      const checkOut = new Date(params.checkOut);
+      properties = properties.filter(p => {
+        let current = new Date(checkIn);
+        while (current < checkOut) {
+          const dateStr = current.toISOString().split('T')[0];
+          if (p.availability?.[dateStr] === false) return false;
+          current.setDate(current.getDate() + 1);
+        }
+        return true;
+      });
+    }
+    return properties;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error searching properties', error);
     return [];
   }
 };
@@ -93,6 +164,25 @@ export const getAdminServices = async (): Promise<Service[]> => {
     })) as Service[];
   } catch (error) {
     console.error('Admin: Error fetching services', error);
+    return [];
+  }
+};
+
+/** Servicios destacados (para homepage pública, usa Admin SDK en servidor). */
+export const getFeaturedServicesAdmin = async (): Promise<Service[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('services')
+      .where('featured', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    })) as Service[];
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured services', error);
     return [];
   }
 };
@@ -306,6 +396,24 @@ export const getAdminRefundRequests = async (): Promise<RefundRequestRow[]> => {
     });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching refund requests', error);
+    return [];
+  }
+};
+
+// --- CONTENIDO DEL SITIO ---
+export const getSiteContentBySectionAdmin = async (section: string): Promise<SiteContent[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('siteContent')
+      .where('section', '==', section)
+      .get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
+    })) as SiteContent[];
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching site content by section', error);
     return [];
   }
 };

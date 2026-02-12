@@ -14,6 +14,8 @@ export interface Property {
   featured: boolean;
   createdAt: Date;
   updatedAt: Date;
+  /** UID de la propiedad en Hostfully (PMS). Si existe, la disponibilidad se consulta al PMS. */
+  hostfullyPropertyId?: string;
 }
 
 export interface Reservation {

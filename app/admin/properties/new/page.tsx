@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Plus, X, Loader2, Save } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
 import Link from 'next/link';
 import { toast } from 'sonner';
 // CORREGIDO: Importamos la Server Action del Admin (que usa firebase-admin)
@@ -129,8 +128,7 @@ export default function NewPropertyPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
@@ -256,6 +254,5 @@ export default function NewPropertyPage() {
           </div>
         </form>
       </div>
-    </AdminLayout>
   );
 }

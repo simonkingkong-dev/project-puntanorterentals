@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, MapPin, Users, Building } from 'lucide-react';
+import { Plus, Edit, MapPin, Users, Building, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 // CORREGIDO: Usar Admin Query
 import { getAdminProperties } from '@/lib/firebase-admin-queries';
@@ -12,7 +12,10 @@ import DeletePropertyButton from './delete-property-button';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPropertiesPage() {
-  const properties = await getAdminProperties();
+  const data = await getAdminProperties();
+  const properties = [...data].sort((a, b) =>
+    a.title.localeCompare(b.title, "es", { sensitivity: "base" })
+  );
 
   return (
     <div className="space-y-6">
@@ -21,12 +24,20 @@ export default async function AdminPropertiesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Propiedades</h1>
           <p className="text-gray-600">Gestiona todas las propiedades del sistema</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/properties/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Propiedad
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/properties/sync-hostfully">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Sincronizar Hostfully
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/properties/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Propiedad
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {properties.length > 0 ? (
@@ -40,6 +51,7 @@ export default async function AdminPropertiesPage() {
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  unoptimized
                 />
                 <div className="absolute top-2 right-2 flex gap-2">
                   {property.featured && (

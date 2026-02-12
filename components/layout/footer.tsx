@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
-import { getContactInfo } from '@/lib/firebase/content';
+import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 
 export default async function Footer() {
-  const contact = await getContactInfo();
+  const contact = await getContactInfoAdmin();
   const social = contact?.socialMedia ?? {};
 
   return (

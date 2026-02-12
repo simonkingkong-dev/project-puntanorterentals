@@ -1,7 +1,6 @@
 // NO LLEVA "use client"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
-import AdminLayout from '@/app/admin/layout';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { ContactInfo } from '@/lib/types';
 import ContactForm from '@/app/admin/contact/contact-form'; // 1. Importamos el nuevo componente de formulario

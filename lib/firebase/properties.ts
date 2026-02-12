@@ -1,15 +1,15 @@
 import { 
   Timestamp, 
+  addDoc, 
   collection, 
+  deleteDoc, 
   doc, 
   getDoc, 
   getDocs, 
   orderBy, 
-  query, 
-  updateDoc, 
+  query,
+  updateDoc,
   where,
-  addDoc,
-  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Property, SearchParams } from '../types';
@@ -212,7 +212,7 @@ export const updateProperty = async (id: string, propertyData: Partial<Omit<Prop
     const propertyRef = doc(db, PROPERTIES_COLLECTION, id);
     await updateDoc(propertyRef, {
       ...propertyData,
-      updatedAt: Timestamp.now() // Actualizar la fecha de modificación
+      updatedAt: Timestamp.now(), // Actualizar la fecha de modificación
     });
   } catch (error) {
     console.error('Error updating property:', error);
