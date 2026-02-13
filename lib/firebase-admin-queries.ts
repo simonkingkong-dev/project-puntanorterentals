@@ -420,6 +420,8 @@ export const getSiteContentBySectionAdmin = async (section: string): Promise<Sit
 
 // --- INFO DE CONTACTO ---
 export const getContactInfoAdmin = async (): Promise<ContactInfo | null> => {
+  // Durante build (p.ej. Firebase App Hosting) las env vars pueden no estar aún; evita fallar
+  if (!process.env.FIREBASE_PRIVATE_KEY) return null;
   try {
     const snapshot = await adminDb.collection('contactInfo').limit(1).get();
     if (snapshot.empty) return null;
