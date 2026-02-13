@@ -9,7 +9,6 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ReservationRowActions from './reservation-row-actions';
 
-// CORREGIDO: Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 
 const getStatusBadge = (status: string) => {

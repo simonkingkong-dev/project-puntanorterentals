@@ -1,11 +1,9 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-// CORREGIDO: 'Menu' ya no se importa aquí
 import { Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// CORREGIDO: El header ya no maneja el estado del sidebar
 interface AdminHeaderProps {}
 
 // La función 'getTitleFromPathname' no cambia

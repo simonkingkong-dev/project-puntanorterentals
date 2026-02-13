@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { adminDb } from "@/lib/firebase-admin"; // Usamos el Admin SDK
+import { adminDb } from "@/lib/firebase-admin";
 import { Service } from "@/lib/types";
 
-// --- CREAR ---
 export async function handleCreateService(formData: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>) {
   try {
     await adminDb.collection('services').add({

@@ -1,4 +1,3 @@
-// Archivo: app/admin/properties/new/page.tsx
 
 "use client";
 
@@ -14,9 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Plus, X, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-// CORREGIDO: Importamos la Server Action del Admin (que usa firebase-admin)
 import { handleCreateProperty } from '../actions'; 
-// Importamos la función de subida (Nota: esto sigue siendo cliente, asegúrate de que tus reglas de Storage lo permitan o sean públicas por ahora)
 import { uploadImageToStorage } from '@/lib/firebase/storage';
 import ImageUploader, { FileWithPreview } from '@/components/admin/image-uploader';
 import { Property } from '@/lib/types';

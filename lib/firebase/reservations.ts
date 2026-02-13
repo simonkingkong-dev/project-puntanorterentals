@@ -1,5 +1,3 @@
-// Archivo: lib/firebase/reservations.ts (Completo)
-
 import { 
   collection, 
   doc, 

@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, MapPin, Users, Building, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-// CORREGIDO: Usar Admin Query
 import { getAdminProperties } from '@/lib/firebase-admin-queries';
 import DeletePropertyButton from './delete-property-button';
 
-// CORREGIDO: Forzar renderizado dinámico para ver cambios al instante
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPropertiesPage() {

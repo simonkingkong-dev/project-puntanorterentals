@@ -6,14 +6,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 interface EditPropertyPageProps {
-  // CORREGIDO: params ahora es una Promesa en Next.js 15+
   params: Promise<{
     id: string; 
   }>;
 }
 
 export default async function EditPropertyPage({ params }: EditPropertyPageProps) {
-  // CORREGIDO: Debemos esperar (await) los params antes de desestructurar
   const { id } = await params;
   
   // 1. Obtenemos los datos de la propiedad específica

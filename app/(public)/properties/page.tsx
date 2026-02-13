@@ -1,5 +1,3 @@
-// Archivo: app/(public)/properties/page.tsx (El código público)
-
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import PropertyCard from '@/components/ui/property-card';

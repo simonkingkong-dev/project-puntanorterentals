@@ -1,13 +1,6 @@
 import "server-only";
 import admin from 'firebase-admin';
 
-interface FirebaseAdminConfig {
-  projectId: string;
-  clientEmail: string;
-  privateKey: string;
-  storageBucket: string;
-}
-
 function formatPrivateKey(key: string) {
   return key.replace(/\\n/g, "\n");
 }

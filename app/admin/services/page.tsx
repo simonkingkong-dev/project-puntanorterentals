@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
-// CORREGIDO: Usar Admin Query
 import { getAdminServices } from '@/lib/firebase-admin-queries';
 import DeleteServiceButton from './delete-service-button'; 
 
-// CORREGIDO: Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 
 export default async function AdminServicesPage() {

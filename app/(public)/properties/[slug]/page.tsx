@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import PropertyPageContent from '@/components/property-page-content'; // <--- Importamos el nuevo componente
+import PropertyPageContent from '@/components/property-page-content';
 import { getPropertyBySlugAdmin } from '@/lib/firebase-admin-queries';
 
 interface PropertyPageProps {

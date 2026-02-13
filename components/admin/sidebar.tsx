@@ -13,7 +13,7 @@ import {
   MessageSquare,
   Star,
   Globe,
-  Menu // CORREGIDO: Importar el ícono de Menú
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -42,7 +42,6 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
   const router = useRouter();
 
   const handleLogout = async () => {
-    // ... (tu función de logout no cambia)
     try {
        const response = await fetch('/api/admin/logout', { method: 'POST' });
       if (response.ok) {
@@ -63,12 +62,10 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
       {/* Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
-        // CORREGIDO: Cambiamos el ancho en lugar de 'translate-x'
         isOpen ? "w-64" : "w-20" 
       )}>
         <div className="flex flex-col h-full">
           
-          {/* CORREGIDO: Nuevo Header del Sidebar con el botón */}
           <div className={cn(
             "flex flex-col items-center justify-center p-4 h-16 min-h-16 max-h-16 flex-shrink-0 border-b border-gray-200",
             isOpen ? "items-start" : "items-center" // Alinear al inicio cuando está abierto
@@ -76,7 +73,6 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
             <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
               <Menu className="w-5 h-5" />
             </Button>
-            {/* CORREGIDO: Texto "Menu" condicional */}
             {isOpen && (
               <span className="text-xs text-muted-foreground mt-1">Menu</span>
             )}

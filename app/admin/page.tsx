@@ -1,5 +1,3 @@
-// Archivo: app/admin/page.tsx
-
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +7,6 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
-// CAMBIO IMPORTANTE: Importamos las nuevas funciones de admin
 import { getAdminProperties, getAdminReservations } from '@/lib/firebase-admin-queries';
 
 export const metadata: Metadata = {

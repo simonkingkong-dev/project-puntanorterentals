@@ -1,5 +1,3 @@
-// Archivo: lib/firebase/storage.ts
-
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid'; // Necesitaremos 'uuid' para nombres únicos
 import { storage } from '../firebase'; // Importa la instancia de storage de tu archivo principal

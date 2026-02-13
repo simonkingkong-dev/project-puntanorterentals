@@ -1,5 +1,3 @@
-// Archivo: app/(public)/payment/success/page.tsx (Completo)
-
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
@@ -8,8 +6,8 @@ import Link from 'next/link';
 import { Check, Calendar, Users, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Reservation } from '@/lib/types'; // Importamos el tipo
-import { format } from 'date-fns'; // Para formatear fechas
+import { Reservation } from '@/lib/types';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const POLL_INTERVAL_MS = 2000;

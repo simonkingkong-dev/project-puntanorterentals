@@ -1,14 +1,10 @@
-// Archivo: app/admin/properties/actions.ts
-
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { adminDb } from "@/lib/firebase-admin"; // <--- Importamos el Admin SDK
+import { adminDb } from "@/lib/firebase-admin";
 import { Property } from "@/lib/types";
 
-// --- CREAR (NUEVA FUNCIÓN) ---
-// Necesitaremos esto para que la página de "Nueva Propiedad" funcione con Admin
 export async function handleCreateProperty(formData: Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'slug' | 'availability'>) {
   try {
     // Generamos el slug automáticamente si no viene (seguridad extra)
@@ -25,7 +21,6 @@ export async function handleCreateProperty(formData: Omit<Property, 'id' | 'crea
       updatedAt: new Date(),
     };
 
-    // Usamos adminDb para crear el documento
     await adminDb.collection('properties').add(newProperty);
 
     revalidatePath("/admin/properties");
@@ -47,7 +42,6 @@ export async function handleUpdateProperty(propertyId: string, formData: UpdateP
   if (!propertyId) return { success: false, error: "ID requerido" };
 
   try {
-    // Usamos adminDb para actualizar
     await adminDb.collection('properties').doc(propertyId).update({
       ...formData,
       updatedAt: new Date(),

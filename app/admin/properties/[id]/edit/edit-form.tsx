@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from "@/lib/types";
-// CORREGIDO: Importar Server Action, Uploader, y función de subida
 import { handleUpdateProperty, UpdatePropertyFormData } from "../../actions";
 import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
 import { uploadImageToStorage } from "@/lib/firebase/storage";

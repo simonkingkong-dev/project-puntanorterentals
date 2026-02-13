@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Star, User } from 'lucide-react';
 import Image from 'next/image';
-// CORREGIDO: Usar Admin Query
 import { getAdminTestimonials } from '@/lib/firebase-admin-queries';
 import DeleteTestimonialButton from './delete-testimonials-button';
 
-// CORREGIDO: Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 
 const renderStars = (rating: number) => {
