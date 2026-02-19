@@ -36,13 +36,13 @@ function getApp() {
 // Lazy: solo se inicializa al primer uso (evita fallar durante next build)
 function createLazyProxy<T extends object>(getReal: () => T): T {
   return new Proxy({} as T, {
-    get(_, prop) {
+    get(_: unknown, prop: string | symbol): unknown {
       const real = getReal();
       const val = (real as Record<string, unknown>)[prop as string];
       if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).bind(real);
       return val;
     },
-  });
+  }) as T;
 }
 export const adminDb = createLazyProxy(() => getApp().firestore());
 export const adminAuth = createLazyProxy(() => getApp().auth());

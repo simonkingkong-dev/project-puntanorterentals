@@ -6,19 +6,19 @@ let _stripe: Stripe | null = null;
 function createStripeStub(): Stripe {
   const errorMsg = 'STRIPE_SECRET_KEY is missing. Please configure it in Firebase App Hosting environment variables.';
   const stubHandler = {
-    get(_target: unknown, prop: string | symbol) {
+    get(_target: unknown, _prop: string | symbol): unknown {
       // Retornamos otro Proxy para manejar propiedades anidadas (ej: paymentIntents.retrieve)
       return new Proxy(() => {}, {
-        get(_target, nestedProp: string | symbol) {
-          return stubHandler.get(_target, nestedProp);
+        get(_t: unknown, _np: string | symbol): unknown {
+          return stubHandler.get(_t, _np);
         },
-        apply() {
+        apply(): never {
           throw new Error(errorMsg);
         },
       });
     },
   };
-  return new Proxy({} as Stripe, stubHandler);
+  return new Proxy({} as Stripe, stubHandler) as Stripe;
 }
 
 function getStripe(): Stripe {
@@ -39,11 +39,11 @@ function getStripe(): Stripe {
 // Lazy: solo se inicializa al primer uso (evita fallar durante next build)
 // Durante build sin STRIPE_SECRET_KEY, el stub permite que el build continúe
 // El error se lanzará solo cuando se intente usar Stripe en runtime
-export const stripe = new Proxy({} as Stripe, {
-  get(_, prop) {
+export const stripe: Stripe = new Proxy({} as Stripe, {
+  get(_: unknown, prop: string | symbol): unknown {
     const real = getStripe();
-    const val = (real as Record<string, unknown>)[prop as string];
+    const val = (real as unknown as Record<string, unknown>)[prop as string];
     if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).bind(real);
     return val;
   },
-});
+}) as Stripe;
