@@ -1,0 +1,73 @@
+# Firebase App Hosting - Secretos desde Google Cloud Secret Manager
+# Los valores están en Secret Manager; aquí solo se referencian por nombre.
+
+env:
+  # Stripe (publishable es pública pero suele estar en Secret Manager también)
+  - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    secret: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+  # Firebase Admin SDK
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Admin dashboard
+  - variable: ADMIN_USERNAME
+    secret: ADMIN_USERNAME
+    availability:
+      - RUNTIME
+  - variable: ADMIN_PASSWORD
+    secret: ADMIN_PASSWORD
+    availability:
+      - RUNTIME
+
+  # Hostfully PMS
+  - variable: HOSTFULLY_API_KEY
+    secret: HOSTFULLY_API_KEY
+    availability:
+      - RUNTIME
+  - variable: HOSTFULLY_AGENCY_UID
+    secret: HOSTFULLY_AGENCY_UID
+    availability:
+      - RUNTIME
+  - variable: HOSTFULLY_BASE_URL
+    secret: HOSTFULLY_BASE_URL
+    availability:
+      - RUNTIME
+
+  # Email (SMTP)
+  - variable: SMTP_HOST
+    secret: SMTP_HOST
+    availability:
+      - RUNTIME
+  - variable: SMTP_PORT
+    secret: SMTP_PORT
+    availability:
+      - RUNTIME
+  - variable: SMTP_USER
+    secret: SMTP_USER
+    availability:
+      - RUNTIME
+  - variable: SMTP_PASS
+    secret: SMTP_PASS
+    availability:
+      - RUNTIME
