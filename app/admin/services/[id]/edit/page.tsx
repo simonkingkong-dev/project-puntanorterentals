@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getServiceById } from "@/lib/firebase/services";
+import { getServiceByIdAdmin } from "@/lib/firebase-admin-queries";
 import ServiceEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -15,7 +15,7 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
   // Esperamos los parametros
   const { id } = await params;
   
-  const service = await getServiceById(id);
+  const service = await getServiceByIdAdmin(id);
 
   if (!service) {
     notFound();

@@ -75,22 +75,7 @@ npm install
 ```
 
 ### 3. Configurar variables de entorno
-Copia `.env.local.example` a `.env.local` y completa las variables:
-
-```env
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-
-# Stripe Configuration
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-```
+Copia `.env.local.example` a `.env.local` y completa todas las variables (Firebase, Stripe, SMTP, Admin, Hostfully). Para una **lista completa y cómo configurarlas en producción (App Hosting)** ver **[docs/VARIABLES_ENTORNO.md](docs/VARIABLES_ENTORNO.md)**.
 
 ### 4. Configurar Firebase
 1. Crear un proyecto en [Firebase Console](https://console.firebase.google.com)

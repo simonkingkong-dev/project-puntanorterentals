@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTestimonialById } from "@/lib/firebase/content";
+import { getTestimonialByIdAdmin } from "@/lib/firebase-admin-queries";
 import TestimonialEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -15,7 +15,7 @@ export default async function EditTestimonialPage({ params }: EditTestimonialPag
   // Esperamos los parametros
   const { id } = await params;
   
-  const testimonial = await getTestimonialById(id);
+  const testimonial = await getTestimonialByIdAdmin(id);
 
   if (!testimonial) {
     notFound();

@@ -14,7 +14,8 @@ import { es } from 'date-fns/locale';
 import { calculateNights } from '@/lib/utils/date';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
 
 const RESERVATION_TIMEOUT_MINUTES = 10;
 

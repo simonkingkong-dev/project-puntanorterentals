@@ -168,6 +168,22 @@ export const getAdminServices = async (): Promise<Service[]> => {
   }
 };
 
+export const getServiceByIdAdmin = async (id: string): Promise<Service | null> => {
+  try {
+    const snap = await adminDb.collection('services').doc(id).get();
+    if (!snap.exists) return null;
+    const data = snap.data()!;
+    return {
+      id: snap.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+    } as Service;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching service by ID', error);
+    return null;
+  }
+};
+
 /** Servicios destacados (para homepage pública, usa Admin SDK en servidor). */
 export const getFeaturedServicesAdmin = async (): Promise<Service[]> => {
   try {
@@ -202,7 +218,23 @@ export const getAdminGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
   }
 };
 
-// --- TESTIMONIOS (AÑADIR ESTO AL FINAL) ---
+export const getGlobalAmenityByIdAdmin = async (id: string): Promise<GlobalAmenity | null> => {
+  try {
+    const snap = await adminDb.collection('globalAmenities').doc(id).get();
+    if (!snap.exists) return null;
+    const data = snap.data()!;
+    return {
+      id: snap.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+    } as GlobalAmenity;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching amenity by ID', error);
+    return null;
+  }
+};
+
+// --- TESTIMONIOS ---
 export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const snapshot = await adminDb.collection('testimonials').orderBy('createdAt', 'desc').get();
@@ -214,6 +246,22 @@ export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
   } catch (error) {
     console.error('Admin: Error fetching testimonials', error);
     return [];
+  }
+};
+
+export const getTestimonialByIdAdmin = async (id: string): Promise<Testimonial | null> => {
+  try {
+    const snap = await adminDb.collection('testimonials').doc(id).get();
+    if (!snap.exists) return null;
+    const data = snap.data()!;
+    return {
+      id: snap.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+    } as Testimonial;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching testimonial by ID', error);
+    return null;
   }
 };
 

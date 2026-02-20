@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getGlobalAmenityById } from "@/lib/firebase/content"; 
+import { getGlobalAmenityByIdAdmin } from "@/lib/firebase-admin-queries"; 
 import AmenityEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -15,7 +15,7 @@ export default async function EditAmenityPage({ params }: EditAmenityPageProps) 
   // Esperamos los parametros
   const { id } = await params;
   
-  const amenity = await getGlobalAmenityById(id);
+  const amenity = await getGlobalAmenityByIdAdmin(id);
 
   if (!amenity) {
     notFound();
