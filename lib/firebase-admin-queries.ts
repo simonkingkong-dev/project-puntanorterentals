@@ -2,6 +2,19 @@ import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
 import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo, SearchParams, SiteContent } from "@/lib/types";
 
+/** Converts Firestore Timestamp, Date, or ISO string to Date. Returns epoch for missing/invalid to avoid Invalid Date. */
+function safeTimestampToDate(value: unknown): Date {
+  if (value == null) return new Date(0);
+  const v = value as { toDate?: () => Date };
+  if (typeof v.toDate === "function") return v.toDate();
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === "string") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? new Date(0) : d;
+  }
+  return new Date(0);
+}
+
 // --- PROPIEDADES ---
 export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property | null> => {
   try {
@@ -9,10 +22,10 @@ export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property
     if (!snap.exists) return null;
     const data = snap.data()!;
     return {
-      id: snap.id,
       ...data,
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
-      updatedAt: data.updatedAt?.toDate?.() ?? new Date(data.updatedAt),
+      id: snap.id,
+      createdAt: safeTimestampToDate(data.createdAt),
+      updatedAt: safeTimestampToDate(data.updatedAt),
     } as Property;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching property by ID', error);
@@ -23,12 +36,10 @@ export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property
 export const getAdminProperties = async (): Promise<Property[]> => {
   try {
     const snapshot = await adminDb.collection('properties').orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-    })) as Property[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt), updatedAt: safeTimestampToDate(d.updatedAt) } as Property;
+    });
   } catch (error) {
     console.error('Admin: Error fetching properties', error);
     return [];
@@ -43,10 +54,10 @@ export const getPropertyBySlugAdmin = async (slug: string): Promise<Property | n
     const doc = snapshot.docs[0];
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
-      updatedAt: data.updatedAt?.toDate?.() ?? new Date(data.updatedAt),
+      id: doc.id,
+      createdAt: safeTimestampToDate(data.createdAt),
+      updatedAt: safeTimestampToDate(data.updatedAt),
     } as Property;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching property by slug', error);
@@ -62,12 +73,10 @@ export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
       .where('featured', '==', true)
       .orderBy('createdAt', 'desc')
       .get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-    })) as Property[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt), updatedAt: safeTimestampToDate(d.updatedAt) } as Property;
+    });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured properties', error);
     return [];
@@ -121,11 +130,11 @@ export const getConfirmedReservationsByPropertyAdmin = async (
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
-        id: doc.id,
         ...data,
-        checkIn: data.checkIn?.toDate?.() ?? new Date(data.checkIn),
-        checkOut: data.checkOut?.toDate?.() ?? new Date(data.checkOut),
-        createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+        id: doc.id,
+        checkIn: safeTimestampToDate(data.checkIn),
+        checkOut: safeTimestampToDate(data.checkOut),
+        createdAt: safeTimestampToDate(data.createdAt),
       } as Reservation;
     });
   } catch (error) {
@@ -139,14 +148,11 @@ export const getAdminReservations = async (): Promise<Reservation[]> => {
   try {
     const snapshot = await adminDb.collection('reservations').orderBy('createdAt', 'desc').get();
     return (snapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        checkIn: doc.data().checkIn?.toDate() || new Date(),
-        checkOut: doc.data().checkOut?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Reservation[])
-      .filter(r => r.status === 'confirmed' || r.status === 'cancelled');
+      .map(doc => {
+        const d = doc.data();
+        return { ...d, id: doc.id, checkIn: safeTimestampToDate(d.checkIn), checkOut: safeTimestampToDate(d.checkOut), createdAt: safeTimestampToDate(d.createdAt) } as Reservation;
+      })
+      .filter(r => r.status === 'confirmed' || r.status === 'cancelled'));
   } catch (error) {
     console.error('Admin: Error fetching reservations', error);
     return [];
@@ -157,11 +163,10 @@ export const getAdminReservations = async (): Promise<Reservation[]> => {
 export const getAdminServices = async (): Promise<Service[]> => {
   try {
     const snapshot = await adminDb.collection('services').orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Service[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt) } as Service;
+    });
   } catch (error) {
     console.error('Admin: Error fetching services', error);
     return [];
@@ -174,9 +179,9 @@ export const getServiceByIdAdmin = async (id: string): Promise<Service | null> =
     if (!snap.exists) return null;
     const data = snap.data()!;
     return {
-      id: snap.id,
       ...data,
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      id: snap.id,
+      createdAt: safeTimestampToDate(data.createdAt),
     } as Service;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching service by ID', error);
@@ -192,11 +197,10 @@ export const getFeaturedServicesAdmin = async (): Promise<Service[]> => {
       .where('featured', '==', true)
       .orderBy('createdAt', 'desc')
       .get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Service[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt) } as Service;
+    });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured services', error);
     return [];
@@ -207,11 +211,10 @@ export const getFeaturedServicesAdmin = async (): Promise<Service[]> => {
 export const getAdminGlobalAmenities = async (): Promise<GlobalAmenity[]> => {
   try {
     const snapshot = await adminDb.collection('globalAmenities').orderBy('order', 'asc').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as GlobalAmenity[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt) } as GlobalAmenity;
+    });
   } catch (error) {
     console.error('Admin: Error fetching amenities', error);
     return [];
@@ -224,9 +227,9 @@ export const getGlobalAmenityByIdAdmin = async (id: string): Promise<GlobalAmeni
     if (!snap.exists) return null;
     const data = snap.data()!;
     return {
-      id: snap.id,
       ...data,
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      id: snap.id,
+      createdAt: safeTimestampToDate(data.createdAt),
     } as GlobalAmenity;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching amenity by ID', error);
@@ -238,11 +241,10 @@ export const getGlobalAmenityByIdAdmin = async (id: string): Promise<GlobalAmeni
 export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const snapshot = await adminDb.collection('testimonials').orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Testimonial[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt) } as Testimonial;
+    });
   } catch (error) {
     console.error('Admin: Error fetching testimonials', error);
     return [];
@@ -255,9 +257,9 @@ export const getTestimonialByIdAdmin = async (id: string): Promise<Testimonial |
     if (!snap.exists) return null;
     const data = snap.data()!;
     return {
-      id: snap.id,
       ...data,
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      id: snap.id,
+      createdAt: safeTimestampToDate(data.createdAt),
     } as Testimonial;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching testimonial by ID', error);
@@ -287,11 +289,11 @@ export const getReservationByPaymentIntentIdAdmin = async (
       propertyTitle = propSnap.exists ? (propSnap.data()?.title as string) : undefined;
     }
     return {
-      id: doc.id,
       ...data,
-      checkIn: data.checkIn?.toDate?.() ?? new Date(data.checkIn),
-      checkOut: data.checkOut?.toDate?.() ?? new Date(data.checkOut),
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      id: doc.id,
+      checkIn: safeTimestampToDate(data.checkIn),
+      checkOut: safeTimestampToDate(data.checkOut),
+      createdAt: safeTimestampToDate(data.createdAt),
       propertyTitle,
     } as ReservationWithPropertyTitle;
   } catch (error) {
@@ -317,11 +319,11 @@ export const getReservationByIdForConfirmationAdmin = async (
       propertyTitle = propSnap.exists ? (propSnap.data()?.title as string) : undefined;
     }
     return {
-      id: doc.id,
       ...data,
-      checkIn: data.checkIn?.toDate?.() ?? new Date(data.checkIn),
-      checkOut: data.checkOut?.toDate?.() ?? new Date(data.checkOut),
-      createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
+      id: doc.id,
+      checkIn: safeTimestampToDate(data.checkIn),
+      checkOut: safeTimestampToDate(data.checkOut),
+      createdAt: safeTimestampToDate(data.createdAt),
       propertyTitle,
     } as ReservationWithPropertyTitle;
   } catch (error) {
@@ -371,8 +373,8 @@ export const releasePendingReservationAdmin = async (reservationId: string): Pro
   if (!snap.exists) return false;
   const data = snap.data()!;
   if (data.status !== 'pending') return false;
-  const checkIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
-  const checkOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+  const checkIn = safeTimestampToDate(data.checkIn);
+  const checkOut = safeTimestampToDate(data.checkOut);
   const propertyId = data.propertyId as string;
   await ref.update({ status: 'cancelled', updatedAt: new Date() });
   const dateStrings = generateDateRange(checkIn, checkOut);
@@ -404,13 +406,13 @@ export const getAdminModificationRequests = async (): Promise<ModificationReques
         reservationId: d.reservationId ?? '',
         type: d.type ?? 'modification',
         requestedBy: d.requestedBy ?? '',
-        requestedAt: d.requestedAt?.toDate?.() ?? new Date(d.requestedAt),
+        requestedAt: safeTimestampToDate(d.requestedAt),
         status: d.status ?? 'pending',
         newCheckIn: d.newCheckIn ?? null,
         newCheckOut: d.newCheckOut ?? null,
         newGuests: d.newGuests ?? null,
         reason: d.reason ?? '',
-        updatedAt: d.updatedAt?.toDate?.() ?? new Date(d.updatedAt),
+        updatedAt: safeTimestampToDate(d.updatedAt),
       };
     });
   } catch (error) {
@@ -442,8 +444,8 @@ export const getAdminRefundRequests = async (): Promise<RefundRequestRow[]> => {
         amountRefunded: d.amountRefunded ?? 0,
         stripeRefundId: d.stripeRefundId ?? null,
         status: d.status ?? 'unknown',
-        requestedAt: d.requestedAt?.toDate?.() ?? new Date(d.requestedAt),
-        updatedAt: d.updatedAt?.toDate?.() ?? new Date(d.updatedAt),
+        requestedAt: safeTimestampToDate(d.requestedAt),
+        updatedAt: safeTimestampToDate(d.updatedAt),
       };
     });
   } catch (error) {
@@ -459,11 +461,10 @@ export const getSiteContentBySectionAdmin = async (section: string): Promise<Sit
       .collection('siteContent')
       .where('section', '==', section)
       .get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-    })) as SiteContent[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, updatedAt: safeTimestampToDate(d.updatedAt) } as SiteContent;
+    });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching site content by section', error);
     return [];
@@ -474,11 +475,10 @@ export const getSiteContentBySectionAdmin = async (section: string): Promise<Sit
 export const getSiteContentAdmin = async (): Promise<SiteContent[]> => {
   try {
     const snapshot = await adminDb.collection('siteContent').get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-    })) as SiteContent[];
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, id: doc.id, updatedAt: safeTimestampToDate(d.updatedAt) } as SiteContent;
+    });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching site content', error);
     return [];
@@ -495,9 +495,9 @@ export const getContactInfoAdmin = async (): Promise<ContactInfo | null> => {
     const doc = snapshot.docs[0];
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
-      updatedAt: data.updatedAt?.toDate?.() ?? new Date(data.updatedAt),
+      id: doc.id,
+      updatedAt: safeTimestampToDate(data.updatedAt),
     } as ContactInfo;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching contact info', error);

@@ -10,7 +10,14 @@ import { getStorage } from 'firebase/storage';
  * - Con NEXT_PUBLIC_FIREBASE_* (local): initializeApp(config).
  * - Sin config: no inicializar en carga para no fallar el build; fallará en primer uso.
  */
-function getFirebaseConfig() {
+function getFirebaseConfig(): {
+  apiKey?: string;
+  authDomain?: string;
+  projectId?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+} {
   const fromEnv = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -24,14 +31,16 @@ function getFirebaseConfig() {
     const webapp = process.env.FIREBASE_WEBAPP_CONFIG;
     if (webapp && typeof webapp === 'string') {
       const parsed = JSON.parse(webapp) as Record<string, string | undefined>;
-      return {
-        apiKey: parsed.apiKey,
-        authDomain: parsed.authDomain,
-        projectId: parsed.projectId,
-        storageBucket: parsed.storageBucket,
-        messagingSenderId: parsed.messagingSenderId,
-        appId: parsed.appId,
-      };
+      if (parsed.apiKey) {
+        return {
+          apiKey: parsed.apiKey,
+          authDomain: parsed.authDomain,
+          projectId: parsed.projectId,
+          storageBucket: parsed.storageBucket,
+          messagingSenderId: parsed.messagingSenderId,
+          appId: parsed.appId,
+        };
+      }
     }
   } catch {
     // ignore
@@ -68,11 +77,12 @@ if (_hasWebappConfig || _configAtLoad.apiKey) {
 }
 
 function createLazyService<T extends object>(getter: () => T): T {
+  let cached: T | null = null;
   return new Proxy({} as T, {
     get(_, prop: string | symbol): unknown {
-      const real = getter();
-      const val = (real as Record<string, unknown>)[prop as string];
-      if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).bind(real);
+      if (!cached) cached = getter();
+      const val = (cached as Record<string, unknown>)[prop as string];
+      if (typeof val === 'function') return (val as (...args: unknown[]) => unknown).bind(cached);
       return val;
     },
   }) as T;

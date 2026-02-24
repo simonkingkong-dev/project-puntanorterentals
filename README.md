@@ -163,10 +163,12 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
-    // Reservations: authenticated users can read/write their own
+    // Reservations: for create use request.resource.data (resource does not exist yet)
     match /reservations/{document} {
-      allow read, write: if request.auth != null && 
-        (request.auth.token.email == resource.data.guestEmail || 
+      allow create: if request.auth != null &&
+        request.resource.data.guestEmail == request.auth.token.email;
+      allow read, update, delete: if request.auth != null &&
+        (resource.data.guestEmail == request.auth.token.email ||
          request.auth.token.admin == true);
     }
     

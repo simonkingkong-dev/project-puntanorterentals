@@ -21,6 +21,14 @@ export default async function EditTestimonialPage({ params }: EditTestimonialPag
     notFound();
   }
 
+  const serializableTestimonial = {
+    ...testimonial,
+    createdAt:
+      testimonial.createdAt instanceof Date
+        ? testimonial.createdAt.toISOString()
+        : (testimonial.createdAt as unknown as string) ?? "",
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
@@ -36,7 +44,7 @@ export default async function EditTestimonialPage({ params }: EditTestimonialPag
           </div>
         </div>
 
-        <TestimonialEditForm initialData={testimonial} />
+        <TestimonialEditForm initialData={serializableTestimonial} />
       </div>
   );
 }

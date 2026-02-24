@@ -21,6 +21,14 @@ export default async function EditAmenityPage({ params }: EditAmenityPageProps) 
     notFound();
   }
 
+  const serializableAmenity = {
+    ...amenity,
+    createdAt:
+      amenity.createdAt instanceof Date
+        ? amenity.createdAt.toISOString()
+        : (amenity.createdAt as unknown as string) ?? "",
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
@@ -36,7 +44,7 @@ export default async function EditAmenityPage({ params }: EditAmenityPageProps) 
           </div>
         </div>
 
-        <AmenityEditForm initialData={amenity} />
+        <AmenityEditForm initialData={serializableAmenity} />
       </div>
   );
 }
