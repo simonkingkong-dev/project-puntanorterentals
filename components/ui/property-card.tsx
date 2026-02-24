@@ -1,3 +1,6 @@
+ "use client";
+
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Users, Star } from 'lucide-react';
@@ -23,17 +26,55 @@ interface PropertyCardProps {
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const images = property.images && property.images.length > 0
+    ? property.images
+    : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const showPrevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const showNextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
   return (
     <Link href={`/properties/${property.slug}`}>
       <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white">
         <div className="relative h-64 overflow-hidden">
           <Image
-            src={property.images?.[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
+            src={images[currentImageIndex]}
             alt={property.title}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
             unoptimized
           />
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={showPrevImage}
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
+                aria-label="Imagen anterior"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={showNextImage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
+                aria-label="Imagen siguiente"
+              >
+                ›
+              </button>
+            </>
+          )}
           {property.featured && (
             <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600 text-white border-0">
               <Star className="w-3 h-3 mr-1" />

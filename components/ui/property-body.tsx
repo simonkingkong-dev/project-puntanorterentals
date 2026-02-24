@@ -9,6 +9,7 @@ import ReservationForm from '@/components/ui/reservation-form';
 import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { useCart } from '@/lib/cart-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import GoogleMap from '@/components/ui/google-map';
 
 const amenityIcons: Record<string, LucideIcon> = {
   'WiFi de alta velocidad': Wifi,
@@ -65,6 +66,16 @@ export default function PropertyBody({
   const hasMap = property.latitude != null && property.longitude != null;
   const hasReviews = property.reviews && property.reviews.length > 0;
 
+  const summaryText =
+    (property.summary && property.summary.trim()) ||
+    (property.shortDescription && property.shortDescription.trim()) ||
+    (property.longDescription && property.longDescription.trim()) ||
+    '';
+  const houseManualOrNotes =
+    (property.houseManual && property.houseManual.trim()) ||
+    (property.notes && property.notes.trim()) ||
+    '';
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-8">
@@ -94,9 +105,9 @@ export default function PropertyBody({
             <Section title="Ubicación">
               <p>{property.location || '—'}</p>
             </Section>
-            {property.summary && (
+            {summaryText && (
               <Section title="Resumen">
-                <p>{property.summary}</p>
+                <p>{summaryText}</p>
               </Section>
             )}
             <Section title="Descripción">
@@ -112,6 +123,26 @@ export default function PropertyBody({
             {property.neighborhood && (
               <Section title="Barrio">
                 <p>{property.neighborhood}</p>
+              </Section>
+            )}
+            {property.access && (
+              <Section title="Acceso">
+                <p>{property.access}</p>
+              </Section>
+            )}
+            {property.space && (
+              <Section title="Espacio">
+                <p>{property.space}</p>
+              </Section>
+            )}
+            {property.transit && (
+              <Section title="Transporte">
+                <p>{property.transit}</p>
+              </Section>
+            )}
+            {houseManualOrNotes && (
+              <Section title="House Manual / Notas">
+                <p>{houseManualOrNotes}</p>
               </Section>
             )}
           </TabsContent>
@@ -136,11 +167,20 @@ export default function PropertyBody({
           <TabsContent value="map" className="mt-4">
             {hasMap ? (
               <div className="rounded-lg overflow-hidden border bg-gray-100 aspect-video">
-                <iframe
-                  title="Mapa de ubicación"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${(property.longitude! - 0.02)}%2C${(property.latitude! - 0.02)}%2C${(property.longitude! + 0.02)}%2C${(property.latitude! + 0.02)}&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`}
+                <GoogleMap
+                  center={{ lat: property.latitude as number, lng: property.longitude as number }}
+                  markers={[
+                    {
+                      id: property.id,
+                      lat: property.latitude as number,
+                      lng: property.longitude as number,
+                      title: property.title,
+                      url: `/properties/${property.slug}`,
+                    },
+                  ]}
+                  selectedId={property.id}
                   className="w-full h-full min-h-[300px]"
-                  allowFullScreen
+                  zoom={15}
                 />
               </div>
             ) : (

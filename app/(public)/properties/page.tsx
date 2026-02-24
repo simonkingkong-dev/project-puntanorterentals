@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import PropertyCard from '@/components/ui/property-card';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAdminProperties, searchPropertiesAdmin } from '@/lib/firebase-admin-queries';
 import { Property, SearchParams } from '@/lib/types';
+import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 
 export const metadata: Metadata = {
   title: 'Propiedades Vacacionales',
@@ -71,13 +71,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
     );
   }
 
-  return (
-    <>
-      {properties.map((property) => (
-        <PropertyCard key={property.id} property={property} />
-      ))}
-    </>
-  );
+  return <PropertiesMapLayout properties={properties} />;
 }
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
@@ -108,21 +102,19 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
         </div>
       </div>
 
-      {/* Properties Grid */}
+      {/* Properties + Map */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <Suspense 
-            fallback={
-              <>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <PropertySkeleton key={i} />
-                ))}
-              </>
-            }
-          >
-            <PropertiesList searchParams={numericSearchParams} /> 
-          </Suspense>
-        </div>
+        <Suspense
+          fallback={
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {Array.from({ length: 6 }, (_, i) => (
+                <PropertySkeleton key={i} />
+              ))}
+            </div>
+          }
+        >
+          <PropertiesList searchParams={numericSearchParams} />
+        </Suspense>
       </div>
     </div>
   );

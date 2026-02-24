@@ -37,6 +37,8 @@ export default function NewPropertyPage() {
     pricePerNight: 100,
     featured: false,
     amenities: [] as string[],
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
   });
   
   // Estado para manejar los archivos en cola
@@ -147,12 +149,58 @@ export default function NewPropertyPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                   <Label htmlFor="title">Título *</Label>
-                   <Input id="title" value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} required />
+                  <Label htmlFor="title">Título *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location">Ubicación *</Label>
-                  <Input id="location" value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} required />
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">Latitud (para mapa)</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="0.000001"
+                    value={formData.latitude ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        latitude: value === '' ? undefined : parseFloat(value),
+                      }));
+                    }}
+                    placeholder="Ej: 21.257900"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="longitude">Longitud (para mapa)</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="0.000001"
+                    value={formData.longitude ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        longitude: value === '' ? undefined : parseFloat(value),
+                      }));
+                    }}
+                    placeholder="Ej: -86.748100"
+                  />
                 </div>
               </div>
              

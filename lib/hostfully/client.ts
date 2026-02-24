@@ -181,12 +181,22 @@ export async function listProperties(): Promise<HostfullyProperty[]> {
   const data = await hostfullyFetch<Record<string, unknown>>(
     `/properties?agencyUid=${encodeURIComponent(agencyUid)}`
   );
-  // Log para debug: ver estructura real de la respuesta Hostfully
-  console.log("[Hostfully listProperties] Raw response keys:", Object.keys(data ?? {}));
-  console.log("[Hostfully listProperties] Raw response:", JSON.stringify(data, null, 2).slice(0, 2000));
 
   const list = (data?.content ?? data?.data ?? data?.properties ?? []) as HostfullyProperty[];
   return Array.isArray(list) ? list : [];
+}
+
+/**
+ * Obtiene el detalle completo de una propiedad por UID.
+ * Nota: la ruta exacta puede variar según la versión de la API; si dev.hostfully.com
+ * documenta otro path, actualiza aquí.
+ */
+export async function getPropertyDetails(
+  propertyUid: string
+): Promise<Record<string, unknown>> {
+  return hostfullyFetch<Record<string, unknown>>(
+    `/properties/${encodeURIComponent(propertyUid)}`
+  );
 }
 
 /**

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Property } from '@/lib/types';
-import { Day } from 'react-day-picker';
+import { Day, type DayProps } from 'react-day-picker';
 import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -162,32 +162,18 @@ export default function AvailabilityCalendar({
   );
 
   const DayWithHover = useCallback(
-    (props: { date: Date; displayMonth: Date } & Record<string, unknown>) => {
-      const dateString = format(props.date, "yyyy-MM-dd");
-      const isUnavailable = property.availability?.[dateString] === false;
-      const isPast = isBefore(props.date, startOfDay(new Date()));
-      const showPrice = !isUnavailable && !isPast;
-      const price = showPrice
-        ? (property.dailyRates?.[dateString] ?? property.pricePerNight)
-        : null;
+    (props: DayProps) => {
       return (
         <div
           className="contents"
           onMouseEnter={() => setHoveredDate(props.date)}
           onMouseLeave={() => setHoveredDate(undefined)}
         >
-          <div className="flex flex-col items-center justify-center gap-0">
-            <Day {...props} />
-            {price != null && (
-              <span className="text-[10px] leading-tight text-gray-500 mt-0.5">
-                ${Math.round(price)}
-              </span>
-            )}
-          </div>
+          <Day {...props} />
         </div>
       );
     },
-    [property.availability, property.dailyRates, property.pricePerNight]
+    []
   );
 
   const isSelectingRange = Boolean(rangeFrom && !selectedRange?.to);

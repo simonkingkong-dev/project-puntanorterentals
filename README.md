@@ -75,7 +75,13 @@ npm install
 ```
 
 ### 3. Configurar variables de entorno
-Copia `.env.local.example` a `.env.local` y completa todas las variables (Firebase, Stripe, SMTP, Admin, Hostfully). Para una **lista completa y cómo configurarlas en producción (App Hosting)** ver **[docs/VARIABLES_ENTORNO.md](docs/VARIABLES_ENTORNO.md)**.
+Copia `.env.local.example` a `.env.local` y completa todas las variables (Firebase, Stripe, SMTP, Admin, Hostfully).
+
+Variables clave:
+
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: clave de la **Google Maps JavaScript API** usada por los mapas públicos.
+  - En desarrollo: ponla en `.env.local`.
+  - En producción (Firebase/App Hosting): crea el secreto correspondiente y mápalo a esta variable de entorno.
 
 ### 4. Configurar Firebase
 1. Crear un proyecto en [Firebase Console](https://console.firebase.google.com)
@@ -265,6 +271,19 @@ firebase deploy
 
 ### Variables de Entorno en Producción
 Asegúrate de configurar todas las variables de entorno en tu plataforma de hosting.
+
+Para **Google Maps** se recomienda:
+
+- Crear la API key en Google Cloud Console y **restringirla**:
+  - Tipo de API: habilitar solo *Maps JavaScript API*.
+  - Restricción de aplicación: **HTTP referrers** (dominios de tu web).
+  - Restricción de API: solo los servicios que realmente uses.
+- Configurar **cuotas y alertas**:
+  - En la sección de *Quotas*, establece un límite diario razonable de cargas de mapa (por ejemplo 1,000–2,000 al día mientras el proyecto está en pruebas).
+  - En *Billing > Budgets & alerts*, crea un presupuesto mensual bajo (por ejemplo 20–30 USD) con alertas al 50%, 80% y 100%.
+- En esta app el componente `GoogleMap`:
+  - Solo se inicializa en el cliente cuando existe `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
+  - Carga el script de Maps **una sola vez** por sesión de navegación.
 
 ## 🧪 Testing
 

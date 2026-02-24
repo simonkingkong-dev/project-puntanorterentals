@@ -14,8 +14,13 @@ import { Testimonial } from "@/lib/types";
 // Importamos la Server Action de actualización
 import { handleUpdateTestimonial, UpdateTestimonialFormData } from "../../actions";
 
+type SerializableTestimonial = Omit<Testimonial, "createdAt"> & {
+  createdAt: string;
+};
+
 interface TestimonialEditFormProps {
-  initialData: Testimonial; // Recibimos los datos de la página
+  // Recibimos los datos desde la página ya serializados para RSC
+  initialData: SerializableTestimonial;
 }
 
 export default function TestimonialEditForm({ initialData }: TestimonialEditFormProps) {

@@ -18,10 +18,24 @@ export interface Property {
   bathrooms?: number;
   /** Resumen corto (Hostfully). */
   summary?: string;
+  /** Descripción corta local/Hostfully (Short Description). */
+  shortDescription?: string;
+  /** Descripción larga local/Hostfully (Long Description). */
+  longDescription?: string;
+  /** Notas para el huésped (Notes/booking notes). */
+  notes?: string;
   /** Interacción con huéspedes (Hostfully). */
   interaction?: string;
   /** Descripción del barrio (Hostfully). */
   neighborhood?: string;
+  /** Cómo acceder a la propiedad (Access). */
+  access?: string;
+  /** Descripción del espacio (Space). */
+  space?: string;
+  /** Información de transporte (Transit). */
+  transit?: string;
+  /** Manual de la casa / instrucciones (House Manual). */
+  houseManual?: string;
   /** Latitud para mapa (Hostfully). */
   latitude?: number;
   /** Longitud para mapa (Hostfully). */

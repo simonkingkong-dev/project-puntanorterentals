@@ -39,6 +39,17 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     featured: initialData.featured,
     amenities: initialData.amenities,
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
+    shortDescription: initialData.shortDescription ?? '',
+    longDescription: initialData.longDescription ?? '',
+    notes: initialData.notes ?? '',
+    interaction: initialData.interaction ?? '',
+    neighborhood: initialData.neighborhood ?? '',
+    access: initialData.access ?? '',
+    space: initialData.space ?? '',
+    transit: initialData.transit ?? '',
+    houseManual: initialData.houseManual ?? '',
+    latitude: initialData.latitude,
+    longitude: initialData.longitude,
   });
 
   // --- CORREGIDO: Estados separados para imágenes ---
@@ -130,6 +141,42 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Input id="location" value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} required />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="latitude">Latitud (para mapa)</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="0.000001"
+                value={formData.latitude ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    latitude: value === '' ? undefined : parseFloat(value),
+                  }));
+                }}
+                placeholder="Ej: 21.257900"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude">Longitud (para mapa)</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="0.000001"
+                value={formData.longitude ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    longitude: value === '' ? undefined : parseFloat(value),
+                  }));
+                }}
+                placeholder="Ej: -86.748100"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="description">Descripción *</Label>
             <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={4} required />
@@ -216,6 +263,124 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               value={formData.hostfullyPropertyId ?? ''}
               onChange={(e) => setFormData(prev => ({ ...prev, hostfullyPropertyId: e.target.value }))}
               placeholder="Ej: abc123-def456-..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contenido Hostfully (secciones de texto avanzadas) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Contenido Hostfully</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="shortDescription">Short Description</Label>
+              <Textarea
+                id="shortDescription"
+                rows={3}
+                value={formData.shortDescription ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, shortDescription: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longDescription">Long Description</Label>
+              <Textarea
+                id="longDescription"
+                rows={3}
+                value={formData.longDescription ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, longDescription: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              rows={3}
+              value={formData.notes ?? ''}
+              onChange={(e) =>
+                setFormData(prev => ({ ...prev, notes: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="interaction">Interaction</Label>
+              <Textarea
+                id="interaction"
+                rows={3}
+                value={formData.interaction ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, interaction: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="neighborhood">Neighborhood</Label>
+              <Textarea
+                id="neighborhood"
+                rows={3}
+                value={formData.neighborhood ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, neighborhood: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="access">Access</Label>
+              <Textarea
+                id="access"
+                rows={3}
+                value={formData.access ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, access: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="space">Space</Label>
+              <Textarea
+                id="space"
+                rows={3}
+                value={formData.space ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, space: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="transit">Transit</Label>
+              <Textarea
+                id="transit"
+                rows={3}
+                value={formData.transit ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, transit: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="houseManual">House Manual</Label>
+            <Textarea
+              id="houseManual"
+              rows={3}
+              value={formData.houseManual ?? ''}
+              onChange={(e) =>
+                setFormData(prev => ({ ...prev, houseManual: e.target.value }))
+              }
             />
           </div>
         </CardContent>

@@ -28,8 +28,13 @@ const availableIcons = [
   { value: 'coffee', label: 'Café/Desayuno', icon: Coffee },
 ];
 
+type SerializableGlobalAmenity = Omit<GlobalAmenity, "createdAt"> & {
+  createdAt: string;
+};
+
 interface AmenityEditFormProps {
-  initialData: GlobalAmenity; // Recibimos los datos de la página (Server Component)
+  // Recibimos los datos de la página (Server Component) ya serializados
+  initialData: SerializableGlobalAmenity;
 }
 
 export default function AmenityEditForm({ initialData }: AmenityEditFormProps) {

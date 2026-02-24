@@ -54,7 +54,7 @@ export default function ReservationForm({
   pricePerNightDisplay,
 }: ReservationFormProps) {
   const router = useRouter();
-  const { cart, setDraft } = useCart();
+  const { cart, addToCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [datesUnavailable, setDatesUnavailable] = useState(false);
   const [showOverlapMessage, setShowOverlapMessage] = useState(false);
@@ -126,19 +126,42 @@ export default function ReservationForm({
         return;
       }
 
-      setDraft({
+      const guestPhoneStr = [formData.phoneCountryCode, formData.guestPhone].filter(Boolean).join(' ').trim() || formData.guestPhone;
+      const checkInStr = selectedDates.checkIn.toISOString();
+      const checkOutStr = selectedDates.checkOut.toISOString();
+
+      const res = await fetch('/api/reservations/create-from-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: property.id,
+          slug: property.slug,
+          checkIn: checkInStr,
+          checkOut: checkOutStr,
+          guests: formData.guests,
+          guestName: formData.guestName,
+          guestEmail: formData.guestEmail,
+          guestPhone: guestPhoneStr,
+          totalAmount: total,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const reservationId = data.reservationId;
+      if (!reservationId) throw new Error('No se recibió ID de reserva');
+
+      if (data.clientToken) {
+        document.cookie = `punta_norte_token=${encodeURIComponent(data.clientToken)}; path=/; max-age=600; SameSite=Lax`;
+      }
+      addToCart({
         propertyId: property.id,
         slug: property.slug,
-        checkIn: selectedDates.checkIn.toISOString(),
-        checkOut: selectedDates.checkOut.toISOString(),
-        guests: formData.guests,
-        guestName: formData.guestName,
-        guestEmail: formData.guestEmail,
-        guestPhone: [formData.phoneCountryCode, formData.guestPhone].filter(Boolean).join(' ').trim() || formData.guestPhone,
-        totalAmount: total,
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        reservationId,
       });
       toast.success('Redirigiendo al pago...');
-      router.push('/payment');
+      router.push(`/payment?reservation=${reservationId}`);
       onReservationComplete?.();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error al preparar la reserva. Por favor intenta nuevamente.';
@@ -246,9 +269,9 @@ export default function ReservationForm({
                     <SelectValue placeholder="Código" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRY_CODES.map(({ code, country }) => (
+                    {COUNTRY_CODES.map(({ code, short: shortCode }) => (
                       <SelectItem key={code} value={code}>
-                        {code} {country}
+                        {code} {shortCode}
                       </SelectItem>
                     ))}
                   </SelectContent>
