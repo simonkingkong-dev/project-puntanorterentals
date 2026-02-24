@@ -162,16 +162,32 @@ export default function AvailabilityCalendar({
   );
 
   const DayWithHover = useCallback(
-    (props: { date: Date; displayMonth: Date }) => (
-      <div
-        className="contents"
-        onMouseEnter={() => setHoveredDate(props.date)}
-        onMouseLeave={() => setHoveredDate(undefined)}
-      >
-        <Day {...props} />
-      </div>
-    ),
-    []
+    (props: { date: Date; displayMonth: Date } & Record<string, unknown>) => {
+      const dateString = format(props.date, "yyyy-MM-dd");
+      const isUnavailable = property.availability?.[dateString] === false;
+      const isPast = isBefore(props.date, startOfDay(new Date()));
+      const showPrice = !isUnavailable && !isPast;
+      const price = showPrice
+        ? (property.dailyRates?.[dateString] ?? property.pricePerNight)
+        : null;
+      return (
+        <div
+          className="contents"
+          onMouseEnter={() => setHoveredDate(props.date)}
+          onMouseLeave={() => setHoveredDate(undefined)}
+        >
+          <div className="flex flex-col items-center justify-center gap-0">
+            <Day {...props} />
+            {price != null && (
+              <span className="text-[10px] leading-tight text-gray-500 mt-0.5">
+                ${Math.round(price)}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    },
+    [property.availability, property.dailyRates, property.pricePerNight]
   );
 
   const isSelectingRange = Boolean(rangeFrom && !selectedRange?.to);

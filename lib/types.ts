@@ -12,10 +12,28 @@ export interface Property {
   };
   slug: string;
   featured: boolean;
+  /** Habitaciones (Hostfully). */
+  bedrooms?: number;
+  /** Baños (Hostfully). */
+  bathrooms?: number;
+  /** Resumen corto (Hostfully). */
+  summary?: string;
+  /** Interacción con huéspedes (Hostfully). */
+  interaction?: string;
+  /** Descripción del barrio (Hostfully). */
+  neighborhood?: string;
+  /** Latitud para mapa (Hostfully). */
+  latitude?: number;
+  /** Longitud para mapa (Hostfully). */
+  longitude?: number;
+  /** Reseñas si Hostfully las expone. */
+  reviews?: Array<{ author?: string; text?: string; rating?: number; date?: string }>;
   createdAt: Date;
   updatedAt: Date;
   /** UID de la propiedad en Hostfully (PMS). Si existe, la disponibilidad se consulta al PMS. */
   hostfullyPropertyId?: string;
+  /** Precio por noche por fecha (YYYY-MM-DD). Rellenado por sync desde Hostfully. */
+  dailyRates?: Record<string, number>;
 }
 
 export interface Reservation {

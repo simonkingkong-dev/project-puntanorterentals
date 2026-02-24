@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Home, Info, Save, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { getSiteContent } from '@/lib/firebase/content';
-import { updateSiteContentAdmin } from './actions';
+import { getSiteContentForAdmin, updateSiteContentAdmin } from './actions';
 
 interface ContentSection {
   section: string;
@@ -156,7 +155,7 @@ export default function AdminContentPage() {
    */
   const loadContent = async () => {
     try {
-      const content = await getSiteContent();
+      const content = await getSiteContentForAdmin();
       const contentMap: { [key: string]: string } = {};
       
       content.forEach(item => {

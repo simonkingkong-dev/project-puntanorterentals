@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 import { useCart } from '@/lib/cart-context';
@@ -61,6 +62,7 @@ export default function ReservationForm({
     guestName: '',
     guestEmail: '',
     guestPhone: '',
+    phoneCountryCode: DEFAULT_COUNTRY_CODE,
     guests: 1,
   });
 
@@ -132,7 +134,7 @@ export default function ReservationForm({
         guests: formData.guests,
         guestName: formData.guestName,
         guestEmail: formData.guestEmail,
-        guestPhone: formData.guestPhone,
+        guestPhone: [formData.phoneCountryCode, formData.guestPhone].filter(Boolean).join(' ').trim() || formData.guestPhone,
         totalAmount: total,
       });
       toast.success('Redirigiendo al pago...');
@@ -235,14 +237,32 @@ export default function ReservationForm({
 
             <div>
               <Label htmlFor="guestPhone">Teléfono *</Label>
-              <Input
-                id="guestPhone"
-                type="tel"
-                required
-                value={formData.guestPhone}
-                onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-                placeholder="+1 234 567 8900"
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={formData.phoneCountryCode}
+                  onValueChange={(value) => setFormData({ ...formData, phoneCountryCode: value })}
+                >
+                  <SelectTrigger id="guestPhone-country" className="w-[140px] shrink-0">
+                    <SelectValue placeholder="Código" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map(({ code, country }) => (
+                      <SelectItem key={code} value={code}>
+                        {code} {country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="guestPhone"
+                  type="tel"
+                  required
+                  value={formData.guestPhone}
+                  onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
+                  placeholder="123 456 7890"
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div>

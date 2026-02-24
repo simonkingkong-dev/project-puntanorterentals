@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Property } from "@/lib/types";
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PropertyGallery from "@/components/ui/property-gallery";
 import PropertyBody from "@/components/ui/property-body";
@@ -48,9 +48,11 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      <PropertyGallery images={property.images} title={property.title} />
+
+      {/* Título y datos bajo la galería */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-2">
           {property.featured && (
             <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
               Destacado
@@ -60,22 +62,32 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
           {property.title}
         </h1>
-        <div className="flex flex-wrap items-center gap-6 text-gray-600">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span>{property.location}</span>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4 text-gray-600 text-sm md:text-base">
+          <span className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
-            <span>Hasta {property.maxGuests} huéspedes</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
+            {property.maxGuests} huéspedes
+          </span>
+          {property.bedrooms != null && (
+            <span className="flex items-center gap-1.5">
+              <BedDouble className="w-4 h-4" />
+              {property.bedrooms} {property.bedrooms === 1 ? "habitación" : "habitaciones"}
+            </span>
+          )}
+          {property.bathrooms != null && (
+            <span className="flex items-center gap-1.5">
+              <Bath className="w-4 h-4" />
+              {property.bathrooms} {property.bathrooms === 1 ? "baño" : "baños"}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <MapPin className="w-4 h-4" />
+            {property.location}
+          </span>
+          <span className="text-xl font-bold text-gray-900 ml-auto">
             {formatPrice(pricePerNight, displayCurrency)} / noche
-          </div>
+          </span>
         </div>
       </div>
-
-      <PropertyGallery images={property.images} title={property.title} />
 
       <PropertyBody
         property={property}

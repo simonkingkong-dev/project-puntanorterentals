@@ -28,6 +28,25 @@ function extractLocation(addr: unknown): string {
   return parts.map(String).join(", ");
 }
 
+/** Prefiere nombre público o de canal (ej. Airbnb) si existe en la respuesta Hostfully. */
+function extractDisplayName(h: HostfullyRaw): string {
+  const fallback = (h.name ?? h.title ?? "Propiedad sin nombre") as string;
+  const publicName = h.publicName ?? h.listingName ?? h.public_name ?? h.listing_name;
+  if (typeof publicName === "string" && publicName.trim()) return publicName.trim();
+  const listings = h.listings ?? h.channels;
+  if (listings && typeof listings === "object") {
+    const list = Array.isArray(listings) ? listings : Object.values(listings);
+    for (const item of list) {
+      if (item && typeof item === "object") {
+        const obj = item as Record<string, unknown>;
+        const n = obj.name ?? obj.title ?? obj.publicName ?? obj.listingName;
+        if (typeof n === "string" && n.trim()) return n.trim();
+      }
+    }
+  }
+  return fallback;
+}
+
 const IMAGE_URL_KEYS = ["url", "link", "src", "fileUrl", "imageUrl", "photoUrl", "href"];
 
 function getUrlFromItem(item: unknown): string | null {
@@ -69,7 +88,7 @@ function extractImages(p: HostfullyRaw): string[] {
 }
 
 function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "createdAt" | "updatedAt"> {
-  const name = (h.name ?? h.title ?? "Propiedad sin nombre") as string;
+  const name = extractDisplayName(h);
   const addr = h.address;
   const location = extractLocation(addr) || (name as string);
   const avail = (h.availability ?? {}) as Record<string, unknown>;
@@ -92,6 +111,27 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
   const amenities: string[] = Array.isArray(h.amenities)
     ? h.amenities.filter((x): x is string => typeof x === "string")
     : [];
+  const bedrooms = typeof h.bedrooms === "number" ? h.bedrooms : undefined;
+  const bathrooms = typeof h.bathrooms === "number" ? h.bathrooms : undefined;
+  const summary = typeof h.summary === "string" ? h.summary : undefined;
+  const interaction = typeof h.interaction === "string" ? h.interaction : undefined;
+  const neighborhood = typeof h.neighborhood === "string" ? h.neighborhood : undefined;
+  const lat = h.latitude ?? h.lat;
+  const lng = h.longitude ?? h.lng ?? h.lon;
+  const latitude = typeof lat === "number" ? lat : undefined;
+  const longitude = typeof lng === "number" ? lng : undefined;
+  let reviews: Property["reviews"];
+  if (Array.isArray(h.reviews)) {
+    reviews = h.reviews.map((r: unknown) => {
+      const o = r && typeof r === "object" ? (r as Record<string, unknown>) : {};
+      return {
+        author: typeof o.author === "string" ? o.author : undefined,
+        text: typeof o.text === "string" ? o.text : typeof o.comment === "string" ? o.comment : undefined,
+        rating: typeof o.rating === "number" ? o.rating : undefined,
+        date: typeof o.date === "string" ? o.date : undefined,
+      };
+    });
+  }
 
   return {
     title: name,
@@ -105,6 +145,14 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
     slug,
     featured: false,
     hostfullyPropertyId: uid,
+    bedrooms,
+    bathrooms,
+    summary,
+    interaction,
+    neighborhood,
+    latitude,
+    longitude,
+    reviews,
   };
 }
 

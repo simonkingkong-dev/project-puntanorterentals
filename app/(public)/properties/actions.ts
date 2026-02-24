@@ -130,8 +130,8 @@ async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: stri
 }
 
 /** Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
- * Si la propiedad tiene hostfullyPropertyId, consulta disponibilidad al PMS (Hostfully).
- * Si no, usa Firestore (availability + release de holds expirados).
+ * Usa siempre Firestore (availability). Para propiedades con hostfullyPropertyId, el cron
+ * mantiene availability y dailyRates sincronizados desde Hostfully.
  */
 export async function checkPropertyAvailability(
   propertyId: string,
@@ -143,21 +143,11 @@ export async function checkPropertyAvailability(
     const property = await getPropertyByIdAdmin(propertyId);
     if (!property) return { available: false, error: "Propiedad no encontrada" };
 
-    // Prioridad 1: Hostfully (PMS) si la propiedad está vinculada
-    if (property.hostfullyPropertyId) {
-      const { checkHostfullyAvailability } = await import("@/lib/hostfully/client");
-      return checkHostfullyAvailability(
-        property.hostfullyPropertyId,
-        new Date(checkIn),
-        new Date(checkOut)
-      );
-    }
-
-    // Prioridad 2: Firestore
     const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
     let prop = property;
+
     const hasUnavailable = dateStrings.some((d) => prop.availability[d] === false);
-    if (hasUnavailable) {
+    if (hasUnavailable && !property.hostfullyPropertyId) {
       await releaseExpiredHoldsForDates(propertyId, dateStrings);
       const refreshed = await getPropertyByIdAdmin(propertyId);
       if (!refreshed) return { available: false, error: "Propiedad no encontrada" };

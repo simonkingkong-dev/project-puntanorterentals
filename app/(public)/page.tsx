@@ -2,12 +2,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, MapPin, Star, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import SearchForm from '@/components/ui/search-form';
+import SearchFormClient from '@/components/search-form-client';
 import PropertyCard from '@/components/ui/property-card';
 import ServiceCard from '@/components/ui/service-card';
 import { getFeaturedPropertiesAdmin, getFeaturedServicesAdmin, getSiteContentBySectionAdmin } from '@/lib/firebase-admin-queries';
 
-export const dynamic = 'force-dynamic'; // Asegura que se obtengan datos frescos en cada request
+export const dynamic = 'force-dynamic';
 
 function contentMap(items: { key: string; value: string }[]) {
   return Object.fromEntries(items.map((i) => [i.key, i.value]));
@@ -48,7 +48,7 @@ export default async function HomePage() {
             {t('hero_subtitle', 'Descubre propiedades vacacionales y servicios premium para tu estancia perfecta.')}
           </p>
           <div className="bg-white/10 backdrop-blur-md p-6 rounded-lg max-w-4xl mx-auto">
-            <SearchForm />
+            <SearchFormClient />
           </div>
         </div>
       </section>

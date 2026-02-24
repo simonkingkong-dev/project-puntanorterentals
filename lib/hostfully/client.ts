@@ -105,6 +105,7 @@ export async function getPropertyCalendar(
 /**
  * Verifica si las fechas están disponibles según Hostfully.
  * Devuelve true solo si todas las noches del rango están disponibles.
+ * Usa fecha local (servidor) para evitar desfases por UTC al generar YYYY-MM-DD.
  */
 export async function checkHostfullyAvailability(
   hostfullyPropertyUid: string,
@@ -112,8 +113,15 @@ export async function checkHostfullyAvailability(
   checkOut: Date
 ): Promise<{ available: boolean; error?: string }> {
   try {
-    const start = checkIn.toISOString().slice(0, 10);
-    const end = checkOut.toISOString().slice(0, 10);
+    // Normalizar a YYYY-MM-DD en hora local del servidor para coincidir con el calendario
+    const toLocalDateStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+    const start = toLocalDateStr(new Date(checkIn));
+    const end = toLocalDateStr(new Date(checkOut));
 
     const calendar = await getPropertyCalendar(
       hostfullyPropertyUid,
@@ -122,15 +130,32 @@ export async function checkHostfullyAvailability(
     );
 
     const dates = calendar.dates ?? [];
-    const dateSet = new Set(dates.map((d) => d.date));
+    if (process.env.NODE_ENV === "development") {
+      const unavailableCount = dates.filter((d) => d.available === false).length;
+      console.log("[Hostfully checkAvailability]", {
+        propertyUid: hostfullyPropertyUid,
+        start,
+        end,
+        daysReturned: dates.length,
+        unavailableCount,
+        sampleDates: dates.slice(0, 3).map((d) => ({ date: d.date, available: d.available })),
+      });
+    }
 
-    const current = new Date(checkIn);
-    const endDate = new Date(checkOut);
+    // Iterar noche a noche (check-in inclusive, check-out exclusive) en hora local
+    const current = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate());
+    const endDateLocal = new Date(checkOut.getFullYear(), checkOut.getMonth(), checkOut.getDate());
 
-    while (current < endDate) {
-      const dateStr = current.toISOString().slice(0, 10);
+    while (current < endDateLocal) {
+      const dateStr = toLocalDateStr(current);
       const day = dates.find((d) => d.date === dateStr);
-      if (!day || day.available === false) {
+      if (!day) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[Hostfully checkAvailability] Fecha sin dato en respuesta:", dateStr);
+        }
+        return { available: false };
+      }
+      if (day.available === false) {
         return { available: false };
       }
       current.setDate(current.getDate() + 1);

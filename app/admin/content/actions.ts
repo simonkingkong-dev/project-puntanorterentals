@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
+import { getSiteContentAdmin } from "@/lib/firebase-admin-queries";
 
 const SITE_CONTENT_COLLECTION = "siteContent";
 
 type ContentType = "text" | "textarea" | "image" | "url";
+
+/** Carga todo el contenido del sitio vía Admin SDK (evita Firestore desde el cliente). */
+export async function getSiteContentForAdmin() {
+  return getSiteContentAdmin();
+}
 
 /**
  * Actualiza un campo del contenido del sitio usando Admin SDK.

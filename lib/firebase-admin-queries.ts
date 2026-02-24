@@ -336,6 +336,7 @@ export const getReservationByIdForConfirmationAdmin = async (
 /**
  * Marca un rango de fechas como disponibles o no en una propiedad.
  * Usado por el webhook cuando se confirma un pago para bloquear fechas.
+ * Si la propiedad no existe (ej. fue eliminada), no hace nada y no lanza error.
  */
 export const updatePropertyAvailabilityAdmin = async (
   propertyId: string,
@@ -345,7 +346,10 @@ export const updatePropertyAvailabilityAdmin = async (
   const propertyRef = adminDb.collection('properties').doc(propertyId);
   const snap = await propertyRef.get();
   if (!snap.exists) {
-    throw new Error(`Property ${propertyId} not found`);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`updatePropertyAvailabilityAdmin: Property ${propertyId} not found, skipping availability update`);
+    }
+    return;
   }
   const current = (snap.data()?.availability as Record<string, boolean>) || {};
   const updated = { ...current };
@@ -462,6 +466,21 @@ export const getSiteContentBySectionAdmin = async (section: string): Promise<Sit
     })) as SiteContent[];
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching site content by section', error);
+    return [];
+  }
+};
+
+/** Returns all site content (for admin UI). Avoids client Firestore and permission errors. */
+export const getSiteContentAdmin = async (): Promise<SiteContent[]> => {
+  try {
+    const snapshot = await adminDb.collection('siteContent').get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
+    })) as SiteContent[];
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching site content', error);
     return [];
   }
 };

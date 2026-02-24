@@ -38,22 +38,17 @@ export const getProperties = async (): Promise<Property[]> => {
 };
 
 /**
- * Fetches a property from the Firestore database using a specified slug.
+ * Fetches a property by slug. Uses the API (Admin SDK) to avoid client Firestore and "Missing or insufficient permissions".
+ * Call from client components (e.g. cart, my-reservations); for server use getPropertyBySlugAdmin.
  */
 export const getPropertyBySlug = async (slug: string): Promise<Property | null> => {
   try {
-    const q = query(collection(db, PROPERTIES_COLLECTION), where('slug', '==', slug));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) return null;
-    
-    const doc = querySnapshot.docs[0];
-    return {
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-    } as Property;
+    const res = await fetch(
+      `/api/properties/by-slug?slug=${encodeURIComponent(slug)}`,
+      { credentials: 'include' }
+    );
+    const data = await res.json();
+    return data.property ?? null;
   } catch (error) {
     console.error('Error fetching property by slug:', error);
     return null;
