@@ -217,3 +217,36 @@ export async function getBlockedDates(
     available: d.available ?? true,
   }));
 }
+
+/**
+ * Crea un lead de tipo BOOKING en Hostfully para bloquear calendario.
+ * IMPORTANTE: revisa la documentación oficial de Hostfully v3.2 para ajustar el payload
+ * exacto según tu cuenta (campos de huésped, moneda, etc.).
+ *
+ * Si el payload no incluye agencyUid o viene vacío, se rellena automáticamente
+ * usando HOSTFULLY_AGENCY_UID. Si esa variable no está configurada, se lanza
+ * un error explícito.
+ */
+export async function createHostfullyBookingLead(
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const body: Record<string, unknown> = { ...payload };
+
+  const hasAgencyField = Object.prototype.hasOwnProperty.call(body, "agencyUid");
+  const currentAgency = hasAgencyField ? String(body["agencyUid"] ?? "").trim() : "";
+
+  if (!currentAgency) {
+    const agencyUid = getAgencyUid()?.trim();
+    if (!agencyUid) {
+      throw new Error(
+        "HOSTFULLY_AGENCY_UID no está configurada. Obténla en Hostfully Agency Settings."
+      );
+    }
+    body["agencyUid"] = agencyUid;
+  }
+
+  return hostfullyFetch<Record<string, unknown>>("/leads", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

@@ -5,6 +5,7 @@ import { sendConfirmationEmail } from '@/lib/mail';
 import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
+import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
 
 function toDateSafe(v: unknown): Date {
   if (v instanceof Date) return v;
@@ -143,6 +144,12 @@ export async function POST(request: NextRequest) {
 
     const dateStrings = generateDateRange(checkIn, checkOut);
     await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+    await trySyncBookingToHostfully(propertyId, {
+      checkIn,
+      checkOut,
+      guestName: updated.guestName,
+      guestEmail: updated.guestEmail,
+    });
     await sendConfirmationEmail(reservationData);
 
     let propertyTitle: string | undefined;

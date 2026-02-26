@@ -141,6 +141,7 @@ function PaymentContent() {
   const tokenParam = searchParams.get('token');
   const releasedRef = useRef(false);
   const createFromDraftStartedRef = useRef(false);
+  const initializedReservationIdRef = useRef<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string>('');
   const [amount, setAmount] = useState<number | null>(null);
   const [reservationInfo, setReservationInfo] = useState<ReservationPaymentInfo | null>(null);
@@ -152,6 +153,10 @@ function PaymentContent() {
 
   useEffect(() => {
     const draft = getDraft() || getDraftFromStorage();
+    // Evitar repetir la inicialización para el mismo reservationId
+    if (reservationId && initializedReservationIdRef.current === reservationId) {
+      return;
+    }
     if (!reservationId && draft && !createFromDraftStartedRef.current) {
       createFromDraftStartedRef.current = true;
       setLoading(true);
@@ -192,6 +197,10 @@ function PaymentContent() {
       setLoading(false);
       router.replace('/cart');
       return;
+    }
+
+    if (reservationId) {
+      initializedReservationIdRef.current = reservationId;
     }
 
     if (modification && amountParam) {

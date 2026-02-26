@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Cache-Control': 'public, max-age=300, s-maxage=300',
+        'Cache-Control': 'public, max-age=600, s-maxage=600',
       },
     });
   } catch (error) {

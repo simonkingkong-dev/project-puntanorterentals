@@ -53,6 +53,10 @@ env:
     secret: HOSTFULLY_BASE_URL
     availability:
       - RUNTIME
+  - variable: HOSTFULLY_ENABLE_WRITES
+    secret: HOSTFULLY_ENABLE_WRITES
+    availability:
+      - RUNTIME
 
   # Email (SMTP)
   - variable: SMTP_HOST

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +54,7 @@ export default function ReservationForm({
   pricePerNightDisplay,
 }: ReservationFormProps) {
   const router = useRouter();
-  const { cart, addToCart } = useCart();
+  const { cart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [datesUnavailable, setDatesUnavailable] = useState(false);
   const [showOverlapMessage, setShowOverlapMessage] = useState(false);
@@ -65,6 +65,16 @@ export default function ReservationForm({
     phoneCountryCode: DEFAULT_COUNTRY_CODE,
     guests: 1,
   });
+  const [countrySearch, setCountrySearch] = useState('');
+
+  const filteredCountryCodes = useMemo(() => {
+    const search = countrySearch.trim().toLowerCase();
+    if (!search) return COUNTRY_CODES;
+    return COUNTRY_CODES.filter(({ country, code, short: shortCode }) => {
+      const haystack = `${country} ${code} ${shortCode}`.toLowerCase();
+      return haystack.includes(search);
+    });
+  }, [countrySearch]);
 
   const hasFullRange = Boolean(selectedDates?.checkIn && selectedDates?.checkOut);
   const nights = hasFullRange && selectedDates ? calculateNights(selectedDates.checkIn!, selectedDates.checkOut!) : 0;
@@ -153,13 +163,6 @@ export default function ReservationForm({
       if (data.clientToken) {
         document.cookie = `punta_norte_token=${encodeURIComponent(data.clientToken)}; path=/; max-age=600; SameSite=Lax`;
       }
-      addToCart({
-        propertyId: property.id,
-        slug: property.slug,
-        checkIn: checkInStr,
-        checkOut: checkOutStr,
-        reservationId,
-      });
       toast.success('Redirigiendo al pago...');
       router.push(`/payment?reservation=${reservationId}`);
       onReservationComplete?.();
@@ -269,9 +272,17 @@ export default function ReservationForm({
                     <SelectValue placeholder="Código" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRY_CODES.map(({ code, short: shortCode }) => (
+                    <div className="px-2 pb-1">
+                      <Input
+                        placeholder="Buscar país..."
+                        className="h-8 text-xs"
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                      />
+                    </div>
+                    {filteredCountryCodes.map(({ code, short: shortCode, country }) => (
                       <SelectItem key={code} value={code}>
-                        {code} {shortCode}
+                        {code} {shortCode} — {country}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -7,6 +7,7 @@ import { sendConfirmationEmail } from '@/lib/mail';
 import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
+import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
 
 export async function POST(request: Request) {
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -70,6 +71,12 @@ export async function POST(request: Request) {
         if (propertyId) {
           const dateStrings = generateDateRange(checkIn, checkOut);
           await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+          await trySyncBookingToHostfully(propertyId, {
+            checkIn,
+            checkOut,
+            guestName: data.guestName,
+            guestEmail: data.guestEmail,
+          });
         }
 
         await sendConfirmationEmail(reservationData);
