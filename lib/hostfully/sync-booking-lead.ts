@@ -40,8 +40,6 @@ export async function trySyncBookingToHostfully(
     };
     await createHostfullyBookingLead(payload);
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[Hostfully] Error creando lead de reserva:', e);
-    }
+    console.error('[Hostfully] Error creando lead de reserva:', e);
   }
 }

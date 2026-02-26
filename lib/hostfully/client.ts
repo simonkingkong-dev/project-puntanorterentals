@@ -214,7 +214,7 @@ export async function getBlockedDates(
   );
   return (calendar.dates ?? []).map((d) => ({
     date: d.date,
-    available: d.available ?? true,
+    available: d.available ?? false,
   }));
 }
 

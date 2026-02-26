@@ -18,16 +18,14 @@ env:
     availability:
       - RUNTIME
 
-  # Firebase Admin SDK
+  # Firebase Admin SDK (RUNTIME only to avoid leaking keys into build/CI)
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
     availability:
-      - BUILD
       - RUNTIME
   - variable: FIREBASE_PRIVATE_KEY
     secret: FIREBASE_PRIVATE_KEY
     availability:
-      - BUILD
       - RUNTIME
 
   # Admin dashboard

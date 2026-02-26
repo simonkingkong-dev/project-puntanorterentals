@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+export const runtime = 'edge';
+
 /**
  * Sirve /favicon.ico para navegadores y bots que lo piden directamente.
  * Evita 404 en logs; mismo contenido que app/icon.tsx.

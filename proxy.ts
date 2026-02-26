@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
 
 /**
- * Patrones de probes/bots conocidos: devolver 404 sin llegar a la app
- * para reducir WARNING en logs (seguridad ya está bien, solo limpieza).
+ * Patrones de probes/bots conocidos: devolver 404 sin llegar a la app.
+ * Normalizado a minúsculas para evitar bypass por cambio de mayúsculas.
  */
 function isProbePath(pathname: string): boolean {
-  if (pathname.endsWith('.php') || pathname.includes('.php?')) return true;
-  if (pathname === '/.env' || pathname.startsWith('/.env/')) return true;
-  if (pathname.startsWith('/wp-')) return true;
-  if (pathname.startsWith('/.well-known/acme-challenge/') && pathname.endsWith('.php')) return true;
-  if (pathname === '/artisan' || pathname === '/sitemap_index.xml') return true;
+  const p = pathname.toLowerCase();
+  if (p.endsWith('.php') || p.includes('.php?')) return true;
+  if (p === '/.env' || p.startsWith('/.env/')) return true;
+  if (p.startsWith('/wp-')) return true;
+  if (p.startsWith('/.well-known/acme-challenge/') && p.endsWith('.php')) return true;
+  if (p === '/artisan' || p === '/sitemap_index.xml') return true;
   return false;
 }
 

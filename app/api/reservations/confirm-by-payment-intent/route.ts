@@ -16,6 +16,12 @@ function toDateSafe(v: unknown): Date {
   return new Date(v as string | number);
 }
 
+function parseReservationDate(v: unknown): Date | null {
+  if (v == null) return null;
+  const d = toDateSafe(v);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
 /**
  * POST /api/reservations/confirm-by-payment-intent
  * Verifica con Stripe que el pago fue exitoso y confirma la reserva al instante
@@ -130,8 +136,14 @@ export async function POST(request: NextRequest) {
 
     const updatedSnap = await reservationRef.get();
     const updated = updatedSnap.data()!;
-    const checkIn = updated.checkIn?.toDate?.() ?? new Date(updated.checkIn);
-    const checkOut = updated.checkOut?.toDate?.() ?? new Date(updated.checkOut);
+    const checkIn = parseReservationDate(updated.checkIn?.toDate?.() ?? updated.checkIn);
+    const checkOut = parseReservationDate(updated.checkOut?.toDate?.() ?? updated.checkOut);
+    if (checkIn == null || checkOut == null || checkIn >= checkOut) {
+      return NextResponse.json(
+        { error: 'Datos de reserva inválidos: fechas faltantes o inválidas' },
+        { status: 400 }
+      );
+    }
     const propertyId = updated.propertyId as string;
 
     const reservationData = {

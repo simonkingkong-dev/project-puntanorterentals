@@ -261,12 +261,15 @@ export default function ReservationForm({
               />
             </div>
 
-            <div>
-              <Label htmlFor="guestPhone">Teléfono *</Label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Teléfono *
+              </legend>
               <div className="flex gap-2">
                 <Select
                   value={formData.phoneCountryCode}
                   onValueChange={(value) => setFormData({ ...formData, phoneCountryCode: value })}
+                  aria-label="Código de país"
                 >
                   <SelectTrigger id="guestPhone-country" className="w-[140px] shrink-0">
                     <SelectValue placeholder="Código" />
@@ -295,9 +298,10 @@ export default function ReservationForm({
                   onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
                   placeholder="123 456 7890"
                   className="flex-1"
+                  aria-label="Número de teléfono"
                 />
               </div>
-            </div>
+            </fieldset>
 
             <div>
               <Label htmlFor="guests">Número de huéspedes *</Label>
