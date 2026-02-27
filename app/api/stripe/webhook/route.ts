@@ -71,12 +71,15 @@ export async function POST(request: Request) {
         if (propertyId) {
           const dateStrings = generateDateRange(checkIn, checkOut);
           await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
-          await trySyncBookingToHostfully(propertyId, {
+          const syncResult = await trySyncBookingToHostfully(propertyId, {
             checkIn,
             checkOut,
             guestName: data.guestName,
             guestEmail: data.guestEmail,
           });
+          if (!syncResult.synced) {
+            console.error('[Hostfully] Sync falló en webhook:', syncResult.error);
+          }
         }
 
         await sendConfirmationEmail(reservationData);

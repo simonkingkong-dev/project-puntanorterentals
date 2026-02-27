@@ -180,10 +180,6 @@ function PaymentContent() {
         .then((data) => {
           if (data.error) throw new Error(data.error);
           const id = data.reservationId;
-          const clientToken = data.clientToken;
-          if (clientToken) {
-            document.cookie = `punta_norte_token=${encodeURIComponent(clientToken)}; path=/; max-age=600; SameSite=Lax`;
-          }
           removeFromCart(getCartItemKey(draft));
           addToCart({ ...draft, reservationId: id });
           router.replace(`/payment?reservation=${id}`);

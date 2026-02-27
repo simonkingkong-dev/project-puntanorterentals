@@ -75,10 +75,16 @@ export async function POST(request: NextRequest) {
 
     const docRef = await adminDb.collection('reservations').add(newReservation);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       reservationId: docRef.id,
       clientToken,
     });
+    const secure = process.env.NODE_ENV === 'production';
+    res.headers.append(
+      'Set-Cookie',
+      `punta_norte_token=${encodeURIComponent(clientToken)}; Path=/; Max-Age=600; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`
+    );
+    return res;
   } catch (error) {
     console.error('Error create-from-draft:', error);
     return NextResponse.json(

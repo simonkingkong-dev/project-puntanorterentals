@@ -12,7 +12,6 @@ import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
-import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
@@ -58,11 +57,12 @@ export default function ReservationForm({
   const [isLoading, setIsLoading] = useState(false);
   const [datesUnavailable, setDatesUnavailable] = useState(false);
   const [showOverlapMessage, setShowOverlapMessage] = useState(false);
+  const defaultCountryShort = COUNTRY_CODES.find((c) => c.code === DEFAULT_COUNTRY_CODE)?.short ?? 'mx';
   const [formData, setFormData] = useState({
     guestName: '',
     guestEmail: '',
     guestPhone: '',
-    phoneCountryCode: DEFAULT_COUNTRY_CODE,
+    phoneCountryCode: defaultCountryShort,
     guests: 1,
   });
   const [countrySearch, setCountrySearch] = useState('');
@@ -125,18 +125,24 @@ export default function ReservationForm({
     setShowOverlapMessage(false);
 
     try {
-      const { available } = await checkPropertyAvailability(
-        property.id,
-        selectedDates.checkIn,
-        selectedDates.checkOut
-      );
+      const availabilityRes = await fetch('/api/properties/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: property.id,
+          checkIn: selectedDates.checkIn.toISOString(),
+          checkOut: selectedDates.checkOut.toISOString(),
+        }),
+      });
+      const { available } = await availabilityRes.json();
       if (!available) {
         setDatesUnavailable(true);
         setIsLoading(false);
         return;
       }
 
-      const guestPhoneStr = [formData.phoneCountryCode, formData.guestPhone].filter(Boolean).join(' ').trim() || formData.guestPhone;
+      const dialCode = COUNTRY_CODES.find((c) => c.short === formData.phoneCountryCode)?.code ?? DEFAULT_COUNTRY_CODE;
+      const guestPhoneStr = [dialCode, formData.guestPhone].filter(Boolean).join(' ').trim() || formData.guestPhone;
       const checkInStr = selectedDates.checkIn.toISOString();
       const checkOutStr = selectedDates.checkOut.toISOString();
 
@@ -160,9 +166,6 @@ export default function ReservationForm({
       const reservationId = data.reservationId;
       if (!reservationId) throw new Error('No se recibió ID de reserva');
 
-      if (data.clientToken) {
-        document.cookie = `punta_norte_token=${encodeURIComponent(data.clientToken)}; path=/; max-age=600; SameSite=Lax`;
-      }
       toast.success('Redirigiendo al pago...');
       router.push(`/payment?reservation=${reservationId}`);
       onReservationComplete?.();
@@ -284,7 +287,7 @@ export default function ReservationForm({
                       />
                     </div>
                     {filteredCountryCodes.map(({ code, short: shortCode, country }) => (
-                      <SelectItem key={code} value={code}>
+                      <SelectItem key={shortCode} value={shortCode}>
                         {code} {shortCode} — {country}
                       </SelectItem>
                     ))}

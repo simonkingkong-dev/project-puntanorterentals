@@ -3,8 +3,11 @@ import { clearAdminSession } from '@/lib/auth/admin/admin';
 
 export async function POST() {
   try {
-    clearAdminSession();
-    return NextResponse.json({ success: true });
+    const setCookieHeader = await clearAdminSession();
+    return NextResponse.json(
+      { success: true },
+      { headers: { 'Set-Cookie': setCookieHeader } }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: 'Error cerrando sesión' },

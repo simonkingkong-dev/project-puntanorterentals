@@ -1,8 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { cookies } from 'next/headers'; // [cite: 460]
-// Update the import path if necessary, for example:
-import { validateAdminCredentials, setAdminSession } from '@/lib/auth/admin/admin';
-// Or create the file at 'c:\Users\Simon\Desktop\Proyectos\project\lib\auth\admin\admin.ts' if it does not exist.
+import { validateAdminCredentials, getAdminSessionCookieHeader } from '@/lib/auth/admin/admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,20 +7,17 @@ export async function POST(request: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Usuario y contraseña son requeridos' }, // [cite: 461]
+        { error: 'Usuario y contraseña son requeridos' },
         { status: 400 }
       );
     }
 
     if (validateAdminCredentials(username, password)) {
-      const cookieStore = await cookies();
-      cookieStore.set('admin-session', 'authenticated', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 24 * 7, // Una semana [cite: 462]
-      });
-      return NextResponse.json({ success: true }, { status: 200 });
+      const setCookieHeader = await getAdminSessionCookieHeader();
+      return NextResponse.json(
+        { success: true },
+        { status: 200, headers: { 'Set-Cookie': setCookieHeader } }
+      );
     } else {
       return NextResponse.json(
         { error: 'Credenciales inválidas' },

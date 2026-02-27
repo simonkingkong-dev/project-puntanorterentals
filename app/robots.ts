@@ -2,7 +2,8 @@ import type { MetadataRoute } from 'next';
 
 /**
  * Sirve /robots.txt para crawlers (Google, Bing, etc.).
- * Evita 404 en logs y define qué rutas no deben indexarse.
+ * No listamos rutas sensibles (ej. /admin/, /api/) para no revelarlas;
+ * la protección se hace por autenticación y WAF.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -10,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/api/'],
+        disallow: [],
       },
     ],
   };

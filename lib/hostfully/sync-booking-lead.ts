@@ -12,22 +12,24 @@ export interface SyncBookingToHostfullyParams {
   guestEmail?: string;
 }
 
+export type SyncBookingResult = { synced: true } | { synced: false; error: unknown };
+
 /**
  * Si HOSTFULLY_ENABLE_WRITES está activo y la propiedad tiene hostfullyPropertyId,
- * crea un lead de tipo BOOKING en Hostfully. Los errores se registran en desarrollo
- * y no se propagan para no fallar la confirmación de la reserva.
+ * crea un lead de tipo BOOKING en Hostfully. No lanza para no fallar la confirmación;
+ * devuelve resultado para que el llamador pueda registrar o alertar si falló.
  */
 export async function trySyncBookingToHostfully(
   propertyId: string,
   params: SyncBookingToHostfullyParams
-): Promise<void> {
+): Promise<SyncBookingResult> {
   try {
     const hostfullyWritesEnabled = process.env.HOSTFULLY_ENABLE_WRITES === 'true';
-    if (!hostfullyWritesEnabled) return;
+    if (!hostfullyWritesEnabled) return { synced: true };
 
     const property = await getPropertyByIdAdmin(propertyId);
     const hostfullyPropertyId = property?.hostfullyPropertyId;
-    if (!hostfullyPropertyId) return;
+    if (!hostfullyPropertyId) return { synced: true };
 
     const payload = {
       type: 'BOOKING',
@@ -39,7 +41,9 @@ export async function trySyncBookingToHostfully(
       guestEmail: params.guestEmail,
     };
     await createHostfullyBookingLead(payload);
+    return { synced: true };
   } catch (e) {
     console.error('[Hostfully] Error creando lead de reserva:', e);
+    return { synced: false, error: e };
   }
 }

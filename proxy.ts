@@ -7,7 +7,7 @@ import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
  */
 function isProbePath(pathname: string): boolean {
   const p = pathname.toLowerCase();
-  if (p.endsWith('.php') || p.includes('.php?')) return true;
+  if (p.endsWith('.php') || p.includes('.php/')) return true;
   if (p === '/.env' || p.startsWith('/.env/')) return true;
   if (p.startsWith('/wp-')) return true;
   if (p.startsWith('/.well-known/acme-challenge/') && p.endsWith('.php')) return true;
@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(nextUrl);
   }
 
-  if (path.startsWith('/admin')) {
+  if (path === '/admin' || path.startsWith('/admin/')) {
     const isAuthenticated = await isAdminAuthenticated();
     if (path === '/admin/login' && isAuthenticated) {
       return NextResponse.redirect(new URL('/admin', request.url));

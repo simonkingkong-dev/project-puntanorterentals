@@ -156,12 +156,15 @@ export async function POST(request: NextRequest) {
 
     const dateStrings = generateDateRange(checkIn, checkOut);
     await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
-    await trySyncBookingToHostfully(propertyId, {
+    const syncResult = await trySyncBookingToHostfully(propertyId, {
       checkIn,
       checkOut,
       guestName: updated.guestName,
       guestEmail: updated.guestEmail,
     });
+    if (!syncResult.synced) {
+      console.error('[Hostfully] Sync falló tras confirmar reserva:', syncResult.error);
+    }
     await sendConfirmationEmail(reservationData);
 
     let propertyTitle: string | undefined;

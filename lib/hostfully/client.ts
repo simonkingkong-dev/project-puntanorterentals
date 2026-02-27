@@ -212,7 +212,8 @@ export async function getBlockedDates(
     startDate,
     endDate
   );
-  return (calendar.dates ?? []).map((d) => ({
+  if (!calendar || !Array.isArray(calendar.dates)) return [];
+  return calendar.dates.map((d) => ({
     date: d.date,
     available: d.available ?? false,
   }));
@@ -230,6 +231,10 @@ export async function getBlockedDates(
 export async function createHostfullyBookingLead(
   payload: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
+  if (payload == null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('createHostfullyBookingLead: payload must be a non-null object');
+  }
+  getApiKey(); // Fail fast if API key is not configured
   const body: Record<string, unknown> = { ...payload };
 
   const hasAgencyField = Object.prototype.hasOwnProperty.call(body, "agencyUid");
