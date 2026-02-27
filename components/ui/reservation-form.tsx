@@ -96,7 +96,7 @@ export default function ReservationForm({
    * @param {React.FormEvent} e - The form event triggered by submission, prevents default behavior.
    * @returns {void} Executes reservation logic, updates UI based on success or failure, and manages redirection.
    */
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!hasFullRange || !selectedDates?.checkIn || !selectedDates?.checkOut) {
@@ -157,8 +157,7 @@ export default function ReservationForm({
           guests: formData.guests,
           guestName: formData.guestName,
           guestEmail: formData.guestEmail,
-          guestPhone: guestPhoneStr,
-          totalAmount: total,
+          guestPhone: guestPhoneStr
         }),
       });
       const data = await res.json();
@@ -176,7 +175,6 @@ export default function ReservationForm({
       setIsLoading(false);
     }
   };
-
   if (!selectedDates?.checkIn || !selectedDates?.checkOut) {
     return (
       <Card>
@@ -227,6 +225,8 @@ export default function ReservationForm({
       </Card>
     );
   }
+
+  const guestOptionsCount = Math.max(1, property.maxGuests);
 
   return (
     <Card>
@@ -316,7 +316,7 @@ export default function ReservationForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: property.maxGuests }, (_, i) => i + 1).map((num) => (
+                  {Array.from({ length: guestOptionsCount }, (_, i) => i + 1).map((num) => (
                     <SelectItem key={num} value={num.toString()}>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />

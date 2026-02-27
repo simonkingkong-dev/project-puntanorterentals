@@ -28,7 +28,13 @@ export async function trySyncBookingToHostfully(
     if (!hostfullyWritesEnabled) return { synced: true };
 
     const property = await getPropertyByIdAdmin(propertyId);
-    const hostfullyPropertyId = property?.hostfullyPropertyId;
+    if (property == null) {
+      const err = new Error(`Property ${propertyId} not found or failed to fetch`);
+      console.error('[Hostfully] Property fetch failed:', err);
+      return { synced: false, error: err };
+    }
+
+    const hostfullyPropertyId = property.hostfullyPropertyId;
     if (!hostfullyPropertyId) return { synced: true };
 
     const payload = {

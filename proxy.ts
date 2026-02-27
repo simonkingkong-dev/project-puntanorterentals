@@ -30,17 +30,17 @@ export async function proxy(request: NextRequest) {
 
   if (path === '/admin' || path.startsWith('/admin/')) {
     const isAuthenticated = await isAdminAuthenticated();
-    if (path === '/admin/login' && isAuthenticated) {
+    const isLoginPath = path === '/admin/login' || path === '/admin/login/';
+    if (isLoginPath && isAuthenticated) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
-    if (path !== '/admin/login' && !isAuthenticated) {
+    if (!isLoginPath && !isAuthenticated) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }
 
   return NextResponse.next();
 }
-
 export const config = {
   // Probes + calendar-feed + admin; excluir estáticos y API.
   matcher: ['/((?!_next/|api/|favicon\\.ico|/icon).*)'],

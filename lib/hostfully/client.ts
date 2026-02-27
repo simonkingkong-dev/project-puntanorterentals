@@ -215,10 +215,9 @@ export async function getBlockedDates(
   if (!calendar || !Array.isArray(calendar.dates)) return [];
   return calendar.dates.map((d) => ({
     date: d.date,
-    available: d.available ?? false,
+    available: d.available ?? true,
   }));
 }
-
 /**
  * Crea un lead de tipo BOOKING en Hostfully para bloquear calendario.
  * IMPORTANTE: revisa la documentación oficial de Hostfully v3.2 para ajustar el payload
@@ -250,8 +249,15 @@ export async function createHostfullyBookingLead(
     body["agencyUid"] = agencyUid;
   }
 
+  let bodyString: string;
+  try {
+    bodyString = JSON.stringify(body);
+  } catch (e) {
+    throw new Error('createHostfullyBookingLead: payload contains circular references and cannot be serialized to JSON');
+  }
+
   return hostfullyFetch<Record<string, unknown>>("/leads", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: bodyString,
   });
 }

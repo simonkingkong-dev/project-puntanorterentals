@@ -25,17 +25,54 @@ async function signSessionPayload(payload: string): Promise<string> {
     ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(sig)));
+  const bytes = new Uint8Array(sig);
+  let b64: string;
+  if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+    b64 = Buffer.from(bytes).toString('base64');
+  } else {
+    // Fallback to btoa in browser-like environments
+    b64 = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+  }
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** Returns the Set-Cookie header value for the signed admin session. Use in Route Handlers. */
 export async function getAdminSessionCookieHeader(): Promise<string> {
   if (!process.env.ADMIN_PASSWORD?.trim()) {
     throw new Error('ADMIN_PASSWORD is not set; cannot create admin session.');
   }
   const timestamp = String(Date.now());
-  const sig = await signSessionPayload(timestamp);
+  let sig: string;
+  try {
+    // primary, existing signer
+    sig = await signSessionPayload(timestamp);
+  } catch (err) {
+    // fallback: sign using available server-side crypto (robust for Node)
+    const secret = process.env.ADMIN_PASSWORD || '';
+    // Try to use Web Crypto if available (but avoid btoa usage), otherwise use Node's crypto
+    if (typeof globalThis !== 'undefined' && (globalThis as any).crypto && (globalThis as any).crypto.subtle) {
+      const subtle = (globalThis as any).crypto.subtle;
+      const key = await subtle.importKey(
+        'raw',
+        new TextEncoder().encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const signature = await subtle.sign('HMAC', key, new TextEncoder().encode(timestamp));
+      const b64 = Buffer.from(new Uint8Array(signature)).toString('base64');
+      sig = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    } else {
+      // Node fallback via dynamic import to avoid bundler issues
+      try {
+        const cryptoModule = await import('crypto');
+        const hmac = cryptoModule.createHmac('sha256', secret).update(timestamp).digest('base64');
+        sig = hmac.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      } catch (err2) {
+        // rethrow original error to preserve original failure semantics
+        throw err;
+      }
+    }
+  }
   const value = `${timestamp}.${sig}`;
   const secure = process.env.NODE_ENV === 'production';
   const parts = [
