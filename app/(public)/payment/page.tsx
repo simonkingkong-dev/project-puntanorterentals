@@ -287,7 +287,11 @@ function PaymentContent() {
         return fetch('/api/stripe/create-payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: totalAmountVal, currency: currency.toLowerCase(), reservationId: resId }),
+          body: JSON.stringify({
+            amount: totalAmountVal,
+            currency: currency.toLowerCase(),
+            reservationId: resId,
+          }),
         });
       })
       .then((res) => res && res.json ? res.json() : null)
@@ -303,7 +307,10 @@ function PaymentContent() {
         setError(err.message || 'Error creando intención de pago');
       })
       .finally(() => setLoading(false));
-  }, [reservationId, modification, amountParam, tokenParam, router, hydrated, getDraft, removeFromCart, addToCart, getItemByKey, updateCartItem, currency]);
+    // No incluir `currency` aquí: el efecto dedicado recrea el PaymentIntent al cambiar moneda
+    // y evita re-ejecutar hold/carga de reserva con semánticas mezcladas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ver comentario anterior (`currency`)
+  }, [reservationId, modification, amountParam, tokenParam, router, hydrated, getDraft, removeFromCart, addToCart, getItemByKey, updateCartItem]);
 
   useEffect(() => {
     if (currency === 'MXN') {
@@ -328,6 +335,7 @@ function PaymentContent() {
     if (!reservationId || amount == null || loading) return;
     if (previousCurrencyRef.current === currency) return;
     previousCurrencyRef.current = currency;
+    // `amount` es siempre USD (total de reserva); la API convierte a MXN/EUR al crear el intent.
     fetch('/api/stripe/create-payment-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -355,7 +363,7 @@ function PaymentContent() {
       setSecondsLeft((s) => (s != null && s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(t);
-  }, [paymentCountdownActive]);
+  }, [paymentCountdownActive, reservationInfo?.expiresAt]);
 
   useEffect(() => {
     if (secondsLeft !== 0 || !reservationId || releasedRef.current) return;

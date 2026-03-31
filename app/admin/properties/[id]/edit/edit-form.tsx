@@ -121,6 +121,17 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
       const stRaw = calStStr?.trim() ?? "";
       const mdRaw = calMdStr?.trim() ?? "";
 
+      const leadOptsRaw = formData.hostfullyLeadWidgetOptionsJson?.trim();
+      if (leadOptsRaw) {
+        try {
+          JSON.parse(leadOptsRaw);
+        } catch {
+          toast.error('El JSON de opciones del widget Lead no es válido');
+          setIsPending(false);
+          return;
+        }
+      }
+
       const propertyData: UpdatePropertyFormData = {
         ...formRest,
         images: finalImageUrls,

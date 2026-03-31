@@ -145,6 +145,9 @@ export async function checkPropertyAvailability(
     const property = await getPropertyByIdAdmin(propertyId);
     if (!property) return { available: false, error: "Propiedad no encontrada" };
 
+    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
+    await releaseExpiredHoldsForDates(propertyId, dateStrings);
+
     if (property.hostfullyPropertyId) {
       return checkHostfullyAvailability(
         property.hostfullyPropertyId,
@@ -153,11 +156,9 @@ export async function checkPropertyAvailability(
       );
     }
 
-    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
     let prop = property;
     const hasUnavailable = dateStrings.some((d) => prop.availability[d] === false);
     if (hasUnavailable) {
-      await releaseExpiredHoldsForDates(propertyId, dateStrings);
       const refreshed = await getPropertyByIdAdmin(propertyId);
       if (!refreshed) return { available: false, error: "Propiedad no encontrada" };
       prop = refreshed;

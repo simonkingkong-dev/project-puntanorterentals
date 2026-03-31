@@ -95,6 +95,7 @@ export async function POST(request: Request) {
     const now = new Date();
 
     let leads: HostfullyLead[] = [];
+    let usedTimeWindow = true;
     try {
       // Intento con ventana temporal (si la API lo soporta)
       leads = await searchHostfullyLeads({
@@ -103,7 +104,8 @@ export async function POST(request: Request) {
         createdTo: now.toISOString(),
       });
     } catch {
-      // Fallback: consulta sin ventana temporal
+      usedTimeWindow = false;
+      // Fallback: consulta sin ventana temporal — no avanzar cursor para no saltar leads
       leads = await searchHostfullyLeads({ agencyUid });
     }
 
@@ -177,12 +179,17 @@ export async function POST(request: Request) {
       wrote++;
     }
 
-    // Commit + cursor update
     await batch.commit();
-    await stateRef.set(
-      stripUndefined({ lastSyncAt: now, updatedAt: now }),
-      { merge: true }
-    );
+
+    const hitBatchCap = wrote >= MAX_WRITES && leads.length > MAX_WRITES;
+    const shouldAdvanceCursor = usedTimeWindow && !hitBatchCap;
+
+    if (shouldAdvanceCursor) {
+      await stateRef.set(
+        stripUndefined({ lastSyncAt: now, updatedAt: now }),
+        { merge: true }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -193,6 +200,9 @@ export async function POST(request: Request) {
       skipped,
       quotes,
       bookings,
+      cursorAdvanced: shouldAdvanceCursor,
+      usedTimeWindow,
+      hitBatchCap,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

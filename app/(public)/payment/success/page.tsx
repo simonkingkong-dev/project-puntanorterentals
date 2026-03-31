@@ -93,10 +93,6 @@ function SuccessContent() {
   useEffect(() => {
     const confirmByPaymentIntent = async (): Promise<ReservationWithTitle | null> => {
       if (!paymentIntentId) return null;
-      const dedupeKey = `confirm-pi:${paymentIntentId}`;
-      if (typeof window !== 'undefined' && sessionStorage.getItem(dedupeKey) === '1') {
-        return null;
-      }
       try {
         const response = await fetch('/api/reservations/confirm-by-payment-intent', {
           method: 'POST',
@@ -104,9 +100,6 @@ function SuccessContent() {
           body: JSON.stringify({ payment_intent_id: paymentIntentId }),
         });
         if (!response.ok) return null;
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem(dedupeKey, '1');
-        }
         return (await response.json()) as ReservationWithTitle;
       } catch {
         return null;
@@ -237,16 +230,16 @@ function SuccessContent() {
     paidCurrency.length > 0;
   const waitStripeForTotal =
     Boolean(paymentIntentId) && !stripeChargeFetchDone && !chargeFromStripe;
-  const displayTotalLabel = waitStripeForTotal
-    ? null
-    : hasStripeCharge
-      ? formatMoney(paidAmount, paidCurrency)
-      : formatMoney(reservationData.totalAmount, 'USD');
+  const hasPaidDisplay = hasStripeCharge;
+  const paidTotalFormatted =
+    hasPaidDisplay && paidCurrency ? formatMoney(paidAmount, paidCurrency) : null;
   const showUsdEquivalent =
     !waitStripeForTotal &&
-    hasStripeCharge &&
+    hasPaidDisplay &&
     paidCurrency !== 'USD' &&
     Number.isFinite(reservationData.totalAmount);
+  const showUsdReferenceOnly =
+    !waitStripeForTotal && !hasPaidDisplay && Number.isFinite(reservationData.totalAmount);
 
   // Estado de Éxito (datos cargados por payment_intent o por reservationId)
   return (
@@ -307,20 +300,31 @@ function SuccessContent() {
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-600">Total pagado</p>
+                  <p className="text-sm text-gray-600">
+                    {hasPaidDisplay ? 'Total pagado' : showUsdReferenceOnly ? 'Total reserva (referencia)' : 'Total pagado'}
+                  </p>
                   <p className="font-medium tabular-nums flex items-center gap-2 min-h-[1.5rem]">
-                    {displayTotalLabel === null ? (
+                    {waitStripeForTotal ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                        <span className="text-gray-500 text-sm font-normal">Obteniendo importe…</span>
+                        <span className="text-gray-500 text-sm font-normal">Obteniendo importe del cobro…</span>
                       </>
+                    ) : hasPaidDisplay && paidTotalFormatted ? (
+                      paidTotalFormatted
+                    ) : showUsdReferenceOnly ? (
+                      formatMoney(reservationData.totalAmount, 'USD')
                     ) : (
-                      displayTotalLabel
+                      '—'
                     )}
                   </p>
                   {showUsdEquivalent && (
                     <p className="text-xs text-gray-500 mt-0.5">
                       Importe base de la reserva (USD): {formatMoney(reservationData.totalAmount, 'USD')}
+                    </p>
+                  )}
+                  {showUsdReferenceOnly && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Importe en USD guardado en la reserva; si pagaste en MXN u otra moneda, revisa el recibo de Stripe.
                     </p>
                   )}
                 </div>

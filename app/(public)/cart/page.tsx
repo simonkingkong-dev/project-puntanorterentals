@@ -125,7 +125,7 @@ function CartItemCard({
       setSecondsLeft((s) => (s != null && s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(t);
-  }, [countdownActive]);
+  }, [countdownActive, reservationStatus?.expiresAt]);
 
   const isDraftItem = isDraft(item);
   const canContinueToPayment =

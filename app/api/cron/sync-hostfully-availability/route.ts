@@ -9,8 +9,8 @@ const MONTHS_AHEAD = 24;
  * POST /api/cron/sync-hostfully-availability
  * Sincroniza disponibilidad y precios por noche desde Hostfully a Firestore.
  * Debe ser llamado por un cron (ej. cada 5–15 min). Protegido por CRON_SECRET.
- * Si `HOSTFULLY_PERSIST_AVAILABILITY` no está en `true`, el route hace `no-op`
- * (útil para el modo Hostfully-only evitando escrituras en Firestore).
+ * Por defecto **sí** persiste en Firestore. Pon `HOSTFULLY_PERSIST_AVAILABILITY=false`
+ * solo si usas solo Hostfully en vivo y no quieres copiar calendario a Firestore.
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -19,12 +19,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Hostfully-only: no persistimos disponibilidad diaria en Firestore.
-  // Por defecto está deshabilitado para evitar escrituras y desyncs.
-  const persist = process.env.HOSTFULLY_PERSIST_AVAILABILITY === "true";
+  const persist = process.env.HOSTFULLY_PERSIST_AVAILABILITY !== "false";
   if (!persist) {
-    // Recomendación: si tu cron/scheduler externo sigue llamando este endpoint,
-    // apágalo para evitar requests innecesarias (en modo Hostfully-only).
     return NextResponse.json({
       success: true,
       skipped: true,
