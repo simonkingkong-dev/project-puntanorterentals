@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { roundForDisplay } from '@/lib/round-display-money';
 import { Property } from '@/lib/types';
 import { Day, type DayProps } from 'react-day-picker';
-import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { generateDateRange, getFirstBlockedNight } from '@/lib/utils/date';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { Currency } from '@/components/ui/currency-select';
 
 interface AvailabilityCalendarProps {
   property: Property;
   onDateSelect: (dates: { checkIn: Date; checkOut?: Date }) => void;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
+  currency?: Currency;
+  usdMxnRate?: number | null;
 }
 
 /** Mismo día (solo fecha) */
@@ -44,6 +48,8 @@ export default function AvailabilityCalendar({
   property,
   onDateSelect,
   selectedDates,
+  currency = 'USD',
+  usdMxnRate = null,
 }: AvailabilityCalendarProps) {
   const [hoveredDate, setHoveredDate] = useState<Date | undefined>();
   const [rangeFrom, setRangeFrom] = useState<Date | undefined>();
@@ -54,6 +60,13 @@ export default function AvailabilityCalendar({
   const fromMonth = today;
   const toMonth = addMonths(today, MONTHS_WINDOW - 1);
   const [currentMonth, setCurrentMonth] = useState(() => today);
+  const [realtimeAvailability, setRealtimeAvailability] = useState<
+    Record<string, boolean> | null
+  >(null);
+  const [realtimeDailyRates, setRealtimeDailyRates] = useState<Record<string, number> | null>(
+    null
+  );
+  const [loadingRealtime, setLoadingRealtime] = useState(false);
 
   const canGoPrev = currentMonth > fromMonth;
   const canGoNext = currentMonth < subMonths(toMonth, MONTHS_VISIBLE - 1);
@@ -65,14 +78,141 @@ export default function AvailabilityCalendar({
     if (canGoNext) setCurrentMonth((m) => addMonths(m, 1));
   }, [canGoNext]);
 
+  useEffect(() => {
+    if (!property.hostfullyPropertyId) {
+      setRealtimeAvailability(null);
+      setRealtimeDailyRates(null);
+      return;
+    }
+
+    const start = new Date();
+    start.setDate(1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + MONTHS_WINDOW);
+    end.setDate(0);
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+      ).padStart(2, "0")}`;
+
+    let cancelled = false;
+    setLoadingRealtime(true);
+    fetch(
+      `/api/properties/calendar?propertyId=${encodeURIComponent(property.id)}&startDate=${toDateStr(
+        start
+      )}&endDate=${toDateStr(end)}`
+    )
+      .then(async (r) => {
+        const data = (await r.json()) as {
+          availability?: Record<string, boolean>;
+          dailyRates?: Record<string, number>;
+          error?: string;
+          warning?: string;
+          source?: string;
+        };
+        if (!r.ok) {
+          throw new Error(data?.error || `HTTP ${r.status}`);
+        }
+        return data;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.warning) {
+          toast.warning(
+            "Mostrando disponibilidad guardada en el sitio (Hostfully no respondió)."
+          );
+        }
+        if (data?.availability && typeof data.availability === "object") {
+          setRealtimeAvailability(data.availability as Record<string, boolean>);
+        } else {
+          setRealtimeAvailability({});
+        }
+        if (data?.dailyRates && typeof data.dailyRates === "object") {
+          setRealtimeDailyRates(data.dailyRates as Record<string, number>);
+        } else {
+          setRealtimeDailyRates({});
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRealtimeAvailability({});
+          setRealtimeDailyRates({});
+          toast.error(
+            "No se pudo cargar disponibilidad en tiempo real de Hostfully."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRealtime(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id, property.hostfullyPropertyId]);
+
+  const availabilityMap = useMemo(
+    () => (property.hostfullyPropertyId ? realtimeAvailability ?? {} : property.availability),
+    [property.hostfullyPropertyId, property.availability, realtimeAvailability]
+  );
+
+  const isNightAvailable = useCallback(
+    (date: Date): boolean => {
+      const dateString = format(date, 'yyyy-MM-dd');
+      if (property.hostfullyPropertyId) {
+        const v = availabilityMap[dateString];
+        return v === true;
+      }
+      return availabilityMap[dateString] !== false;
+    },
+    [property.hostfullyPropertyId, availabilityMap]
+  );
+
+  const canUseAsCheckout = useCallback(
+    (checkoutDate: Date): boolean => {
+      if (!rangeFrom) return false;
+      const start = startOfDay(rangeFrom);
+      const end = startOfDay(checkoutDate);
+      if (end.getTime() <= start.getTime()) return false;
+
+      // Todas las noches intermedias (check-in inclusive, check-out exclusive) deben estar libres.
+      const cursor = new Date(start);
+      while (cursor < end) {
+        if (!isNightAvailable(cursor)) return false;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return true;
+    },
+    [rangeFrom, isNightAvailable]
+  );
+
   const isDateDisabled = useCallback(
     (date: Date): boolean => {
       const dateString = format(date, 'yyyy-MM-dd');
-      const isUnavailable = property.availability[dateString] === false;
       const isPast = isBefore(date, startOfDay(new Date()));
-      return isPast || isUnavailable;
+      if (isPast) return true;
+      const isCheckoutCandidate =
+        rangeFrom != null && startOfDay(date).getTime() > startOfDay(rangeFrom).getTime();
+
+      if (property.hostfullyPropertyId) {
+        if (loadingRealtime && realtimeAvailability == null) return true;
+        if (isCheckoutCandidate) return !canUseAsCheckout(date);
+        // Conservador: si Hostfully no devuelve la fecha, la tratamos como no seleccionable.
+        const v = availabilityMap[dateString];
+        return v !== true;
+      }
+
+      if (isCheckoutCandidate) return !canUseAsCheckout(date);
+      return availabilityMap[dateString] === false;
     },
-    [property.availability]
+    [
+      property.hostfullyPropertyId,
+      loadingRealtime,
+      realtimeAvailability,
+      availabilityMap,
+      rangeFrom,
+      canUseAsCheckout,
+    ]
   );
 
   const handleDayClick = useCallback(
@@ -110,8 +250,9 @@ export default function AvailabilityCalendar({
           toast.info('La fecha de salida debe ser posterior a la de entrada.');
           return;
         }
-        const dateStrings = generateDateRange(range.from, range.to);
-        const firstBlocked = getFirstBlockedNight(dateStrings, property.availability ?? {});
+        // Validamos solo noches: check-out es exclusivo y puede caer en fecha no disponible.
+        const dateStrings = generateDateRange(range.from, addDays(range.to, -1));
+        const firstBlocked = getFirstBlockedNight(dateStrings, availabilityMap ?? {});
         if (firstBlocked) {
           toast.error('Solo se pueden seleccionar fechas con todas las noches libres. Hay una noche no disponible en ese rango.');
           setRangeFrom(undefined);
@@ -129,7 +270,7 @@ export default function AvailabilityCalendar({
         onDateSelect({ checkIn: range.from });
       }
     },
-    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut]
+    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut, availabilityMap]
   );
 
   /** Rango mostrado: si hay rangeFrom (selección en curso), priorizar; si no, rango confirmado */
@@ -181,6 +322,76 @@ export default function AvailabilityCalendar({
   const displayCheckIn = rangeFrom ?? selectedDates?.checkIn;
   const displayCheckOut = selectedDates?.checkOut ?? (rangeFrom && hoveredDate ? hoveredDate : undefined);
   const checkOutIsPreview = Boolean(rangeFrom && hoveredDate && !selectedDates?.checkOut);
+  const nightsCount =
+    displayCheckIn && displayCheckOut
+      ? Math.max(
+          0,
+          Math.round(
+            (startOfDay(displayCheckOut).getTime() -
+              startOfDay(displayCheckIn).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        )
+      : 0;
+  const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
+  const nightsSubtotal = useMemo(() => {
+    if (!displayCheckIn || !displayCheckOut || nightsCount <= 0) return 0;
+    const rates = property.hostfullyPropertyId ? realtimeDailyRates ?? {} : property.dailyRates ?? {};
+    const cursor = new Date(
+      displayCheckIn.getFullYear(),
+      displayCheckIn.getMonth(),
+      displayCheckIn.getDate()
+    );
+    const end = new Date(
+      displayCheckOut.getFullYear(),
+      displayCheckOut.getMonth(),
+      displayCheckOut.getDate()
+    );
+    let total = 0;
+    while (cursor < end) {
+      const key = format(cursor, 'yyyy-MM-dd');
+      const dynamic = rates[key];
+      const usdAmount =
+        typeof dynamic === 'number' && Number.isFinite(dynamic) && dynamic > 0
+          ? dynamic
+          : property.pricePerNight;
+      total += usdAmount;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return roundForDisplay(total * displayRate, currency);
+  }, [
+    displayCheckIn,
+    displayCheckOut,
+    nightsCount,
+    property.hostfullyPropertyId,
+    realtimeDailyRates,
+    property.dailyRates,
+    property.pricePerNight,
+    displayRate,
+    currency,
+  ]);
+  const formatPrice = (amount: number) => {
+    if (currency === 'MXN') {
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    }
+    if (currency === 'EUR') {
+      return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+      }).format(amount);
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   return (
     <Card>
@@ -256,19 +467,30 @@ export default function AvailabilityCalendar({
           </div>
         </div>
 
-        <div className="mt-4 space-y-1 text-sm text-gray-700">
-          <p>
-            <span className="font-medium">Fecha del check in:</span>{' '}
-            {displayCheckIn
-              ? format(displayCheckIn, 'dd MMMM yyyy', { locale: es })
-              : '—'}
-          </p>
-          <p>
-            <span className="font-medium">Fecha del check out:</span>{' '}
-            {displayCheckOut
-              ? format(displayCheckOut, 'dd MMMM yyyy', { locale: es }) + (checkOutIsPreview ? ' (preview)' : '')
-              : '—'}
-          </p>
+        <div className="mt-4 flex items-start justify-between gap-4 text-sm text-gray-700">
+          <div className="space-y-1">
+            <p>
+              <span className="font-medium">Fecha del check in:</span>{' '}
+              {displayCheckIn
+                ? format(displayCheckIn, 'dd MMMM yyyy', { locale: es })
+                : '—'}
+            </p>
+            <p>
+              <span className="font-medium">Fecha del check out:</span>{' '}
+              {displayCheckOut
+                ? format(displayCheckOut, 'dd MMMM yyyy', { locale: es }) + (checkOutIsPreview ? ' (preview)' : '')
+                : '—'}
+            </p>
+          </div>
+          <div className="min-w-[260px] border-l border-gray-200 pl-4">
+            <p className="font-semibold text-gray-900">Resumen de precios</p>
+            {nightsCount > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-4 text-gray-900">
+                <span>{nightsCount} {nightsCount === 1 ? 'noche' : 'noches'}</span>
+                <span>{formatPrice(nightsSubtotal)}</span>
+              </div>
+            ) : <p className="mt-2 text-gray-500">—</p>}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { calculateNights } from '@/lib/utils/date';
+import { roundForDisplay } from '@/lib/round-display-money';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
 
 // Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
@@ -150,6 +151,8 @@ function PaymentContent() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [currency, setCurrency] = useState<Currency>('USD');
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
+  const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
+  const previousCurrencyRef = useRef<Currency>('USD');
 
   useEffect(() => {
     const draft = getDraft() || getDraftFromStorage();
@@ -227,7 +230,7 @@ function PaymentContent() {
       fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountVal, currency: 'usd', reservationId, modification: true }),
+        body: JSON.stringify({ amount: amountVal, currency: currency.toLowerCase(), reservationId, modification: true }),
       })
         .then((res) => res.json())
         .then((data) => {
@@ -284,7 +287,7 @@ function PaymentContent() {
         return fetch('/api/stripe/create-payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: totalAmountVal, currency: 'usd', reservationId: resId }),
+          body: JSON.stringify({ amount: totalAmountVal, currency: currency.toLowerCase(), reservationId: resId }),
         });
       })
       .then((res) => res && res.json ? res.json() : null)
@@ -300,7 +303,7 @@ function PaymentContent() {
         setError(err.message || 'Error creando intención de pago');
       })
       .finally(() => setLoading(false));
-  }, [reservationId, modification, amountParam, tokenParam, router, hydrated, getDraft, removeFromCart, addToCart, getItemByKey, updateCartItem]);
+  }, [reservationId, modification, amountParam, tokenParam, router, hydrated, getDraft, removeFromCart, addToCart, getItemByKey, updateCartItem, currency]);
 
   useEffect(() => {
     if (currency === 'MXN') {
@@ -308,18 +311,51 @@ function PaymentContent() {
         .then((r) => r.json())
         .then((data) => setUsdMxnRate(data.rate))
         .catch(() => setUsdMxnRate(17.2));
+      setUsdEurRate(null);
+    } else if (currency === 'EUR') {
+      fetch('/api/exchange-rate?from=USD&to=EUR')
+        .then((r) => r.json())
+        .then((data) => setUsdEurRate(data.rate))
+        .catch(() => setUsdEurRate(0.92));
+      setUsdMxnRate(null);
     } else {
       setUsdMxnRate(null);
+      setUsdEurRate(null);
     }
   }, [currency]);
 
   useEffect(() => {
-    if (secondsLeft === null || secondsLeft <= 0) return;
+    if (!reservationId || amount == null || loading) return;
+    if (previousCurrencyRef.current === currency) return;
+    previousCurrencyRef.current = currency;
+    fetch('/api/stripe/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount,
+        currency: currency.toLowerCase(),
+        reservationId,
+        modification,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.error) throw new Error(data.error);
+        if (data?.clientSecret) setClientSecret(data.clientSecret);
+      })
+      .catch((err) => {
+        toast.error(err?.message || 'No se pudo actualizar la moneda de pago');
+      });
+  }, [currency, reservationId, amount, modification, loading]);
+
+  const paymentCountdownActive = secondsLeft != null && secondsLeft > 0;
+  useEffect(() => {
+    if (!paymentCountdownActive) return;
     const t = setInterval(() => {
       setSecondsLeft((s) => (s != null && s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(t);
-  }, [secondsLeft != null && secondsLeft > 0]);
+  }, [paymentCountdownActive]);
 
   useEffect(() => {
     if (secondsLeft !== 0 || !reservationId || releasedRef.current) return;
@@ -361,14 +397,32 @@ function PaymentContent() {
   const displayAmountUsd = amount ?? 0;
   const serviceFeeUsd = Math.round(displayAmountUsd * 0.1);
   const subtotalUsd = displayAmountUsd - serviceFeeUsd;
-  const rate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
-  const displayAmount = Math.round(displayAmountUsd * rate);
-  const serviceFee = Math.round(serviceFeeUsd * rate);
-  const subtotal = Math.round(subtotalUsd * rate);
+  const rate =
+    currency === 'MXN' && usdMxnRate != null
+      ? usdMxnRate
+      : currency === 'EUR' && usdEurRate != null
+        ? usdEurRate
+        : 1;
+  const displayAmount = roundForDisplay(displayAmountUsd * rate, currency);
+  const serviceFee = roundForDisplay(serviceFeeUsd * rate, currency);
+  const subtotal = roundForDisplay(subtotalUsd * rate, currency);
 
   function formatPrice(val: number): string {
     if (currency === 'MXN') {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(val);
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(val);
+    }
+    if (currency === 'EUR') {
+      return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(val);
     }
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
   }
@@ -441,8 +495,8 @@ function PaymentContent() {
 
       {/* Resumen de pago */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Resumen de Pago</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle className="leading-none">Resumen de Pago</CardTitle>
           <CurrencySelect value={currency} onValueChange={setCurrency} />
         </CardHeader>
         <CardContent className="space-y-4">
@@ -458,6 +512,9 @@ function PaymentContent() {
             <span>Total</span>
             <span>{formatPrice(displayAmount)}</span>
           </div>
+          <p className="text-xs text-gray-500 pt-1">
+            El cobro se realizará en {currency === 'MXN' ? 'pesos mexicanos (MXN)' : currency === 'EUR' ? 'euros (EUR)' : 'dólares estadounidenses (USD)'} según la moneda seleccionada.
+          </p>
         </CardContent>
       </Card>
 

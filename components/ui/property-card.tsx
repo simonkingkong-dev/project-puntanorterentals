@@ -104,14 +104,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               {property.description}
             </p>
             
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-gray-900">
-                  ${property.pricePerNight}
-                </span>
-                <span className="text-gray-500 text-sm">/ noche</span>
-              </div>
-              
+            <div className="flex items-center justify-end pt-2 border-t">
               <div className="flex flex-wrap gap-1">
                 {(property.amenities ?? []).slice(0, 2).map((amenity, index) => (
                   <Badge key={index} variant="secondary" className="text-xs">

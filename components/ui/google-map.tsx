@@ -71,6 +71,8 @@ export function GoogleMap({
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const centerLat = center.lat;
+  const centerLng = center.lng;
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -90,16 +92,17 @@ export function GoogleMap({
       .then((googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
 
+        const mapCenter = { lat: centerLat, lng: centerLng };
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = new googleNs.maps.Map(mapRef.current, {
-            center,
+            center: mapCenter,
             zoom,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: true,
           });
         } else {
-          mapInstanceRef.current.setCenter(center);
+          mapInstanceRef.current.setCenter(mapCenter);
           mapInstanceRef.current.setZoom(zoom);
         }
 
@@ -139,7 +142,7 @@ export function GoogleMap({
     return () => {
       isCancelled = true;
     };
-  }, [center.lat, center.lng, zoom, markers, selectedId, onMarkerClick]);
+  }, [centerLat, centerLng, zoom, markers, selectedId, onMarkerClick]);
 
   return (
     <div

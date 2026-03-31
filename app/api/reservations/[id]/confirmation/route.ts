@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getReservationByIdForConfirmationAdmin } from '@/lib/firebase-admin-queries';
+import { stripe } from '@/lib/stripe';
+import { paymentDisplayFromIntent } from '@/lib/stripe-payment-display';
 
 /**
  * GET /api/reservations/[id]/confirmation
@@ -21,6 +23,16 @@ export async function GET(
 
     if (!reservation) {
       return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
+    }
+
+    const stripeId = reservation.stripePaymentId;
+    if (stripeId) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(stripeId);
+        return NextResponse.json({ ...reservation, ...paymentDisplayFromIntent(pi) });
+      } catch {
+        // continúa sin enriquecer
+      }
     }
 
     return NextResponse.json(reservation);

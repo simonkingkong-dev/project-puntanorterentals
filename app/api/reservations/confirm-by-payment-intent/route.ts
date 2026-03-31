@@ -6,6 +6,9 @@ import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
 import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
+import { registerHostfullyLeadPayment } from '@/lib/hostfully/client';
+import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
+import { paymentDisplayFromIntent } from '@/lib/stripe-payment-display';
 
 function toDateSafe(v: unknown): Date {
   if (v instanceof Date) return v;
@@ -103,6 +106,7 @@ export async function POST(request: NextRequest) {
         checkOut,
         createdAt: updated.createdAt?.toDate?.() ?? new Date(updated.createdAt),
         propertyTitle,
+        ...paymentDisplayFromIntent(paymentIntent),
       });
     }
 
@@ -121,6 +125,7 @@ export async function POST(request: NextRequest) {
         checkOut,
         createdAt: data.createdAt?.toDate?.() ?? new Date(data.createdAt),
         propertyTitle,
+        ...paymentDisplayFromIntent(paymentIntent),
       });
     }
 
@@ -154,24 +159,61 @@ export async function POST(request: NextRequest) {
       createdAt: updated.createdAt?.toDate?.() ?? new Date(updated.createdAt),
     } as Reservation;
 
+    const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut);
+    if (!availability.available) {
+      return NextResponse.json(
+        { error: availability.error || 'Las fechas ya no están disponibles' },
+        { status: 409 }
+      );
+    }
+
+    const propSnap = propertyId
+      ? await adminDb.collection('properties').doc(propertyId).get()
+      : null;
+    const isHostfullyProperty = Boolean(propSnap?.exists && propSnap.data()?.hostfullyPropertyId);
+
     const dateStrings = generateDateRange(checkIn, checkOut);
-    await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+    if (!isHostfullyProperty) {
+      await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+    }
     const syncResult = await trySyncBookingToHostfully(propertyId, {
+      reservationId: reservationSnap.id,
       checkIn,
       checkOut,
       guestName: updated.guestName,
+      guestFirstName: updated.guestFirstName,
+      guestLastName: updated.guestLastName,
       guestEmail: updated.guestEmail,
     });
     if (!syncResult.synced) {
       console.error('[Hostfully] Sync falló tras confirmar reserva:', syncResult.error);
+    } else if (syncResult.leadUid) {
+      await reservationRef.update({
+        hostfullyLeadUid: syncResult.leadUid,
+        hostfullySyncedAt: new Date(),
+      });
+    }
+    const leadUidForPayment =
+      syncResult.synced && syncResult.leadUid
+        ? syncResult.leadUid
+        : ((updated.hostfullyLeadUid as string | undefined) ?? '').trim() || undefined;
+    if (leadUidForPayment) {
+      const paymentSync = await registerHostfullyLeadPayment({
+        leadUid: leadUidForPayment,
+        amount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+        currency: paymentIntent.currency?.toUpperCase() || 'USD',
+        paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
+        externalPaymentId: paymentIntent.id,
+        note: `Pago Stripe ${paymentIntent.id}`,
+      });
+      if (!paymentSync.synced) {
+        console.error('[Hostfully] No se pudo registrar pago del lead:', paymentSync.error);
+      }
     }
     await sendConfirmationEmail(reservationData);
 
     let propertyTitle: string | undefined;
-    if (propertyId) {
-      const propSnap = await adminDb.collection('properties').doc(propertyId).get();
-      propertyTitle = propSnap.exists ? (propSnap.data()?.title as string) : undefined;
-    }
+    propertyTitle = propSnap?.exists ? (propSnap.data()?.title as string) : undefined;
 
     return NextResponse.json({
       id: reservationSnap.id,
@@ -180,6 +222,7 @@ export async function POST(request: NextRequest) {
       checkOut,
       createdAt: updated.createdAt?.toDate?.() ?? new Date(updated.createdAt),
       propertyTitle,
+      ...paymentDisplayFromIntent(paymentIntent),
     });
   } catch (error) {
     console.error('Error confirmando reserva por payment intent:', error);

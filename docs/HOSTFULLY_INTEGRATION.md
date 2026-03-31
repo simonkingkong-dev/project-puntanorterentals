@@ -6,7 +6,7 @@
 - **API:** Hostfully API v3.2 (cliente en `lib/hostfully/client.ts`).
 - **Endpoints usados:**
   - `GET /properties?agencyUid=...` → lista de propiedades de la agencia.
-  - `GET /property-calendar/{propertyUid}?startDate=...&endDate=...` → calendario por propiedad.
+  - `GET /property-calendar/{propertyUid}?from=YYYY-MM-DD&to=YYYY-MM-DD` → calendario por propiedad.
 
 ### Campos que leemos de Hostfully (propiedades)
 En `sync-hostfully/actions.ts` (`mapHostfullyToProperty` y helpers) se usan:
@@ -68,3 +68,55 @@ En `api/cron/sync-hostfully-availability/route.ts`:
 - Si la disponibilidad no coincide: revisar timezone en el cron y en Hostfully; ampliar rango del cron si hace falta; asegurar que el calendario de Hostfully devuelva `available` y opcionalmente `rate`/`price`/`dailyRate` por día.
 - Si faltan fotos o descripciones: inspeccionar la respuesta real de `GET /properties` (logs en sync) y ajustar `extractImages` y `mapHostfullyToProperty` con los nombres de campo correctos.
 - Si los precios no cuadran: confirmar en la API de Hostfully qué campo contiene el precio por noche por fecha y mapearlo en el cron (ya se usa `d.rate ?? d.price ?? d.dailyRate`).
+
+---
+
+## 5. Widgets de reserva y calendario (Hostfully → sitio propio)
+
+### Objetivo
+Usar el **widget oficial** (script + `div` o iframe) en la página de propiedad para que disponibilidad, precios y checkout salgan **directamente de Hostfully** y reduzcan desfases respecto a un calendario que solo lee caché (Firestore).
+
+### Código en este repo
+- Selector de motor: `NEXT_PUBLIC_BOOKING_ENGINE` (`custom` | `hostfully`) — ver [`lib/booking-engine.ts`](../lib/booking-engine.ts).
+- Config pública del embed: [`lib/hostfully-widget-config.ts`](../lib/hostfully-widget-config.ts).
+- Componente: [`components/ui/hostfully-booking-embed.tsx`](../components/ui/hostfully-booking-embed.tsx).
+- En página de propiedad: [`components/ui/property-body.tsx`](../components/ui/property-body.tsx) — si `hostfully` y hay `hostfullyPropertyId`, se muestra el widget y **no** se sincroniza el carrito desde fechas; el flujo Stripe/`create-from-draft` no se usa en esa vista.
+
+### Variables de entorno (ver también `.env.local.example`)
+| Variable | Uso |
+|----------|-----|
+| `NEXT_PUBLIC_BOOKING_ENGINE` | `custom` (defecto) o `hostfully`. |
+| `NEXT_PUBLIC_HOSTFULLY_AGENCY_UID` | Mismo valor que `HOSTFULLY_AGENCY_UID` (visible al cliente; solo identifica agencia en el widget). |
+| `NEXT_PUBLIC_HOSTFULLY_WIDGET_SCRIPT_SRC` | URL del atributo `src` del `<script>` del snippet del panel Hostfully. |
+| `NEXT_PUBLIC_HOSTFULLY_BOOKING_IFRAME_URL` | Opcional. Plantilla con `{propertyUid}` y `{agencyUid}` si el proveedor da URL de iframe en lugar de script. |
+| `NEXT_PUBLIC_HOSTFULLY_WIDGET_DATA_*_ATTR` | Opcional. Nombres de atributos `data-*` del `div` si difieren del snippet por defecto en código. |
+| `NEXT_PUBLIC_HOSTFULLY_WIDGET_ROOT_CLASS` | Opcional. Clase del contenedor que el script puede buscar. |
+
+### Contrato del snippet
+1. En Hostfully: **Publishing / Custom Branding** → artículos “Set up the Hostfully Booking Widget” / “Integrate Hostfully into your website”.
+2. Copiar la URL del script → `NEXT_PUBLIC_HOSTFULLY_WIDGET_SCRIPT_SRC`.
+3. Copiar los nombres exactos de los atributos `data-*` del `div` de ejemplo → ajustar `NEXT_PUBLIC_HOSTFULLY_WIDGET_DATA_AGENCY_ATTR` y `NEXT_PUBLIC_HOSTFULLY_WIDGET_DATA_PROPERTY_ATTR` si hace falta.
+4. El UID de propiedad en el embed debe coincidir con `hostfullyPropertyId` en Firestore (sync admin).
+
+### Estilo visual (límites)
+- **En tu web:** contenedor (bordes, márgenes, `min-height`, responsive) alrededor del embed en `HostfullyBookingEmbed` y en `property-body`.
+- **Dentro del widget:** colores, botones y tipografía típicamente desde el panel Hostfully (**Custom branding / Set up custom CSS**). No se puede clonar pixel-perfect el diseño React/shadcn del sitio sin hacks frágiles.
+
+### Sincronización respecto al flujo `custom`
+- Con **widget**, la fuente de verdad de reserva en esa vista es Hostfully; el cron de disponibilidad sigue siendo útil para **catálogo** (listados, SEO) pero no gobierna el checkout del widget.
+- Con **`custom`**, la verificación al pagar sigue leyendo `property.availability` en Firestore (mantener cron si usas ese flujo).
+
+### Checklist de lanzamiento (hostfully)
+1. `NEXT_PUBLIC_BOOKING_ENGINE=hostfully` + script URL + `NEXT_PUBLIC_HOSTFULLY_AGENCY_UID`.
+2. Sync de propiedades: todas las publicadas tienen `hostfullyPropertyId`.
+3. Probar 2–3 propiedades: fechas, total, idioma, validación de huéspedes, flujo hasta confirmación en Hostfully.
+4. Móvil y ancho estrecho.
+5. Revisión 24–48h de errores en logs tras el cambio.
+6. **Firebase App Hosting / Secret Manager:** añadir los `NEXT_PUBLIC_*` anteriores con disponibilidad **BUILD** y **RUNTIME** para que el cliente embebido reciba los valores.
+
+### Cloudflare WAF (opcional, reduce probes PHP/WordPress)
+Regla única de ejemplo (syntax según documentación Cloudflare):
+
+`(http.request.uri.path contains ".php") or starts_with(http.request.uri.path, "/wp-") or starts_with(http.request.uri.path, "/wp-content") or starts_with(http.request.uri.path, "/wp-includes") or starts_with(http.request.uri.path, "/wp-admin") or http.request.uri.path eq "/xmlrpc.php" or starts_with(http.request.uri.path, "/cgi-bin")`
+
+Acción: **Block**. El proxy de Next.js en [`proxy.ts`](../proxy.ts) también devuelve 404 temprano para muchos de estos paths.

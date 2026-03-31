@@ -8,6 +8,8 @@ import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
 import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
+import { registerHostfullyLeadPayment } from '@/lib/hostfully/client';
+import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 
 export async function POST(request: Request) {
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -69,16 +71,56 @@ export async function POST(request: Request) {
         } as Reservation;
 
         if (propertyId) {
+          const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut);
+          if (!availability.available) {
+            await reservationRef.update({
+              status: 'cancelled',
+              updatedAt: new Date(),
+            });
+            return NextResponse.json({ received: true });
+          }
+
+          const propSnap = await adminDb.collection('properties').doc(propertyId).get();
+          const isHostfullyProperty = Boolean(
+            propSnap.exists && propSnap.data()?.hostfullyPropertyId
+          );
           const dateStrings = generateDateRange(checkIn, checkOut);
-          await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+          if (!isHostfullyProperty) {
+            await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
+          }
           const syncResult = await trySyncBookingToHostfully(propertyId, {
+            reservationId,
             checkIn,
             checkOut,
             guestName: data.guestName,
+            guestFirstName: data.guestFirstName,
+            guestLastName: data.guestLastName,
             guestEmail: data.guestEmail,
           });
           if (!syncResult.synced) {
             console.error('[Hostfully] Sync falló en webhook:', syncResult.error);
+          } else if (syncResult.leadUid) {
+            await reservationRef.update({
+              hostfullyLeadUid: syncResult.leadUid,
+              hostfullySyncedAt: new Date(),
+            });
+          }
+          const leadUidForPayment =
+            syncResult.synced && syncResult.leadUid
+              ? syncResult.leadUid
+              : ((data.hostfullyLeadUid as string | undefined) ?? '').trim() || undefined;
+          if (leadUidForPayment) {
+            const paymentSync = await registerHostfullyLeadPayment({
+              leadUid: leadUidForPayment,
+              amount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+              currency: paymentIntent.currency?.toUpperCase() || 'USD',
+              paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
+              externalPaymentId: paymentIntent.id,
+              note: `Pago Stripe ${paymentIntent.id}`,
+            });
+            if (!paymentSync.synced) {
+              console.error('[Hostfully] No se pudo registrar pago del lead (webhook):', paymentSync.error);
+            }
           }
         }
 

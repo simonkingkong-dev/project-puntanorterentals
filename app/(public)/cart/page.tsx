@@ -118,13 +118,14 @@ function CartItemCard({
     return () => controller.abort();
   }, [item.reservationId, key, onRemove]);
 
+  const countdownActive = secondsLeft != null && secondsLeft > 0;
   useEffect(() => {
-    if (secondsLeft === null || secondsLeft <= 0) return;
+    if (!countdownActive) return;
     const t = setInterval(() => {
       setSecondsLeft((s) => (s != null && s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(t);
-  }, [secondsLeft != null && secondsLeft > 0]);
+  }, [countdownActive]);
 
   const isDraftItem = isDraft(item);
   const canContinueToPayment =

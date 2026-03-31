@@ -26,11 +26,24 @@ interface PropertyEditFormProps {
   initialData: Property;
 }
 
+/** Campos numéricos de widgets como string en inputs HTML. */
+type PropertyEditFormState = Omit<
+  UpdatePropertyFormData,
+  | "images"
+  | "hostfullyCalendarWidgetId"
+  | "hostfullyCalendarShowTentative"
+  | "hostfullyCalendarMonthsToDisplay"
+> & {
+  hostfullyCalendarWidgetId: string;
+  hostfullyCalendarShowTentative: string;
+  hostfullyCalendarMonthsToDisplay: string;
+};
+
 export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
   const [isPending, setIsPending] = useState(false);
   
   // 1. El estado del formulario principal
-  const [formData, setFormData] = useState<Omit<UpdatePropertyFormData, 'images'>>({
+  const [formData, setFormData] = useState<PropertyEditFormState>({
     title: initialData.title,
     description: initialData.description,
     location: initialData.location,
@@ -39,6 +52,21 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     featured: initialData.featured,
     amenities: initialData.amenities,
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
+    hostfullyLeadWidgetUuid: initialData.hostfullyLeadWidgetUuid ?? '',
+    hostfullyLeadWidgetOptionsJson: initialData.hostfullyLeadWidgetOptionsJson ?? '',
+    hostfullyCalendarWidgetId:
+      initialData.hostfullyCalendarWidgetId != null
+        ? String(initialData.hostfullyCalendarWidgetId)
+        : '',
+    hostfullyCalendarWidgetName: initialData.hostfullyCalendarWidgetName ?? '',
+    hostfullyCalendarShowTentative:
+      initialData.hostfullyCalendarShowTentative != null
+        ? String(initialData.hostfullyCalendarShowTentative)
+        : '',
+    hostfullyCalendarMonthsToDisplay:
+      initialData.hostfullyCalendarMonthsToDisplay != null
+        ? String(initialData.hostfullyCalendarMonthsToDisplay)
+        : '',
     shortDescription: initialData.shortDescription ?? '',
     longDescription: initialData.longDescription ?? '',
     notes: initialData.notes ?? '',
@@ -80,10 +108,33 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         finalImageUrls = [...existingImageUrls, ...newUrls];
       }
 
+      const {
+        hostfullyCalendarWidgetId: calWidgetIdStr,
+        hostfullyCalendarShowTentative: calStStr,
+        hostfullyCalendarMonthsToDisplay: calMdStr,
+        ...formRest
+      } = formData;
+
+      const calIdRaw = calWidgetIdStr?.trim();
+      const calId =
+        calIdRaw && !Number.isNaN(Number(calIdRaw)) ? Number(calIdRaw) : undefined;
+      const stRaw = calStStr?.trim() ?? "";
+      const mdRaw = calMdStr?.trim() ?? "";
+
       const propertyData: UpdatePropertyFormData = {
-        ...formData,
+        ...formRest,
         images: finalImageUrls,
         hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
+        hostfullyLeadWidgetUuid: formData.hostfullyLeadWidgetUuid?.trim() || undefined,
+        hostfullyLeadWidgetOptionsJson:
+          formData.hostfullyLeadWidgetOptionsJson?.trim() || undefined,
+        hostfullyCalendarWidgetId: calId,
+        hostfullyCalendarWidgetName:
+          formData.hostfullyCalendarWidgetName?.trim() || undefined,
+        hostfullyCalendarShowTentative:
+          stRaw !== "" && !Number.isNaN(Number(stRaw)) ? Number(stRaw) : undefined,
+        hostfullyCalendarMonthsToDisplay:
+          mdRaw !== "" && !Number.isNaN(Number(mdRaw)) ? Number(mdRaw) : undefined,
       };
 
       const result = await handleUpdateProperty(initialData.id, propertyData);
@@ -264,6 +315,102 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               onChange={(e) => setFormData(prev => ({ ...prev, hostfullyPropertyId: e.target.value }))}
               placeholder="Ej: abc123-def456-..."
             />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-sm font-medium text-gray-900">Widget Lead / reserva (leadCaptureWidget)</p>
+            <p className="text-xs text-muted-foreground">
+              Pega el UUID del snippet (2º argumento de <code className="rounded bg-muted px-1">new Widget</code>).
+              Ideal: snippet por propiedad en Hostfully, no solo agencia.
+            </p>
+            <Label htmlFor="hostfullyLeadWidgetUuid">UUID del widget Lead</Label>
+            <Input
+              id="hostfullyLeadWidgetUuid"
+              value={formData.hostfullyLeadWidgetUuid ?? ""}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, hostfullyLeadWidgetUuid: e.target.value }))
+              }
+              placeholder="bd250250-08a1-49d8-b2ee-d49588fbaf9d"
+            />
+            <Label htmlFor="hostfullyLeadWidgetOptionsJson">JSON de opciones (3º argumento de Widget)</Label>
+            <Textarea
+              id="hostfullyLeadWidgetOptionsJson"
+              rows={6}
+              className="font-mono text-xs"
+              value={formData.hostfullyLeadWidgetOptionsJson ?? ""}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  hostfullyLeadWidgetOptionsJson: e.target.value,
+                }))
+              }
+              placeholder='{"type":"property",...}'
+            />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-sm font-medium text-gray-900">Widget calendario Orbi (opcional)</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hostfullyCalendarWidgetId">Id numérico del calendario</Label>
+                <Input
+                  id="hostfullyCalendarWidgetId"
+                  inputMode="numeric"
+                  value={formData.hostfullyCalendarWidgetId}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hostfullyCalendarWidgetId: e.target.value,
+                    }))
+                  }
+                  placeholder="179135"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hostfullyCalendarWidgetName">Nombre en el calendario</Label>
+                <Input
+                  id="hostfullyCalendarWidgetName"
+                  value={formData.hostfullyCalendarWidgetName ?? ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hostfullyCalendarWidgetName: e.target.value,
+                    }))
+                  }
+                  placeholder="01 Casa Naranja"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hostfullyCalendarShowTentative">showTentative (0/1)</Label>
+                <Input
+                  id="hostfullyCalendarShowTentative"
+                  inputMode="numeric"
+                  value={formData.hostfullyCalendarShowTentative}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hostfullyCalendarShowTentative: e.target.value,
+                    }))
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hostfullyCalendarMonthsToDisplay">Meses a mostrar</Label>
+                <Input
+                  id="hostfullyCalendarMonthsToDisplay"
+                  inputMode="numeric"
+                  value={formData.hostfullyCalendarMonthsToDisplay}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hostfullyCalendarMonthsToDisplay: e.target.value,
+                    }))
+                  }
+                  placeholder="2"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

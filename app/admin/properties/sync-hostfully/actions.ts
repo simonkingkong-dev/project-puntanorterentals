@@ -165,6 +165,34 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
   const lng = h.longitude ?? h.lng ?? h.lon;
   const latitude = typeof lat === "number" ? lat : undefined;
   const longitude = typeof lng === "number" ? lng : undefined;
+  const propertyType =
+    typeof (h as HostfullyRaw).propertyType === "string"
+      ? (h as HostfullyRaw).propertyType!.toString()
+      : typeof (h as HostfullyRaw).type === "string"
+        ? (h as HostfullyRaw).type!.toString()
+        : undefined;
+  const roomType =
+    typeof (h as HostfullyRaw).roomType === "string"
+      ? (h as HostfullyRaw).roomType!.toString()
+      : undefined;
+  const cancellationPolicy =
+    typeof (h as HostfullyRaw).cancellationPolicy === "string"
+      ? (h as HostfullyRaw).cancellationPolicy!.toString()
+      : typeof (h as HostfullyRaw).bookingPolicy === "string"
+        ? (h as HostfullyRaw).bookingPolicy!.toString()
+        : undefined;
+  const checkInTime =
+    typeof (h as HostfullyRaw).checkInTime === "string"
+      ? (h as HostfullyRaw).checkInTime!.toString()
+      : undefined;
+  const checkOutTime =
+    typeof (h as HostfullyRaw).checkOutTime === "string"
+      ? (h as HostfullyRaw).checkOutTime!.toString()
+      : undefined;
+  const houseRules =
+    typeof (h as HostfullyRaw).houseRules === "string"
+      ? (h as HostfullyRaw).houseRules!.toString()
+      : undefined;
   let reviews: Property["reviews"];
   if (Array.isArray(h.reviews)) {
     reviews = h.reviews.map((r: unknown) => {
@@ -205,6 +233,12 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
     latitude,
     longitude,
     reviews,
+    propertyType,
+    roomType,
+    cancellationPolicy,
+    checkInTime,
+    checkOutTime,
+    houseRules,
   };
 }
 

@@ -6,28 +6,17 @@ import { MapPin, Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PropertyGallery from "@/components/ui/property-gallery";
 import PropertyBody from "@/components/ui/property-body";
+import { roundForDisplay } from "@/lib/round-display-money";
 
 interface PropertyPageContentProps {
   property: Property;
 }
 
-function formatPrice(amount: number, currency: "USD" | "MXN"): string {
-  if (currency === "MXN") {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
-
 export default function PropertyPageContent({ property }: PropertyPageContentProps) {
-  const [currency, setCurrency] = useState<"USD" | "MXN">("USD");
+  const [currency, setCurrency] = useState<"USD" | "MXN" | "EUR">("USD");
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
+  const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
+  const [hostfullyNightlyBase, setHostfullyNightlyBase] = useState<number | null>(null);
 
   useEffect(() => {
     if (currency === "MXN") {
@@ -35,16 +24,63 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
         .then((r) => r.json())
         .then((data) => setUsdMxnRate(data.rate))
         .catch(() => setUsdMxnRate(17.2));
+      setUsdEurRate(null);
+    } else if (currency === "EUR") {
+      fetch("/api/exchange-rate?from=USD&to=EUR")
+        .then((r) => r.json())
+        .then((data) => setUsdEurRate(data.rate))
+        .catch(() => setUsdEurRate(0.92));
+      setUsdMxnRate(null);
     } else {
       setUsdMxnRate(null);
+      setUsdEurRate(null);
     }
   }, [currency]);
 
+  useEffect(() => {
+    if (!property.hostfullyPropertyId) {
+      setHostfullyNightlyBase(null);
+      return;
+    }
+    const start = new Date();
+    start.setDate(1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 3);
+    end.setDate(0);
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    let cancelled = false;
+    fetch(
+      `/api/properties/calendar?propertyId=${encodeURIComponent(property.id)}&startDate=${toDateStr(
+        start
+      )}&endDate=${toDateStr(end)}`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const rates =
+          data?.dailyRates && typeof data.dailyRates === "object"
+            ? Object.values(data.dailyRates as Record<string, number>).filter(
+                (v) => typeof v === "number" && Number.isFinite(v) && v > 0
+              )
+            : [];
+        setHostfullyNightlyBase(rates.length > 0 ? Math.round(Math.min(...rates)) : null);
+      })
+      .catch(() => {
+        if (!cancelled) setHostfullyNightlyBase(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id, property.hostfullyPropertyId]);
+
+  const baseNightlyUsd = hostfullyNightlyBase ?? property.pricePerNight;
   const pricePerNight =
     currency === "MXN" && usdMxnRate != null
-      ? Math.round(property.pricePerNight * usdMxnRate)
-      : property.pricePerNight;
-  const displayCurrency = currency === "MXN" && usdMxnRate != null ? "MXN" : "USD";
+      ? roundForDisplay(baseNightlyUsd * usdMxnRate, "MXN")
+      : currency === "EUR" && usdEurRate != null
+        ? Math.round(baseNightlyUsd * usdEurRate)
+        : baseNightlyUsd;
 
   return (
     <div className="space-y-8">
@@ -82,9 +118,6 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
           <span className="flex items-center gap-1.5">
             <MapPin className="w-4 h-4" />
             {property.location}
-          </span>
-          <span className="text-xl font-bold text-gray-900 ml-auto">
-            {formatPrice(pricePerNight, displayCurrency)} / noche
           </span>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { Reservation } from "@/lib/types";
 import { generateDateRange } from "@/lib/utils/date";
+import { checkHostfullyAvailability } from "@/lib/hostfully/client";
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -129,9 +130,10 @@ async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: stri
   }
 }
 
-/** Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
- * Usa siempre Firestore (availability). Para propiedades con hostfullyPropertyId, el cron
- * mantiene availability y dailyRates sincronizados desde Hostfully.
+/**
+ * Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
+ * - Si hay `hostfullyPropertyId`: consulta Hostfully en tiempo real.
+ * - Si no hay hostfully id: usa Firestore + liberación de holds expirados.
  */
 export async function checkPropertyAvailability(
   propertyId: string,
@@ -143,11 +145,18 @@ export async function checkPropertyAvailability(
     const property = await getPropertyByIdAdmin(propertyId);
     if (!property) return { available: false, error: "Propiedad no encontrada" };
 
+    if (property.hostfullyPropertyId) {
+      return checkHostfullyAvailability(
+        property.hostfullyPropertyId,
+        new Date(checkIn),
+        new Date(checkOut)
+      );
+    }
+
     const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
     let prop = property;
-
     const hasUnavailable = dateStrings.some((d) => prop.availability[d] === false);
-    if (hasUnavailable && !property.hostfullyPropertyId) {
+    if (hasUnavailable) {
       await releaseExpiredHoldsForDates(propertyId, dateStrings);
       const refreshed = await getPropertyByIdAdmin(propertyId);
       if (!refreshed) return { available: false, error: "Propiedad no encontrada" };

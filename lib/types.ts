@@ -42,10 +42,33 @@ export interface Property {
   longitude?: number;
   /** Reseñas si Hostfully las expone. */
   reviews?: Array<{ author?: string; text?: string; rating?: number; date?: string }>;
+  /** Tipo de propiedad (casa/depto/etc.). */
+  propertyType?: string;
+  /** Tipo de habitación/unidad si Hostfully la expone. */
+  roomType?: string;
+  /** Política de cancelación/reserva. */
+  cancellationPolicy?: string;
+  /** Hora sugerida de check-in. */
+  checkInTime?: string;
+  /** Hora sugerida de check-out. */
+  checkOutTime?: string;
+  /** Reglas de la casa. */
+  houseRules?: string;
   createdAt: Date;
   updatedAt: Date;
   /** UID de la propiedad en Hostfully (PMS). Si existe, la disponibilidad se consulta al PMS. */
   hostfullyPropertyId?: string;
+  /** UUID del widget Lead (2º argumento de `new Widget` en el snippet Hostfully). */
+  hostfullyLeadWidgetUuid?: string;
+  /** JSON del objeto de opciones del widget Lead (3º argumento de `new Widget`). */
+  hostfullyLeadWidgetOptionsJson?: string;
+  /** Id numérico del widget de calendario Orbi (`id` en `new orbiwidget`). */
+  hostfullyCalendarWidgetId?: number;
+  /** Nombre para el calendario Orbi (opcional; por defecto `title`). */
+  hostfullyCalendarWidgetName?: string;
+  /** Opciones del snippet `orbiwidget` (0/1 según Hostfully). */
+  hostfullyCalendarShowTentative?: number;
+  hostfullyCalendarMonthsToDisplay?: number;
   /** Precio por noche por fecha (YYYY-MM-DD). Rellenado por sync desde Hostfully. */
   dailyRates?: Record<string, number>;
 }
@@ -54,12 +77,17 @@ export interface Reservation {
   id: string;
   propertyId: string;
   guestName: string;
+  guestFirstName?: string;
+  guestLastName?: string;
   guestEmail: string;
   guestPhone: string;
   checkIn: Date;
   checkOut: Date;
   guests: number;
   totalAmount: number;
+  /** Moneda e importe cobrado por Stripe (puede diferir de totalAmount en USD). Opcional en documentos antiguos. */
+  paidCurrency?: string;
+  paidAmount?: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   stripePaymentId?: string;
   createdAt: Date;
@@ -75,6 +103,9 @@ export interface Reservation {
   confirmedAt?: Date;
   /** Token para acceder a la página de modificación de reserva confirmada. */
   modifyToken?: string;
+  /** Vínculo de trazabilidad con el lead creado en Hostfully. */
+  hostfullyLeadUid?: string;
+  hostfullySyncedAt?: Date;
 }
 
 /** Solicitud de modificación/reembolso creada por el huésped (después de 2h o reembolso). */

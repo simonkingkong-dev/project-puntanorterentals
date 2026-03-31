@@ -7,11 +7,26 @@ import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
  */
 function isProbePath(pathname: string): boolean {
   const p = pathname.toLowerCase();
-  if (p.endsWith('.php') || p.includes('.php/')) return true;
+  // Cualquier intento de acceder a scripts PHP (incluye /algo.php, /algo.php/, querystrings, etc.)
+  if (p.includes('.php')) return true;
+
+  // Ficheros de entorno y rutas sensibles típicas
   if (p === '/.env' || p.startsWith('/.env/')) return true;
-  if (p.startsWith('/wp-')) return true;
-  if (p.startsWith('/.well-known/acme-challenge/') && p.endsWith('.php')) return true;
+
+  // Directorios y rutas de WordPress muy comunes
+  if (p.startsWith('/wp-')) return true; // /wp-admin, /wp-login.php, /wp-content, /wp-includes, etc.
+  if (p === '/wp-content' || p.startsWith('/wp-content/')) return true;
+  if (p === '/wp-includes' || p.startsWith('/wp-includes/')) return true;
+  if (p === '/wp-admin' || p.startsWith('/wp-admin/')) return true;
+
+  // Otros patrones de hosting legacy típicos
+  if (p.startsWith('/cgi-bin')) return true;
+  if (p === '/xmlrpc.php') return true;
   if (p === '/artisan' || p === '/sitemap_index.xml') return true;
+
+  // Cualquier challenge .php raro bajo .well-known
+  if (p.startsWith('/.well-known/acme-challenge/') && p.includes('.php')) return true;
+
   return false;
 }
 

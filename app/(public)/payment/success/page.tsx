@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Check, Calendar, Users, Mail, Loader2 } from 'lucide-react';
+import { Check, Calendar, Users, Mail, Loader2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Reservation } from '@/lib/types';
@@ -15,6 +15,36 @@ const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
 
 type ReservationWithTitle = Reservation & { propertyTitle?: string };
 
+/** Siempre muestra código de moneda (MXN, USD, EUR) para evitar confusión con el símbolo $. */
+function formatMoney(amount: number, currency: string): string {
+  const c = currency.toUpperCase();
+  if (c === 'MXN') {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      currencyDisplay: 'code',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+  if (c === 'EUR') {
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+      currencyDisplay: 'code',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'code',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
@@ -25,9 +55,48 @@ function SuccessContent() {
   const [polling, setPolling] = useState(false);
   /** true = mostramos la reserva pero con mensaje "procesando" (webhook aún no corrió, p. ej. en local) */
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  /** Importe y moneda reales según Stripe (GET dedicado; evita depender solo del JSON de la reserva). */
+  const [chargeFromStripe, setChargeFromStripe] = useState<{
+    paidCurrency: string;
+    paidAmount: number;
+  } | null>(null);
+  /** false hasta que termine el GET a Stripe (o no haya payment_intent). Evita mostrar USD un instante. */
+  const [stripeChargeFetchDone, setStripeChargeFetchDone] = useState(() => paymentIntentId == null);
+
+  useEffect(() => {
+    if (!paymentIntentId) {
+      setStripeChargeFetchDone(true);
+      setChargeFromStripe(null);
+      return;
+    }
+    let cancelled = false;
+    setStripeChargeFetchDone(false);
+    setChargeFromStripe(null);
+    fetch(`/api/stripe/payment-intents/${encodeURIComponent(paymentIntentId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data || typeof data.paidAmount !== 'number' || !data.paidCurrency) return;
+        setChargeFromStripe({
+          paidAmount: data.paidAmount,
+          paidCurrency: String(data.paidCurrency).toUpperCase(),
+        });
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setStripeChargeFetchDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentIntentId]);
 
   useEffect(() => {
     const confirmByPaymentIntent = async (): Promise<ReservationWithTitle | null> => {
+      if (!paymentIntentId) return null;
+      const dedupeKey = `confirm-pi:${paymentIntentId}`;
+      if (typeof window !== 'undefined' && sessionStorage.getItem(dedupeKey) === '1') {
+        return null;
+      }
       try {
         const response = await fetch('/api/reservations/confirm-by-payment-intent', {
           method: 'POST',
@@ -35,6 +104,9 @@ function SuccessContent() {
           body: JSON.stringify({ payment_intent_id: paymentIntentId }),
         });
         if (!response.ok) return null;
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(dedupeKey, '1');
+        }
         return (await response.json()) as ReservationWithTitle;
       } catch {
         return null;
@@ -153,6 +225,29 @@ function SuccessContent() {
     );
   }
 
+  const paidCurrency =
+    chargeFromStripe?.paidCurrency ??
+    (typeof reservationData.paidCurrency === 'string' ? reservationData.paidCurrency : undefined);
+  const paidAmount =
+    chargeFromStripe?.paidAmount ?? reservationData.paidAmount;
+  const hasStripeCharge =
+    typeof paidAmount === 'number' &&
+    Number.isFinite(paidAmount) &&
+    typeof paidCurrency === 'string' &&
+    paidCurrency.length > 0;
+  const waitStripeForTotal =
+    Boolean(paymentIntentId) && !stripeChargeFetchDone && !chargeFromStripe;
+  const displayTotalLabel = waitStripeForTotal
+    ? null
+    : hasStripeCharge
+      ? formatMoney(paidAmount, paidCurrency)
+      : formatMoney(reservationData.totalAmount, 'USD');
+  const showUsdEquivalent =
+    !waitStripeForTotal &&
+    hasStripeCharge &&
+    paidCurrency !== 'USD' &&
+    Number.isFinite(reservationData.totalAmount);
+
   // Estado de Éxito (datos cargados por payment_intent o por reservationId)
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -210,10 +305,24 @@ function SuccessContent() {
               </div>
               
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-500" /> {/* Reemplazado MapPin */}
+                <CreditCard className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Pagado</p>
-                  <p className="font-medium">${reservationData.totalAmount}</p>
+                  <p className="text-sm text-gray-600">Total pagado</p>
+                  <p className="font-medium tabular-nums flex items-center gap-2 min-h-[1.5rem]">
+                    {displayTotalLabel === null ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        <span className="text-gray-500 text-sm font-normal">Obteniendo importe…</span>
+                      </>
+                    ) : (
+                      displayTotalLabel
+                    )}
+                  </p>
+                  {showUsdEquivalent && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Importe base de la reserva (USD): {formatMoney(reservationData.totalAmount, 'USD')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

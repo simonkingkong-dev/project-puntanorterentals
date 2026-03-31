@@ -28,6 +28,10 @@ function getAgencyUid(): string | undefined {
   return process.env.HOSTFULLY_AGENCY_UID;
 }
 
+function isHostfullyDebugEnabled(): boolean {
+  return process.env.HOSTFULLY_DEBUG === "true";
+}
+
 async function hostfullyFetch<T>(
   path: string,
   options: RequestInit = {}
@@ -74,6 +78,126 @@ export interface HostfullyPropertyCalendar {
   [key: string]: unknown;
 }
 
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function normalizeDateKey(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const direct = raw.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return toLocalDateStr(parsed);
+}
+
+function isHostfullyDayAvailable(day: Record<string, unknown>): boolean {
+  if (typeof day.available === "boolean") return day.available;
+  if (typeof day.isAvailable === "boolean") return day.isAvailable;
+  if (typeof day.bookable === "boolean") return day.bookable;
+  if (day.availability && typeof day.availability === "object") {
+    const nested = day.availability as Record<string, unknown>;
+    if (typeof nested.unavailable === "boolean") return !nested.unavailable;
+  }
+
+  const status =
+    typeof day.status === "string" ? day.status.toLowerCase().trim() : "";
+  if (!status) return true;
+  if (["available", "open", "free"].includes(status)) return true;
+  if (
+    [
+      "booked",
+      "reserved",
+      "unavailable",
+      "blocked",
+      "hold",
+      "onhold",
+      "not_available",
+      "not-available",
+    ].includes(status)
+  ) {
+    return false;
+  }
+  return false;
+}
+
+function extractCalendarDays(
+  calendar: Record<string, unknown>
+): Array<{ date: string; available: boolean }> {
+  const directArrayKeys = [
+    "dates",
+    "calendar",
+    "days",
+    "availability",
+    "items",
+    "results",
+  ] as const;
+
+  const tryMapArray = (arr: unknown[]): Array<{ date: string; available: boolean }> => {
+    const mapped: Array<{ date: string; available: boolean }> = [];
+    for (const raw of arr) {
+      if (!raw || typeof raw !== "object") continue;
+      const day = raw as Record<string, unknown>;
+      const date =
+        normalizeDateKey(day.date) ??
+        normalizeDateKey(day.from) ??
+        normalizeDateKey(day.day) ??
+        normalizeDateKey(day.startDate);
+      if (!date) continue;
+      mapped.push({ date, available: isHostfullyDayAvailable(day) });
+    }
+    return mapped;
+  };
+
+  for (const key of directArrayKeys) {
+    const v = calendar[key];
+    if (Array.isArray(v)) {
+      const mapped = tryMapArray(v);
+      if (mapped.length > 0) return mapped;
+    }
+  }
+
+  const mappedDays: Array<{ date: string; available: boolean }> = [];
+  for (const [k, v] of Object.entries(calendar)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+    if (typeof v === "boolean") {
+      mappedDays.push({ date: k, available: v });
+      continue;
+    }
+    if (v && typeof v === "object") {
+      mappedDays.push({
+        date: k,
+        available: isHostfullyDayAvailable(v as Record<string, unknown>),
+      });
+    }
+  }
+  if (mappedDays.length > 0) return mappedDays;
+
+  const queue: unknown[] = Object.values(calendar);
+  const seen = new Set<unknown>();
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object") continue;
+    if (seen.has(current)) continue;
+    seen.add(current);
+
+    if (Array.isArray(current)) {
+      const mapped = tryMapArray(current);
+      if (mapped.length > 0) return mapped;
+      continue;
+    }
+
+    for (const v of Object.values(current as Record<string, unknown>)) {
+      queue.push(v);
+    }
+  }
+
+  return [];
+}
+
 export interface HostfullyProperty {
   uid: string;
   name: string;
@@ -83,6 +207,15 @@ export interface HostfullyProperty {
   [key: string]: unknown;
 }
 
+export interface HostfullyLeadPaymentParams {
+  leadUid: string;
+  amount: number;
+  currency?: string;
+  paidAt?: Date;
+  externalPaymentId?: string;
+  note?: string;
+}
+
 // --- Funciones de la API ---
 
 /**
@@ -90,13 +223,14 @@ export interface HostfullyProperty {
  * @param propertyUid - UID de la propiedad en Hostfully
  * @param startDate - Inicio del rango (YYYY-MM-DD)
  * @param endDate - Fin del rango (YYYY-MM-DD)
+ * @see https://dev.hostfully.com/reference/findbypropertyuid_1 — query: `from`, `to`
  */
 export async function getPropertyCalendar(
   propertyUid: string,
   startDate: string,
   endDate: string
 ): Promise<HostfullyPropertyCalendar> {
-  const params = new URLSearchParams({ startDate, endDate });
+  const params = new URLSearchParams({ from: startDate, to: endDate });
   return hostfullyFetch<HostfullyPropertyCalendar>(
     `/property-calendar/${encodeURIComponent(propertyUid)}?${params}`
   );
@@ -113,13 +247,6 @@ export async function checkHostfullyAvailability(
   checkOut: Date
 ): Promise<{ available: boolean; error?: string }> {
   try {
-    // Normalizar a YYYY-MM-DD en hora local del servidor para coincidir con el calendario
-    const toLocalDateStr = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    };
     const start = toLocalDateStr(new Date(checkIn));
     const end = toLocalDateStr(new Date(checkOut));
 
@@ -129,8 +256,8 @@ export async function checkHostfullyAvailability(
       end
     );
 
-    const dates = calendar.dates ?? [];
-    if (process.env.NODE_ENV === "development") {
+    const dates = extractCalendarDays(calendar as Record<string, unknown>);
+    if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
       const unavailableCount = dates.filter((d) => d.available === false).length;
       console.log("[Hostfully checkAvailability]", {
         propertyUid: hostfullyPropertyUid,
@@ -150,7 +277,7 @@ export async function checkHostfullyAvailability(
       const dateStr = toLocalDateStr(current);
       const day = dates.find((d) => d.date === dateStr);
       if (!day) {
-        if (process.env.NODE_ENV === "development") {
+        if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
           console.warn("[Hostfully checkAvailability] Fecha sin dato en respuesta:", dateStr);
         }
         return { available: false };
@@ -166,6 +293,77 @@ export async function checkHostfullyAvailability(
     const msg = e instanceof Error ? e.message : "Error Hostfully";
     return { available: false, error: msg };
   }
+}
+
+/**
+ * Registra un pago/abono sobre un lead en Hostfully.
+ * La API varía entre cuentas/versiones; intentamos rutas/payloads comunes.
+ */
+export async function registerHostfullyLeadPayment(
+  params: HostfullyLeadPaymentParams
+): Promise<{ synced: boolean; path?: string; error?: string }> {
+  const leadUid = params.leadUid?.trim();
+  if (!leadUid) return { synced: false, error: "leadUid requerido" };
+  const amount = Number(params.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { synced: false, error: "amount inválido" };
+  }
+
+  const paidAtIso = (params.paidAt ?? new Date()).toISOString();
+  const currency = (params.currency ?? "USD").toUpperCase();
+
+  const payloadVariants: Array<Record<string, unknown>> = [
+    {
+      amount,
+      currency,
+      paidAt: paidAtIso,
+      externalPaymentId: params.externalPaymentId,
+      note: params.note,
+    },
+    {
+      payment: {
+        amount,
+        currency,
+        paidAt: paidAtIso,
+        externalPaymentId: params.externalPaymentId,
+        note: params.note,
+      },
+    },
+    {
+      transaction: {
+        amount,
+        currency,
+        date: paidAtIso,
+        reference: params.externalPaymentId,
+        note: params.note,
+      },
+    },
+  ];
+
+  const pathVariants = [
+    `/leads/${encodeURIComponent(leadUid)}/payments`,
+    `/leads/${encodeURIComponent(leadUid)}/payment`,
+    `/leads/${encodeURIComponent(leadUid)}/transactions`,
+  ];
+
+  let lastErr = "Hostfully payment sync failed";
+  for (const path of pathVariants) {
+    for (const body of payloadVariants) {
+      try {
+        await hostfullyFetch<Record<string, unknown>>(path, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        return { synced: true, path };
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e);
+        if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
+          console.warn("[Hostfully payment sync] Variante rechazada", { path, error: lastErr });
+        }
+      }
+    }
+  }
+  return { synced: false, error: lastErr };
 }
 
 /**
@@ -212,11 +410,8 @@ export async function getBlockedDates(
     startDate,
     endDate
   );
-  if (!calendar || !Array.isArray(calendar.dates)) return [];
-  return calendar.dates.map((d) => ({
-    date: d.date,
-    available: d.available ?? true,
-  }));
+  if (!calendar || typeof calendar !== "object") return [];
+  return extractCalendarDays(calendar as Record<string, unknown>);
 }
 /**
  * Crea un lead de tipo BOOKING en Hostfully para bloquear calendario.
@@ -228,7 +423,8 @@ export async function getBlockedDates(
  * un error explícito.
  */
 export async function createHostfullyBookingLead(
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  options: { includeAgencyUid?: boolean } = {}
 ): Promise<Record<string, unknown>> {
   if (payload == null || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new Error('createHostfullyBookingLead: payload must be a non-null object');
@@ -236,17 +432,20 @@ export async function createHostfullyBookingLead(
   getApiKey(); // Fail fast if API key is not configured
   const body: Record<string, unknown> = { ...payload };
 
-  const hasAgencyField = Object.prototype.hasOwnProperty.call(body, "agencyUid");
-  const currentAgency = hasAgencyField ? String(body["agencyUid"] ?? "").trim() : "";
+  const includeAgencyUid = options.includeAgencyUid ?? true;
+  if (includeAgencyUid) {
+    const hasAgencyField = Object.prototype.hasOwnProperty.call(body, "agencyUid");
+    const currentAgency = hasAgencyField ? String(body["agencyUid"] ?? "").trim() : "";
 
-  if (!currentAgency) {
-    const agencyUid = getAgencyUid()?.trim();
-    if (!agencyUid) {
-      throw new Error(
-        "HOSTFULLY_AGENCY_UID no está configurada. Obténla en Hostfully Agency Settings."
-      );
+    if (!currentAgency) {
+      const agencyUid = getAgencyUid()?.trim();
+      if (!agencyUid) {
+        throw new Error(
+          "HOSTFULLY_AGENCY_UID no está configurada. Obténla en Hostfully Agency Settings."
+        );
+      }
+      body["agencyUid"] = agencyUid;
     }
-    body["agencyUid"] = agencyUid;
   }
 
   let bodyString: string;
@@ -260,4 +459,74 @@ export async function createHostfullyBookingLead(
     method: "POST",
     body: bodyString,
   });
+}
+
+export interface HostfullyLead {
+  uid?: string;
+  leadUid?: string;
+  propertyUid?: string;
+  agencyUid?: string;
+  type?: string;
+  leadType?: string;
+  status?: string;
+  bookingStatus?: string;
+  eventCategory?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  checkIn?: string;
+  checkOut?: string;
+  guestEmail?: string;
+  guestName?: string;
+  [key: string]: unknown;
+}
+
+function toOptionalString(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  if (typeof v === "string") return v;
+  const s = String(v);
+  return s.trim() ? s : undefined;
+}
+
+/**
+ * Consulta leads via Hostfully (polling).
+ * Nota: los nombres exactos de query params pueden variar por versión de API; aquí
+ * intentamos los más comunes para soportar tu polling sin romper ejecución.
+ */
+export async function searchHostfullyLeads(filters: {
+  agencyUid?: string;
+  createdFrom?: string | Date;
+  createdTo?: string | Date;
+}): Promise<HostfullyLead[]> {
+  const params = new URLSearchParams();
+
+  const agencyUid = toOptionalString(filters.agencyUid);
+  if (agencyUid) params.set("agencyUid", agencyUid);
+
+  const createdFrom =
+    filters.createdFrom instanceof Date
+      ? filters.createdFrom.toISOString()
+      : filters.createdFrom;
+  const createdTo =
+    filters.createdTo instanceof Date ? filters.createdTo.toISOString() : filters.createdTo;
+
+  const createdFromS = toOptionalString(createdFrom);
+  const createdToS = toOptionalString(createdTo);
+
+  if (createdFromS) params.set("createdFrom", createdFromS);
+  if (createdToS) params.set("createdTo", createdToS);
+
+  const qs = params.toString();
+  const path = `/leads${qs ? `?${qs}` : ""}`;
+
+  const data = await hostfullyFetch<Record<string, unknown>>(path);
+  const list =
+    (data?.content ??
+      data?.data ??
+      (data as Record<string, unknown>)?.leads ??
+      (data as Record<string, unknown>)?.items ??
+      (data as Record<string, unknown>)?.results ??
+      []) as unknown;
+
+  if (!Array.isArray(list)) return [];
+  return list as HostfullyLead[];
 }

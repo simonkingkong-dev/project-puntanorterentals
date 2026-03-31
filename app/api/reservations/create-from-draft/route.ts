@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { releasePendingReservationAdmin } from '@/lib/firebase-admin-queries';
+import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
       checkOut,
       guests = 1,
       guestName,
+      guestFirstName,
+      guestLastName,
       guestEmail,
       guestPhone,
       totalAmount,
@@ -33,7 +36,30 @@ export async function POST(request: NextRequest) {
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
+    if (
+      !Number.isFinite(checkInDate.getTime()) ||
+      !Number.isFinite(checkOutDate.getTime()) ||
+      checkInDate >= checkOutDate
+    ) {
+      return NextResponse.json(
+        { error: 'Fechas inválidas para la reserva' },
+        { status: 400 }
+      );
+    }
     const email = String(guestEmail).trim().toLowerCase();
+
+    // Revalidación crítica de disponibilidad en servidor (evita carreras entre pestañas/usuarios).
+    const availability = await checkPropertyAvailability(
+      String(propertyId),
+      checkInDate,
+      checkOutDate
+    );
+    if (!availability.available) {
+      return NextResponse.json(
+        { error: availability.error || 'Las fechas ya no están disponibles' },
+        { status: 409 }
+      );
+    }
 
     // Liberar cualquier otra reserva en hold activa del mismo huésped (límite 1 en hold).
     const pendingSnapshot = await adminDb
@@ -60,7 +86,11 @@ export async function POST(request: NextRequest) {
 
     const newReservation = {
       propertyId,
-      guestName: guestName ?? '',
+      guestName:
+        String(guestName ?? '').trim() ||
+        `${String(guestFirstName ?? '').trim()} ${String(guestLastName ?? '').trim()}`.trim(),
+      guestFirstName: String(guestFirstName ?? '').trim(),
+      guestLastName: String(guestLastName ?? '').trim(),
       guestEmail: email,
       guestPhone: guestPhone ?? '',
       checkIn: checkInDate,

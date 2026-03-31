@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type Currency = "USD" | "MXN";
+export type Currency = "USD" | "MXN" | "EUR";
 
 interface CurrencySelectProps {
   value: Currency;
@@ -19,21 +19,18 @@ interface CurrencySelectProps {
 export function CurrencySelect({ value, onValueChange, className }: CurrencySelectProps) {
   return (
     <Select value={value} onValueChange={(v) => onValueChange(v as Currency)}>
-      <SelectTrigger className={className ?? "w-[140px] h-9"}>
+      <SelectTrigger className={className ?? "w-[140px] h-9 [&>span]:leading-none"}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="USD">
-          <span className="flex items-center gap-2">
-            <span className="text-lg">🇺🇸</span>
-            USD
-          </span>
+          <span className="inline-flex items-center leading-none">USD</span>
         </SelectItem>
         <SelectItem value="MXN">
-          <span className="flex items-center gap-2">
-            <span className="text-lg">🇲🇽</span>
-            MXN
-          </span>
+          <span className="inline-flex items-center leading-none">MXN</span>
+        </SelectItem>
+        <SelectItem value="EUR">
+          <span className="inline-flex items-center leading-none">EUR</span>
         </SelectItem>
       </SelectContent>
     </Select>

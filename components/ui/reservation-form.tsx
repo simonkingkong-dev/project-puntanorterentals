@@ -15,6 +15,7 @@ import { calculateNights } from '@/lib/utils/date';
 import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
+import { roundForDisplay } from '@/lib/round-display-money';
 import { toast } from 'sonner';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
@@ -27,6 +28,7 @@ interface ReservationFormProps {
   onReservationComplete?: () => void;
   currency?: Currency;
   pricePerNightDisplay?: number;
+  usdMxnRate?: number | null;
 }
 
 /**
@@ -42,6 +44,9 @@ function formatPrice(amount: number, currency: Currency): string {
   if (currency === 'MXN') {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
   }
+  if (currency === 'EUR') {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount);
+  }
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
@@ -51,6 +56,7 @@ export default function ReservationForm({
   onReservationComplete,
   currency = 'USD',
   pricePerNightDisplay,
+  usdMxnRate = null,
 }: ReservationFormProps) {
   const router = useRouter();
   const { cart } = useCart();
@@ -59,13 +65,16 @@ export default function ReservationForm({
   const [showOverlapMessage, setShowOverlapMessage] = useState(false);
   const defaultCountryShort = COUNTRY_CODES.find((c) => c.code === DEFAULT_COUNTRY_CODE)?.short ?? 'mx';
   const [formData, setFormData] = useState({
-    guestName: '',
+    guestFirstName: '',
+    guestLastName: '',
     guestEmail: '',
     guestPhone: '',
     phoneCountryCode: defaultCountryShort,
     guests: 1,
   });
   const [countrySearch, setCountrySearch] = useState('');
+  const [hostfullyNightlyTotal, setHostfullyNightlyTotal] = useState<number | null>(null);
+  const [nightlyBreakdown, setNightlyBreakdown] = useState<Array<{ date: string; amount: number }>>([]);
 
   const filteredCountryCodes = useMemo(() => {
     const search = countrySearch.trim().toLowerCase();
@@ -78,15 +87,81 @@ export default function ReservationForm({
 
   const hasFullRange = Boolean(selectedDates?.checkIn && selectedDates?.checkOut);
   const nights = hasFullRange && selectedDates ? calculateNights(selectedDates.checkIn!, selectedDates.checkOut!) : 0;
+  const pricePerNight = pricePerNightDisplay ?? property.pricePerNight;
 
+  const selectedCheckInTime = selectedDates?.checkIn?.getTime();
+  const selectedCheckOutTime = selectedDates?.checkOut?.getTime();
+  const selectedCheckInDate = selectedDates?.checkIn;
+  const selectedCheckOutDate = selectedDates?.checkOut;
   useEffect(() => {
     setDatesUnavailable(false);
     setShowOverlapMessage(false);
-  }, [selectedDates?.checkIn?.getTime(), selectedDates?.checkOut?.getTime()]);
-  const pricePerNight = pricePerNightDisplay ?? property.pricePerNight;
-  const subtotal = nights * pricePerNight;
-  const fees = Math.round(subtotal * 0.1); // 10% service fee
-  const total = subtotal + fees;
+  }, [selectedCheckInTime, selectedCheckOutTime]);
+  useEffect(() => {
+    if (!property.hostfullyPropertyId || !selectedCheckInDate || !selectedCheckOutDate) {
+      setHostfullyNightlyTotal(null);
+      setNightlyBreakdown([]);
+      return;
+    }
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let cancelled = false;
+    fetch(
+      `/api/properties/calendar?propertyId=${encodeURIComponent(property.id)}&startDate=${toDateStr(
+        selectedCheckInDate
+      )}&endDate=${toDateStr(selectedCheckOutDate)}`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const rates =
+          data?.dailyRates && typeof data.dailyRates === 'object'
+            ? (data.dailyRates as Record<string, number>)
+            : {};
+        const nightsInRange = calculateNights(selectedCheckInDate, selectedCheckOutDate);
+        if (nightsInRange <= 0) {
+          setHostfullyNightlyTotal(null);
+          return;
+        }
+        let total = 0;
+        const breakdown: Array<{ date: string; amount: number }> = [];
+        const cursor = new Date(
+          selectedCheckInDate.getFullYear(),
+          selectedCheckInDate.getMonth(),
+          selectedCheckInDate.getDate()
+        );
+        const end = new Date(
+          selectedCheckOutDate.getFullYear(),
+          selectedCheckOutDate.getMonth(),
+          selectedCheckOutDate.getDate()
+        );
+        while (cursor < end) {
+          const key = toDateStr(cursor);
+          const amount = Number(rates[key]) > 0 ? Number(rates[key]) : pricePerNight;
+          total += amount;
+          breakdown.push({ date: key, amount });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        setHostfullyNightlyTotal(Math.round(total));
+        setNightlyBreakdown(breakdown);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHostfullyNightlyTotal(null);
+          setNightlyBreakdown([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id, property.hostfullyPropertyId, selectedCheckInTime, selectedCheckOutTime, pricePerNight, selectedCheckInDate, selectedCheckOutDate]);
+  const subtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
+  const feesUsd = Math.round(subtotalUsd * 0.1); // 10% service fee
+  const totalUsd = subtotalUsd + feesUsd;
+  const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
+  const subtotal = roundForDisplay(subtotalUsd * displayRate, currency);
+  const fees = roundForDisplay(feesUsd * displayRate, currency);
+  const total = roundForDisplay(totalUsd * displayRate, currency);
 
   /**
    * Handles form submission for creating a reservation and redirects to payment on success.
@@ -155,9 +230,12 @@ const handleSubmit = async (e: React.FormEvent) => {
           checkIn: checkInStr,
           checkOut: checkOutStr,
           guests: formData.guests,
-          guestName: formData.guestName,
+          guestName: `${formData.guestFirstName} ${formData.guestLastName}`.trim(),
+          guestFirstName: formData.guestFirstName,
+          guestLastName: formData.guestLastName,
           guestEmail: formData.guestEmail,
-          guestPhone: guestPhoneStr
+          guestPhone: guestPhoneStr,
+          totalAmount: totalUsd,
         }),
       });
       const data = await res.json();
@@ -241,14 +319,25 @@ const handleSubmit = async (e: React.FormEvent) => {
           {/* Guest Information */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="guestName">Nombre completo *</Label>
+              <Label htmlFor="guestFirstName">Nombre *</Label>
               <Input
-                id="guestName"
+                id="guestFirstName"
                 type="text"
                 required
-                value={formData.guestName}
-                onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
-                placeholder="Tu nombre completo"
+                value={formData.guestFirstName}
+                onChange={(e) => setFormData({ ...formData, guestFirstName: e.target.value })}
+                placeholder="Tu nombre"
+              />
+            </div>
+            <div>
+              <Label htmlFor="guestLastName">Apellido *</Label>
+              <Input
+                id="guestLastName"
+                type="text"
+                required
+                value={formData.guestLastName}
+                onChange={(e) => setFormData({ ...formData, guestLastName: e.target.value })}
+                placeholder="Tu apellido"
               />
             </div>
 
@@ -336,9 +425,28 @@ const handleSubmit = async (e: React.FormEvent) => {
             <h3 className="font-semibold">Resumen de precios</h3>
             
             <div className="flex justify-between text-sm">
-              <span>{formatPrice(pricePerNight, currency)} × {nights} {nights === 1 ? 'noche' : 'noches'}</span>
+              <span>{nights} {nights === 1 ? 'noche' : 'noches'}</span>
               <span>{formatPrice(subtotal, currency)}</span>
             </div>
+            {nights > 0 && (
+              <details className="rounded-md p-2 text-sm [&[open]_.nightly-chevron]:rotate-90">
+                <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
+                  <span className="nightly-chevron text-gray-500 inline-block transition-transform duration-200 ease-out">{'>'}</span>
+                  <span>Ver detalle por noche</span>
+                </summary>
+                <div className="mt-2 space-y-1">
+                  {(nightlyBreakdown.length > 0
+                    ? nightlyBreakdown
+                    : Array.from({ length: nights }, (_, i) => ({ date: `Noche ${i + 1}`, amount: property.pricePerNight }))
+                  ).map((night, idx) => (
+                    <div key={`${night.date}-${idx}`} className="flex justify-between text-gray-600">
+                      <span>{night.date}</span>
+                      <span>{formatPrice(roundForDisplay(night.amount * displayRate, currency), currency)}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
             
             <div className="flex justify-between text-sm">
               <span>Tarifa de servicio</span>
