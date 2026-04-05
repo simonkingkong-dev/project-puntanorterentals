@@ -1,27 +1,43 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getServerLocale } from '@/lib/i18n/server';
+import { messages } from '@/lib/i18n/messages';
 
-export const metadata: Metadata = {
-  title: 'Términos de Uso',
-  description: 'Términos y condiciones de uso de Punta Norte Rentals.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+  return {
+    title: m.page_terms_title,
+    description: m.page_terms_meta,
+  };
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 prose prose-gray">
-        <h1 className="text-3xl font-bold text-gray-900">Términos de Uso</h1>
-        <p className="text-gray-500 text-sm">Última actualización: 2025</p>
-        <div className="text-gray-600 space-y-4 mt-6">
-          <p>Al utilizar Punta Norte Rentals aceptas estos términos. El sitio está destinado a la búsqueda y reserva de alojamientos vacacionales.</p>
-          <p>Las reservas están sujetas a disponibilidad y a la confirmación del pago. Te recomendamos leer nuestra política de cancelación antes de reservar.</p>
-        </div>
-        <div className="mt-8">
-          <Link href="/">
-            <Button variant="outline">Volver al inicio</Button>
-          </Link>
-        </div>
+    <div className="min-h-[70vh] bg-gradient-to-b from-muted/50 to-background">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+        <article className="rounded-2xl border bg-card/80 backdrop-blur-sm shadow-sm p-8 sm:p-10">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+            {m.page_terms_title}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">{m.page_terms_updated}</p>
+          <div className="mt-8 space-y-5 text-muted-foreground leading-relaxed">
+            <p>{m.page_terms_p1}</p>
+            <p>{m.page_terms_p2}</p>
+          </div>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Button asChild variant="outline">
+              <Link href="/">{m.not_found_cta_home}</Link>
+            </Button>
+            <Button asChild variant="ghost" className="text-orange-700">
+              <Link href="/cancellation">{m.page_help_link_cancellation}</Link>
+            </Button>
+          </div>
+        </article>
       </div>
     </div>
   );

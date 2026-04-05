@@ -1,10 +1,22 @@
 import Link from 'next/link';
 import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
+import { tServer } from '@/lib/i18n/server';
 
 export default async function Footer() {
   const contact = await getContactInfoAdmin();
   const social = contact?.socialMedia ?? {};
+  const quickLinks = await tServer('footer_quick_links', 'Quick Links');
+  const about = await tServer('footer_about', 'About Us');
+  const contactLabel = await tServer('footer_contact', 'Contact');
+  const support = await tServer('footer_support', 'Support');
+  const helpCenter = await tServer('footer_help_center', 'Help Center');
+  const terms = await tServer('footer_terms', 'Terms of Use');
+  const privacy = await tServer('footer_privacy', 'Privacy Policy');
+  const cancellation = await tServer('footer_cancellation', 'Cancellation Policy');
+  const properties = await tServer('nav_properties', 'Properties');
+  const tagline = await tServer('footer_tagline', 'Exceptional vacation properties that create unforgettable memories.');
+  const createdWith = await tServer('footer_created_with', 'Made with ❤️ for exceptional travelers');
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -22,7 +34,7 @@ export default async function Footer() {
               </div>
             </div>
             <p className="text-gray-400 text-sm">
-              Propiedades vacacionales excepcionales que crean recuerdos inolvidables.
+              {tagline}
             </p>
             <div className="flex space-x-4">
               {social.facebook ? (
@@ -51,21 +63,21 @@ export default async function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Enlaces Rápidos</h3>
+            <h3 className="text-lg font-semibold mb-4">{quickLinks}</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/properties" className="text-gray-400 hover:text-white transition-colors">
-                  Propiedades
+                  {properties}
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
-                  Sobre Nosotros
+                  {about}
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
-                  Contacto
+                  {contactLabel}
                 </Link>
               </li>
             </ul>
@@ -73,26 +85,26 @@ export default async function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Soporte</h3>
+            <h3 className="text-lg font-semibold mb-4">{support}</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/help" className="text-gray-400 hover:text-white transition-colors">
-                  Centro de Ayuda
+                  {helpCenter}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                  Términos de Uso
+                  {terms}
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                  Política de Privacidad
+                  {privacy}
                 </Link>
               </li>
               <li>
                 <Link href="/cancellation" className="text-gray-400 hover:text-white transition-colors">
-                  Política de Cancelación
+                  {cancellation}
                 </Link>
               </li>
             </ul>
@@ -100,7 +112,7 @@ export default async function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contacto</h3>
+            <h3 className="text-lg font-semibold mb-4">{contactLabel}</h3>
             <ul className="space-y-3">
               <li className="flex items-center space-x-3">
                 <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
@@ -132,7 +144,7 @@ export default async function Footer() {
               {contact?.copyright ?? '© 2025 Punta Norte Rentals. Todos los derechos reservados.'}
             </p>
             <p className="text-gray-400 text-sm mt-2 md:mt-0">
-              Creado con ❤️ para viajeros excepcionales
+              {createdWith}
             </p>
           </div>
         </div>

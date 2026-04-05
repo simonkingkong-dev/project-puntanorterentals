@@ -19,14 +19,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2, Users } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, parseISO } from "date-fns";
+import { es, enUS } from "date-fns/locale";
 import { calculateNights, getNightsBetween, getFirstBlockedNight } from "@/lib/utils/date";
 import AvailabilityCalendar from "@/components/ui/availability-calendar";
 import type { Property } from "@/lib/types";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
-
+import { useLocale } from "@/components/providers/locale-provider";
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 type ReservationData = {
@@ -48,11 +48,18 @@ type ModifyDetailsResponse = {
   property: Property;
 };
 
+function payDiffLabel(t: (key: string) => string, amount: number) {
+  return t("modify_pay_difference").replace("${amount}", String(amount));
+}
+
 export default function ModifyReservationPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { setCart, removeFromCart } = useCart();
+  const { removeFromCart } = useCart();
+  const { t, locale } = useLocale();
+  const dateLocale = locale === "en" ? enUS : es;
+
   const id = params?.id as string;
   const token = searchParams?.get("token") ?? "";
 
@@ -67,7 +74,7 @@ export default function ModifyReservationPage() {
 
   useEffect(() => {
     if (!id || !token) {
-      setError("Falta el token de modificación.");
+      setError(t("modify_err_token"));
       setLoading(false);
       return;
     }
@@ -82,9 +89,9 @@ export default function ModifyReservationPage() {
         });
         setGuests(json.reservation.guests ?? 1);
       })
-      .catch((err) => setError(err.message ?? "Error al cargar la reserva"))
+      .catch((err) => setError(err.message ?? t("modify_err_load")))
       .finally(() => setLoading(false));
-  }, [id, token]);
+  }, [id, token, t]);
 
   const onDateSelect = useCallback((dates: { checkIn: Date; checkOut?: Date }) => {
     setSelectedDates((prev) => ({
@@ -103,13 +110,13 @@ export default function ModifyReservationPage() {
         body: JSON.stringify({ token }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error al cancelar");
+      if (!res.ok) throw new Error(json.error ?? t("modify_err_cancel"));
       setCancelDialogOpen(false);
       removeFromCart(id);
-      toast.success("Reserva cancelada. El reembolso se procesará en breve.");
+      toast.success(t("modify_toast_cancelled"));
       router.push("/cart");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al cancelar");
+      toast.error(err instanceof Error ? err.message : t("modify_err_cancel"));
     } finally {
       setActionLoading(false);
     }
@@ -129,11 +136,11 @@ export default function ModifyReservationPage() {
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error al enviar");
-      toast.success("Solicitud de modificación enviada. Nuestro equipo la revisará pronto.");
+      if (!res.ok) throw new Error(json.error ?? t("modify_err_send"));
+      toast.success(t("modify_toast_mod_sent"));
       router.push("/cart");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al enviar");
+      toast.error(err instanceof Error ? err.message : t("modify_err_send"));
     } finally {
       setActionLoading(false);
     }
@@ -142,7 +149,7 @@ export default function ModifyReservationPage() {
   const handleUpdateConfirmed = async () => {
     if (!id || !token || !data || !selectedDates?.checkIn || !selectedDates?.checkOut) return;
     const nightsHere = calculateNights(selectedDates.checkIn, selectedDates.checkOut);
-    const total = Math.round((nightsHere * (data.property?.pricePerNight ?? 0)) * 1.1);
+    const total = Math.round(nightsHere * (data.property?.pricePerNight ?? 0) * 1.1);
     setActionLoading(true);
     try {
       const res = await fetch(`/api/reservations/${id}/update-confirmed`, {
@@ -157,16 +164,19 @@ export default function ModifyReservationPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error al actualizar");
-      toast.success("Reserva actualizada correctamente.");
+      if (!res.ok) throw new Error(json.error ?? t("modify_err_update"));
+      toast.success(t("modify_toast_updated"));
       const detailRes = await fetch(`/api/reservations/${id}/modify-details?token=${encodeURIComponent(token)}`);
       const detailJson = await detailRes.json();
       if (!detailRes.ok) throw new Error(detailJson.error);
       setData(detailJson);
-      setSelectedDates({ checkIn: new Date(detailJson.reservation.checkIn), checkOut: new Date(detailJson.reservation.checkOut) });
+      setSelectedDates({
+        checkIn: new Date(detailJson.reservation.checkIn),
+        checkOut: new Date(detailJson.reservation.checkOut),
+      });
       setGuests(detailJson.reservation.guests ?? 1);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al actualizar");
+      toast.error(err instanceof Error ? err.message : t("modify_err_update"));
     } finally {
       setActionLoading(false);
     }
@@ -175,7 +185,7 @@ export default function ModifyReservationPage() {
   const handleRefundDifference = async () => {
     if (!id || !token || !data || !selectedDates?.checkIn || !selectedDates?.checkOut) return;
     const nightsHere = calculateNights(selectedDates.checkIn, selectedDates.checkOut);
-    const total = Math.round((nightsHere * (data.property?.pricePerNight ?? 0)) * 1.1);
+    const total = Math.round(nightsHere * (data.property?.pricePerNight ?? 0) * 1.1);
     setActionLoading(true);
     try {
       const res = await fetch(`/api/reservations/${id}/refund-difference`, {
@@ -190,16 +200,19 @@ export default function ModifyReservationPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error al procesar reembolso");
-      toast.success("Modificación aplicada. El reembolso por la diferencia se procesará en breve.");
+      if (!res.ok) throw new Error(json.error ?? t("modify_err_refund"));
+      toast.success(t("modify_toast_refund"));
       const detailRes = await fetch(`/api/reservations/${id}/modify-details?token=${encodeURIComponent(token)}`);
       const detailJson = await detailRes.json();
       if (!detailRes.ok) throw new Error(detailJson.error);
       setData(detailJson);
-      setSelectedDates({ checkIn: new Date(detailJson.reservation.checkIn), checkOut: new Date(detailJson.reservation.checkOut) });
+      setSelectedDates({
+        checkIn: new Date(detailJson.reservation.checkIn),
+        checkOut: new Date(detailJson.reservation.checkOut),
+      });
       setGuests(detailJson.reservation.guests ?? 1);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al procesar reembolso");
+      toast.error(err instanceof Error ? err.message : t("modify_err_refund"));
     } finally {
       setActionLoading(false);
     }
@@ -221,7 +234,7 @@ export default function ModifyReservationPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Error al preparar modificación");
+      if (!res.ok) throw new Error(json.error ?? t("modify_err_prepare"));
       const params = new URLSearchParams({
         reservation: id,
         amount: priceDiff.toString(),
@@ -230,7 +243,7 @@ export default function ModifyReservationPage() {
       });
       router.push(`/payment?${params.toString()}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al preparar pago");
+      toast.error(err instanceof Error ? err.message : t("modify_err_prepare"));
     } finally {
       setActionLoading(false);
     }
@@ -238,7 +251,7 @@ export default function ModifyReservationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
       </div>
     );
@@ -246,10 +259,10 @@ export default function ModifyReservationPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <p className="text-red-600 mb-4">{error || "No se encontró la reserva."}</p>
+      <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
+        <p className="text-destructive mb-4 text-center max-w-md">{error || t("modify_err_not_found")}</p>
         <Button asChild variant="outline">
-          <Link href="/cart">Volver al carrito</Link>
+          <Link href="/cart">{t("modify_back_cart")}</Link>
         </Button>
       </div>
     );
@@ -261,9 +274,10 @@ export default function ModifyReservationPage() {
 
   const checkInDate = selectedDates?.checkIn ? new Date(selectedDates.checkIn) : new Date(reservation.checkIn);
   const checkOutDate = selectedDates?.checkOut ? new Date(selectedDates.checkOut) : new Date(reservation.checkOut);
-  const nights = selectedDates?.checkIn && selectedDates?.checkOut
-    ? calculateNights(selectedDates.checkIn, selectedDates.checkOut)
-    : calculateNights(reservation.checkIn, reservation.checkOut);
+  const nights =
+    selectedDates?.checkIn && selectedDates?.checkOut
+      ? calculateNights(selectedDates.checkIn, selectedDates.checkOut)
+      : calculateNights(reservation.checkIn, reservation.checkOut);
   const subtotal = nights * property.pricePerNight;
   const fees = Math.round(subtotal * 0.1);
   const newTotal = subtotal + fees;
@@ -278,19 +292,29 @@ export default function ModifyReservationPage() {
     guests >= (reservation.guests ?? 1);
   const isExtendingCheckOut = checkOutDate.getTime() > resCheckOut.getTime();
   const extraNights = isExtendingCheckOut ? getNightsBetween(resCheckOut, checkOutDate) : [];
-  const firstBlockedNight = isExtendingCheckOut && extraNights.length > 0
-    ? getFirstBlockedNight(extraNights, property.availability ?? {})
-    : null;
+  const firstBlockedNight =
+    isExtendingCheckOut && extraNights.length > 0
+      ? getFirstBlockedNight(extraNights, property.availability ?? {})
+      : null;
   const canApplyAdditive = isAdditive && !firstBlockedNight;
 
+  const blockedNightFormatted = firstBlockedNight
+    ? format(parseISO(firstBlockedNight), "PPP", { locale: dateLocale })
+    : "";
+
+  const summaryLine = t("modify_summary_dates")
+    .replace("{checkIn}", format(checkInDate, "dd MMM yyyy", { locale: dateLocale }))
+    .replace("{checkOut}", format(checkOutDate, "dd MMM yyyy", { locale: dateLocale }))
+    .replace("{nights}", String(nights));
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-muted/30">
+      <div className="bg-card border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Button asChild variant="ghost">
             <Link href="/cart">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al carrito
+              {t("modify_back_cart")}
             </Link>
           </Button>
         </div>
@@ -298,14 +322,12 @@ export default function ModifyReservationPage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Modificar reserva
-          </h1>
-          <p className="text-gray-600">{property.title}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{t("modify_title")}</h1>
+          <p className="text-muted-foreground">{property.title}</p>
         </div>
 
         {property.images?.[0] && (
-          <div className="relative h-48 rounded-lg overflow-hidden bg-gray-100">
+          <div className="relative h-48 rounded-xl overflow-hidden bg-muted">
             <Image
               src={property.images[0]}
               alt={property.title}
@@ -318,29 +340,24 @@ export default function ModifyReservationPage() {
         )}
 
         {!withinTwoHours && firstBlockedNight && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 text-sm">
-            <p className="font-medium">La noche del {firstBlockedNight} no está disponible.</p>
-            <p className="mt-1">Solo se pueden añadir noches contiguas. Si quieres otras fechas, solicita una modificación.</p>
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-destructive text-sm">
+            <p className="font-medium">
+              {t("modify_night_unavailable").replace("{date}", blockedNightFormatted)}
+            </p>
+            <p className="mt-1 opacity-90">{t("modify_night_unavailable_hint")}</p>
           </div>
         )}
 
         <div>
-          <AvailabilityCalendar
-            property={property}
-            onDateSelect={onDateSelect}
-            selectedDates={selectedDates}
-          />
+          <AvailabilityCalendar property={property} onDateSelect={onDateSelect} selectedDates={selectedDates} />
 
-          <Card>
+          <Card className="mt-6 border-border/80">
             <CardHeader>
-              <CardTitle>Huéspedes</CardTitle>
+              <CardTitle>{t("modify_guests_card")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Label htmlFor="guests">Número de huéspedes</Label>
-              <Select
-                value={guests.toString()}
-                onValueChange={(v) => setGuests(parseInt(v, 10))}
-              >
+              <Label htmlFor="guests">{t("guests_count_label")}</Label>
+              <Select value={guests.toString()} onValueChange={(v) => setGuests(parseInt(v, 10))}>
                 <SelectTrigger id="guests" className="mt-2 max-w-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -349,7 +366,7 @@ export default function ModifyReservationPage() {
                     <SelectItem key={n} value={n.toString()}>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
-                        {n} {n === 1 ? "huésped" : "huéspedes"}
+                        {n} {n === 1 ? t("property_guest_singular") : t("property_guests")}
                       </div>
                     </SelectItem>
                   ))}
@@ -359,29 +376,26 @@ export default function ModifyReservationPage() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="border-border/80">
           <CardHeader>
-            <CardTitle>Resumen de precios</CardTitle>
+            <CardTitle>{t("modify_price_summary")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Total anterior:</span>
+              <span className="text-muted-foreground">{t("modify_previous_total")}</span>
               <span>${previousTotal}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Nuevo total:</span>
+              <span className="text-muted-foreground">{t("modify_new_total")}</span>
               <span>${newTotal}</span>
             </div>
             <div className="flex justify-between font-medium pt-2 border-t">
-              <span className="text-gray-700">Diferencia de precio:</span>
+              <span className="text-foreground">{t("modify_price_diff")}</span>
               <span className={priceDiff > 0 ? "text-orange-600" : priceDiff < 0 ? "text-green-600" : ""}>
                 {priceDiff > 0 ? "+" : ""}${priceDiff}
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Check-in: {format(checkInDate, "dd MMM yyyy", { locale: es })} · Check-out:{" "}
-              {format(checkOutDate, "dd MMM yyyy", { locale: es })} · {nights} noches
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">{summaryLine}</p>
           </CardContent>
         </Card>
 
@@ -394,71 +408,75 @@ export default function ModifyReservationPage() {
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={actionLoading}
               >
-                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancelar reservación"}
+                {actionLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  t("modify_cancel_booking")
+                )}
               </Button>
               {priceDiff > 0 ? (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600"
-                  onClick={handlePayDifference}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pagar diferencia ($${priceDiff})`}
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    payDiffLabel(t, priceDiff)
+                  )}
                 </Button>
               ) : priceDiff < 0 ? (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600"
-                  onClick={handleRefundDifference}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reembolso por diferencia"}
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleRefundDifference} disabled={actionLoading}>
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t("modify_refund_difference")
+                  )}
                 </Button>
               ) : (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600"
-                  onClick={handleUpdateConfirmed}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Modificar"}
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t("modify_apply_changes")
+                  )}
                 </Button>
               )}
             </>
           ) : (
             <>
-              <Button
-                variant="outline"
-                disabled
-                className="opacity-50 cursor-not-allowed bg-red-50 text-red-700 border-red-200"
-              >
-                Cancelar reservación
+              <Button variant="outline" disabled className="opacity-50 cursor-not-allowed bg-red-50 text-red-800 border-red-200">
+                {t("modify_cancel_booking")}
               </Button>
               {canApplyAdditive ? (
                 <>
                   {priceDiff > 0 ? (
-                    <Button
-                      className="bg-orange-500 hover:bg-orange-600"
-                      onClick={handlePayDifference}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pagar diferencia ($${priceDiff})`}
+                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                      {actionLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        payDiffLabel(t, priceDiff)
+                      )}
                     </Button>
                   ) : (
-                    <Button
-                      className="bg-orange-500 hover:bg-orange-600"
-                      onClick={handleUpdateConfirmed}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Modificar"}
+                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                      {actionLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        t("modify_apply_changes")
+                      )}
                     </Button>
                   )}
                 </>
               ) : (
                 <Button
                   variant="outline"
-                  className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                  className="border-orange-300 text-orange-800 hover:bg-orange-50"
                   onClick={handleRequestModification}
                   disabled={actionLoading}
                 >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Solicitar modificación"}
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t("modify_request_change")
+                  )}
                 </Button>
               )}
             </>
@@ -468,13 +486,11 @@ export default function ModifyReservationPage() {
         <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Cancelar esta reserva?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se cancelará la reserva y se procesará el reembolso completo a través de Stripe.
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t("modify_dialog_title")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("modify_dialog_body")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>No</AlertDialogCancel>
+              <AlertDialogCancel>{t("modify_dialog_no")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
@@ -482,7 +498,7 @@ export default function ModifyReservationPage() {
                 }}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Sí, cancelar
+                {t("modify_dialog_yes")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

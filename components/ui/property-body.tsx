@@ -13,18 +13,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GoogleMap from "@/components/ui/google-map";
 import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
+import { useLocale } from "@/components/providers/locale-provider";
 
 const amenityIcons: Record<string, LucideIcon> = {
   "WiFi de alta velocidad": Wifi,
+  WiFi: Wifi,
   "Aire acondicionado": Home,
+  "Air Conditioning": Home,
   "Cocina equipada": Utensils,
+  Kitchen: Utensils,
   Estacionamiento: Car,
+  Parking: Car,
+  "Free Parking": Car,
   "Piscina comunitaria": Waves,
+  Pool: Waves,
   "Vista al mar": Waves,
+  "Acceso a playa": Waves,
+  "Beach Access": Waves,
   "Terraza privada": Home,
   "Servicio de limpieza": Home,
   "Seguridad 24/7": Shield,
-  "Acceso a playa": Waves,
   default: Home,
 };
 
@@ -34,6 +42,7 @@ interface PropertyBodyProps {
   onCurrencyChange: (c: Currency) => void;
   pricePerNightDisplay: number;
   usdMxnRate: number | null;
+  usdEurRate: number | null;
 }
 
 function Section({
@@ -54,6 +63,7 @@ function Section({
 
 export default function PropertyBody(props: PropertyBodyProps) {
   const { property, currency, onCurrencyChange, pricePerNightDisplay } = props;
+  const { locale, t } = useLocale();
   const [selectedDates, setSelectedDates] = useState<
     { checkIn: Date; checkOut?: Date } | undefined
   >();
@@ -62,94 +72,102 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const hasMap = property.latitude != null && property.longitude != null;
   const hasReviews = property.reviews && property.reviews.length > 0;
 
+  const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) =>
+    (locale === "en" ? en : es)?.trim() || base?.trim() || "";
+
   const summaryText =
-    (property.summary && property.summary.trim()) ||
-    (property.shortDescription && property.shortDescription.trim()) ||
-    (property.longDescription && property.longDescription.trim()) ||
-    "";
+    pickLocalized(property.summary, property.summaryEs, property.summaryEn) ||
+    pickLocalized(property.shortDescription, property.shortDescriptionEs, property.shortDescriptionEn) ||
+    pickLocalized(property.longDescription, property.longDescriptionEs, property.longDescriptionEn);
+  const descriptionText = pickLocalized(property.description, property.descriptionEs, property.descriptionEn);
+  const interactionText = pickLocalized(property.interaction, property.interactionEs, property.interactionEn);
+  const neighborhoodText = pickLocalized(property.neighborhood, property.neighborhoodEs, property.neighborhoodEn);
+  const accessText = pickLocalized(property.access, property.accessEs, property.accessEn);
+  const spaceText = pickLocalized(property.space, property.spaceEs, property.spaceEn);
+  const transitText = pickLocalized(property.transit, property.transitEs, property.transitEn);
   const houseManualOrNotes =
-    (property.houseManual && property.houseManual.trim()) ||
-    (property.notes && property.notes.trim()) ||
-    "";
+    pickLocalized(property.houseManual, property.houseManualEs, property.houseManualEn) ||
+    pickLocalized(property.notes, property.notesEs, property.notesEn);
 
   const propertyTabs = (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto flex-wrap gap-1">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="amenities">Amenidades</TabsTrigger>
-        <TabsTrigger value="map">Mapa</TabsTrigger>
-        <TabsTrigger value="reviews">Reseñas</TabsTrigger>
+        <TabsTrigger value="overview">{t("property_tabs_overview", "Overview")}</TabsTrigger>
+        <TabsTrigger value="amenities">{t("property_tabs_amenities", "Amenities")}</TabsTrigger>
+        <TabsTrigger value="map">{t("property_tabs_map", "Map")}</TabsTrigger>
+        <TabsTrigger value="reviews">{t("property_tabs_reviews", "Reviews")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="mt-4 space-y-4">
-        <Section title="Ubicación">
-          <p>{property.location || "—"}</p>
-        </Section>
         {summaryText && (
-          <Section title="Resumen">
+          <Section title={t("section_summary", "Summary")}>
             <p>{summaryText}</p>
           </Section>
         )}
         {(property.propertyType || property.roomType) && (
-          <Section title="Tipo de propiedad">
+          <Section title={t("section_property_type", "Property type")}>
             <p>
               {[property.propertyType, property.roomType].filter(Boolean).join(" · ")}
             </p>
           </Section>
         )}
-        <Section title="Descripción">
-          {property.description.split("\n").map((paragraph, index) => (
+        <Section title={t("section_description", "Description")}>
+          {descriptionText.split("\n").map((paragraph, index) => (
             <p key={index} className="leading-relaxed mb-4">
               {paragraph}
             </p>
           ))}
         </Section>
-        {property.interaction && (
-          <Section title="Interacción">
-            <p>{property.interaction}</p>
+        {interactionText && (
+          <Section title={t("section_interaction", "Interaction")}>
+            <p>{interactionText}</p>
           </Section>
         )}
-        {property.neighborhood && (
-          <Section title="Barrio">
-            <p>{property.neighborhood}</p>
+        {neighborhoodText && (
+          <Section title={t("section_neighborhood", "Neighborhood")}>
+            <p>{neighborhoodText}</p>
           </Section>
         )}
-        {property.access && (
-          <Section title="Acceso">
-            <p>{property.access}</p>
+        {accessText && (
+          <Section title={t("section_access", "Access")}>
+            <p>{accessText}</p>
           </Section>
         )}
-        {property.space && (
-          <Section title="Espacio">
-            <p>{property.space}</p>
+        {spaceText && (
+          <Section title={t("section_space", "Space")}>
+            <p>{spaceText}</p>
           </Section>
         )}
-        {property.transit && (
-          <Section title="Transporte">
-            <p>{property.transit}</p>
+        {transitText && (
+          <Section title={t("section_transit", "Getting around")}>
+            <p>{transitText}</p>
           </Section>
         )}
         {houseManualOrNotes && (
-          <Section title="House Manual / Notas">
+          <Section title={t("section_house_manual", "House manual / notes")}>
             <p>{houseManualOrNotes}</p>
           </Section>
         )}
         {(property.checkInTime || property.checkOutTime) && (
-          <Section title="Horarios">
+          <Section title={t("section_schedules", "Schedules")}>
             <p>
-              {property.checkInTime ? `Check-in: ${property.checkInTime}` : ""}
+              {property.checkInTime
+                ? `${t("check_in", "Check-in")}: ${property.checkInTime}`
+                : ""}
               {property.checkInTime && property.checkOutTime ? " · " : ""}
-              {property.checkOutTime ? `Check-out: ${property.checkOutTime}` : ""}
+              {property.checkOutTime
+                ? `${t("check_out", "Check-out")}: ${property.checkOutTime}`
+                : ""}
             </p>
           </Section>
         )}
         {property.cancellationPolicy && (
-          <Section title="Política de cancelación">
+          <Section title={t("section_cancellation", "Cancellation policy")}>
             <p>{property.cancellationPolicy}</p>
           </Section>
         )}
         {property.houseRules && (
-          <Section title="Reglas de la casa">
+          <Section title={t("section_house_rules", "House rules")}>
             <p>{property.houseRules}</p>
           </Section>
         )}
@@ -199,7 +217,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
             />
           </div>
         ) : (
-          <p className="text-gray-500">Mapa no disponible para esta propiedad.</p>
+          <p className="text-gray-500">{t("map_unavailable", "Map not available for this property.")}</p>
         )}
       </TabsContent>
 
@@ -241,7 +259,9 @@ export default function PropertyBody(props: PropertyBodyProps) {
         <div className="lg:col-span-2 space-y-8">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Disponibilidad</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {t("property_availability_heading", "Availability")}
+              </h2>
             </div>
             <AvailabilityCalendar
               property={property}
@@ -249,13 +269,14 @@ export default function PropertyBody(props: PropertyBodyProps) {
               selectedDates={selectedDates}
               currency={currency}
               usdMxnRate={props.usdMxnRate}
+              usdEurRate={props.usdEurRate}
             />
           </div>
           {propertyTabs}
         </div>
 
-        <div className="lg:col-span-1 lg:mt-12">
-          <div className="sticky top-24 space-y-4">
+        <div className="lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
+          <div className="max-h-[calc(100vh-6rem)] space-y-4 overflow-y-auto [scrollbar-gutter:stable] pr-1">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-gray-900 mb-2">Reserva directa</p>
               <p>
@@ -272,6 +293,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
               currency={currency}
               pricePerNightDisplay={pricePerNightDisplay}
               usdMxnRate={props.usdMxnRate}
+              usdEurRate={props.usdEurRate}
             />
           </div>
         </div>
@@ -290,15 +312,12 @@ export default function PropertyBody(props: PropertyBodyProps) {
     return (
       <div className="space-y-6">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-medium">Falta configuración Hostfully para reservar</p>
+          <p className="font-medium">{t("property_hostfully_missing_title", "Hostfully setup required")}</p>
           <p className="mt-1">
-            En el admin, añade el UUID del widget Lead y el JSON de opciones, o define{" "}
-            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_LEAD_WIDGET_UUID</code>{" "}
-            y{" "}
-            <code className="rounded bg-amber-100 px-1">
-              NEXT_PUBLIC_HOSTFULLY_LEAD_WIDGET_OPTIONS_JSON
-            </code>
-            .
+            {t("property_hostfully_missing_body", "Add the Lead widget UUID and options in admin, or set env vars.")}{" "}
+            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_LEAD_WIDGET_UUID</code>
+            {" · "}
+            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_LEAD_WIDGET_OPTIONS_JSON</code>.
           </p>
         </div>
         {showCalendarWidget && (
@@ -347,9 +366,9 @@ export default function PropertyBody(props: PropertyBodyProps) {
 
       <div className="lg:col-span-1">
         <div className="sticky top-24 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-          <p className="font-medium text-gray-900 mb-2">Reserva en Hostfully (fallback)</p>
+          <p className="font-medium text-gray-900 mb-2">{t("widget_fallback_title", "Book on Hostfully (fallback)")}</p>
           <p>
-            Este modo usa widgets como respaldo. Para flujo propio, define{" "}
+            {t("widget_fallback_body", "Widgets are used as fallback. For custom flow set NEXT_PUBLIC_BOOKING_ENGINE=custom.")}{" "}
             <code className="rounded bg-gray-100 px-1">NEXT_PUBLIC_BOOKING_ENGINE=custom</code>.
           </p>
           <div className="mt-4">

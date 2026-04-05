@@ -16,7 +16,9 @@ import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { roundForDisplay } from '@/lib/round-display-money';
+import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { toast } from 'sonner';
+import { useLocale } from '@/components/providers/locale-provider';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
@@ -29,6 +31,7 @@ interface ReservationFormProps {
   currency?: Currency;
   pricePerNightDisplay?: number;
   usdMxnRate?: number | null;
+  usdEurRate?: number | null;
 }
 
 /**
@@ -42,12 +45,27 @@ interface ReservationFormProps {
  */
 function formatPrice(amount: number, currency: Currency): string {
   if (currency === 'MXN') {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   }
   if (currency === 'EUR') {
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   }
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 export default function ReservationForm({ 
@@ -57,8 +75,10 @@ export default function ReservationForm({
   currency = 'USD',
   pricePerNightDisplay,
   usdMxnRate = null,
+  usdEurRate = null,
 }: ReservationFormProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const { cart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [datesUnavailable, setDatesUnavailable] = useState(false);
@@ -158,7 +178,7 @@ export default function ReservationForm({
   const subtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
   const feesUsd = Math.round(subtotalUsd * 0.1); // 10% service fee
   const totalUsd = subtotalUsd + feesUsd;
-  const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
+  const displayRate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
   const subtotal = roundForDisplay(subtotalUsd * displayRate, currency);
   const fees = roundForDisplay(feesUsd * displayRate, currency);
   const total = roundForDisplay(totalUsd * displayRate, currency);
@@ -175,12 +195,17 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!hasFullRange || !selectedDates?.checkIn || !selectedDates?.checkOut) {
-      toast.error('Por favor selecciona las fechas de tu estancia');
+      toast.error(t('toast_select_dates', 'Please select your stay dates'));
       return;
     }
 
     if (formData.guests > property.maxGuests) {
-      toast.error(`Esta propiedad acepta máximo ${property.maxGuests} huéspedes`);
+      toast.error(
+        t('toast_max_guests', 'This property accepts up to {n} guests').replace(
+          '{n}',
+          String(property.maxGuests)
+        )
+      );
       return;
     }
 
@@ -243,11 +268,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       const reservationId = data.reservationId;
       if (!reservationId) throw new Error('No se recibió ID de reserva');
 
-      toast.success('Redirigiendo al pago...');
+      toast.success(t('toast_redirecting', 'Redirecting to payment…'));
       router.push(`/payment?reservation=${reservationId}`);
       onReservationComplete?.();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Error al preparar la reserva. Por favor intenta nuevamente.';
+      const message =
+        error instanceof Error
+          ? error.message
+          : t('toast_prepare_error', 'Could not prepare the booking. Please try again.');
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -259,7 +287,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         <CardContent className="p-6">
           <div className="text-center py-8">
             <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">Selecciona las fechas en el calendario para continuar</p>
+            <p className="text-gray-600">
+              {t('reservation_select_dates_prompt', 'Select dates on the calendar to continue')}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -273,10 +303,16 @@ const handleSubmit = async (e: React.FormEvent) => {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-10 w-10 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-amber-900">Las fechas no están disponibles</p>
-              <p className="text-sm text-amber-800 mt-1">Pueden estar reservadas o confirmadas por otro huésped. Elige otras fechas para esta propiedad.</p>
+              <p className="font-medium text-amber-900">
+                {t('reservation_dates_unavailable_title', 'Those dates are not available')}
+              </p>
+              <p className="text-sm text-amber-800 mt-1">
+                {t('reservation_dates_unavailable_body', 'They may be booked or held by another guest.')}
+              </p>
               <Button asChild className="mt-4">
-                <Link href={`/properties/${property.slug}`}>Ir a la propiedad</Link>
+                <Link href={`/properties/${property.slug}`}>
+                  {t('reservation_go_property', 'Go to property')}
+                </Link>
               </Button>
             </div>
           </div>
@@ -292,10 +328,10 @@ const handleSubmit = async (e: React.FormEvent) => {
           <div className="flex items-start gap-3">
             <ShoppingCart className="h-10 w-10 text-orange-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-orange-900">Ya tienes una reserva similar</p>
-              <p className="text-sm text-orange-800 mt-1">Las fechas que elegiste se superponen con una reserva que ya tienes en el carrito (en proceso o en hold). ¿Quieres continuar con esa reserva?</p>
+              <p className="font-medium text-orange-900">{t('reservation_overlap_title', 'Similar booking in cart')}</p>
+              <p className="text-sm text-orange-800 mt-1">{t('reservation_overlap_body', 'Dates overlap with a cart item.')}</p>
               <Button asChild className="mt-4 bg-orange-500 hover:bg-orange-600">
-                <Link href="/cart">Continuar al carrito</Link>
+                <Link href="/cart">{t('reservation_go_cart', 'Go to cart')}</Link>
               </Button>
             </div>
           </div>
@@ -311,7 +347,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="w-5 h-5" />
-          Reservar Ahora
+          {t('reservation_form_title', 'Book now')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -319,30 +355,30 @@ const handleSubmit = async (e: React.FormEvent) => {
           {/* Guest Information */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="guestFirstName">Nombre *</Label>
+              <Label htmlFor="guestFirstName">{t('reservation_first_name', 'First name *')}</Label>
               <Input
                 id="guestFirstName"
                 type="text"
                 required
                 value={formData.guestFirstName}
                 onChange={(e) => setFormData({ ...formData, guestFirstName: e.target.value })}
-                placeholder="Tu nombre"
+                placeholder={t('placeholder_first_name', 'First name')}
               />
             </div>
             <div>
-              <Label htmlFor="guestLastName">Apellido *</Label>
+              <Label htmlFor="guestLastName">{t('reservation_last_name', 'Last name *')}</Label>
               <Input
                 id="guestLastName"
                 type="text"
                 required
                 value={formData.guestLastName}
                 onChange={(e) => setFormData({ ...formData, guestLastName: e.target.value })}
-                placeholder="Tu apellido"
+                placeholder={t('placeholder_last_name', 'Last name')}
               />
             </div>
 
             <div>
-              <Label htmlFor="guestEmail">Correo electrónico *</Label>
+              <Label htmlFor="guestEmail">{t('reservation_email', 'Email *')}</Label>
               <Input
                 id="guestEmail"
                 type="email"
@@ -355,21 +391,21 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Teléfono *
+                {t('reservation_phone_legend', 'Phone *')}
               </legend>
               <div className="flex gap-2">
                 <Select
                   value={formData.phoneCountryCode}
                   onValueChange={(value) => setFormData({ ...formData, phoneCountryCode: value })}
-                  aria-label="Código de país"
+                  aria-label={t('reservation_phone_country_aria', 'Country code')}
                 >
                   <SelectTrigger id="guestPhone-country" className="w-[140px] shrink-0">
-                    <SelectValue placeholder="Código" />
+                    <SelectValue placeholder="Code" />
                   </SelectTrigger>
                   <SelectContent>
                     <div className="px-2 pb-1">
                       <Input
-                        placeholder="Buscar país..."
+                        placeholder={t('reservation_phone_search', 'Search country…')}
                         className="h-8 text-xs"
                         value={countrySearch}
                         onChange={(e) => setCountrySearch(e.target.value)}
@@ -390,13 +426,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                   onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
                   placeholder="123 456 7890"
                   className="flex-1"
-                  aria-label="Número de teléfono"
+                  aria-label={t('reservation_phone_number_aria', 'Phone number')}
                 />
               </div>
             </fieldset>
 
             <div>
-              <Label htmlFor="guests">Número de huéspedes *</Label>
+              <Label htmlFor="guests">{t('reservation_guests_label', 'Number of guests *')}</Label>
               <Select 
                 value={formData.guests.toString()} 
                 onValueChange={(value) => setFormData({ ...formData, guests: parseInt(value) })}
@@ -422,17 +458,20 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           {/* Price Breakdown */}
           <div className="space-y-3">
-            <h3 className="font-semibold">Resumen de precios</h3>
+            <h3 className="font-semibold">{t('reservation_price_summary', 'Price summary')}</h3>
             
             <div className="flex justify-between text-sm">
-              <span>{nights} {nights === 1 ? 'noche' : 'noches'}</span>
+              <span>
+                {nights}{' '}
+                {nights === 1 ? t('night_singular', 'night') : t('night_plural', 'nights')}
+              </span>
               <span>{formatPrice(subtotal, currency)}</span>
             </div>
             {nights > 0 && (
               <details className="rounded-md p-2 text-sm [&[open]_.nightly-chevron]:rotate-90">
                 <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
                   <span className="nightly-chevron text-gray-500 inline-block transition-transform duration-200 ease-out">{'>'}</span>
-                  <span>Ver detalle por noche</span>
+                  <span>{t('reservation_nightly_detail', 'View nightly breakdown')}</span>
                 </summary>
                 <div className="mt-2 space-y-1">
                   {(nightlyBreakdown.length > 0
@@ -449,14 +488,14 @@ const handleSubmit = async (e: React.FormEvent) => {
             )}
             
             <div className="flex justify-between text-sm">
-              <span>Tarifa de servicio</span>
+              <span>{t('payment_service_fee', 'Service fee')}</span>
               <span>{formatPrice(fees, currency)}</span>
             </div>
             
             <Separator />
             
             <div className="flex justify-between font-semibold text-lg">
-              <span>Total</span>
+              <span>{t('payment_total', 'Total')}</span>
               <span>{formatPrice(total, currency)}</span>
             </div>
           </div>
@@ -469,21 +508,21 @@ const handleSubmit = async (e: React.FormEvent) => {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Procesando...
+                {t('reservation_processing', 'Processing…')}
               </>
             ) : (
               <>
                 <CreditCard className="w-4 h-4 mr-2" />
-                Continuar al Pago
+                {t('reservation_continue_payment', 'Continue to payment')}
               </>
             )}
           </Button>
         </form>
 
         <div className="text-xs text-gray-600 space-y-1.5">
-          <p>• Tu reserva queda confirmada al completar el pago de forma segura.</p>
-          <p>• Puedes cancelar sin costo hasta 2 horas después de pagar; después aplican las políticas de cancelación.</p>
-          <p>• Te enviamos la confirmación por email al instante.</p>
+          <p>• {t('reservation_footnote_confirm', 'Booking confirms after secure payment.')}</p>
+          <p>• {t('reservation_footnote_cancel', 'Free cancel window applies per policy.')}</p>
+          <p>• {t('reservation_footnote_email', 'Confirmation email sent immediately.')}</p>
         </div>
       </CardContent>
     </Card>

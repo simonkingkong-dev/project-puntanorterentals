@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLocale } from '@/components/providers/locale-provider';
 
 /**
  * Displays a search form for users to find properties based on check-in and check-out dates, and number of guests.
@@ -17,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
  */
 export default function SearchForm() {
   const router = useRouter();
+  const { t } = useLocale();
   const [searchParams, setSearchParams] = useState({
     checkIn: '',
     checkOut: '',
@@ -35,15 +37,18 @@ export default function SearchForm() {
     router.push(`/properties?${params.toString()}`);
   };
 
+  const guestWord = (n: number) =>
+    n === 1 ? t("property_guest_singular") : t("property_guests");
+
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-      <CardContent className="p-6">
+    <Card className="w-full max-w-4xl mx-auto shadow-2xl border border-border/60 bg-card/95 backdrop-blur-md">
+      <CardContent className="p-6 sm:p-7">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Check In */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Entrada
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              {t("search_check_in")}
             </label>
             <Input
               type="date"
@@ -56,9 +61,9 @@ export default function SearchForm() {
 
           {/* Check Out */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Salida
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              {t("search_check_out")}
             </label>
             <Input
               type="date"
@@ -71,18 +76,18 @@ export default function SearchForm() {
 
           {/* Guests */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Huéspedes
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              {t("search_guests")}
             </label>
             <Select value={searchParams.guests} onValueChange={(value) => setSearchParams({ ...searchParams, guests: value })}>
               <SelectTrigger className="h-12">
-                <SelectValue placeholder="¿Cuántos?" />
+                <SelectValue placeholder={t("search_guests_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                   <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? 'huésped' : 'huéspedes'}
+                    {num} {guestWord(num)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -95,7 +100,7 @@ export default function SearchForm() {
           className="w-full mt-6 h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02]"
         >
           <Search className="w-4 h-4 mr-2" />
-          Buscar Propiedades
+          {t("search_submit")}
         </Button>
       </CardContent>
     </Card>

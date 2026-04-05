@@ -25,6 +25,7 @@ import { ShoppingCart, Calendar, Loader2, Trash2, Pencil, Clock, Mail } from 'lu
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useLocale } from '@/components/providers/locale-provider';
 
 type ReservationStatus = {
   status: string;
@@ -329,6 +330,7 @@ function CartItemCard({
 export default function CartPage() {
   const router = useRouter();
   const { cart, removeFromCart, setCart } = useCart();
+  const { t } = useLocale();
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
@@ -353,9 +355,9 @@ export default function CartPage() {
     return (
       <div className="min-h-[50vh] max-w-md mx-auto flex flex-col items-center py-16 px-4">
         <ShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Tu carrito está vacío</h2>
+        <h2 className="text-xl font-semibold text-gray-700 mb-2">{t('cart_empty_title', 'Your cart is empty')}</h2>
         <p className="text-gray-500 text-center mb-6">
-          Selecciona fechas en una propiedad y vuelve aquí para ver el resumen. Las reservas confirmadas están en Mis reservas.
+          {t('cart_empty_subtitle', 'Pick dates on a property and come back here to review your summary. Confirmed bookings are in My reservations.')}
         </p>
         <div className="w-full space-y-4 mb-6">
           <Label htmlFor="recovery-email" className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -417,10 +419,10 @@ export default function CartPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button asChild>
-            <Link href="/properties">Ver propiedades</Link>
+            <Link href="/properties">{t('cart_explore', 'Explore properties')}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/my-reservations">Mis reservas</Link>
+            <Link href="/my-reservations">{t('cart_my_reservations', 'My reservations')}</Link>
           </Button>
         </div>
       </div>
@@ -429,7 +431,7 @@ export default function CartPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Carrito</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('cart_title', 'Cart')}</h1>
       <div className="space-y-6">
         {uniqueCart.map((item) => (
           <CartItemCard

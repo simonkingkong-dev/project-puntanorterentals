@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getAdminProperties, searchPropertiesAdmin } from '@/lib/firebase-admin-queries';
 import { Property, SearchParams } from '@/lib/types';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
+import { tServer } from '@/lib/i18n/server';
 
 export const metadata: Metadata = {
   title: 'Propiedades Vacacionales',
@@ -57,15 +58,23 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
   }
 
   if (!Array.isArray(properties) || properties.length === 0) {
+    const emptyTitle = await tServer(
+      hasSearchParams ? 'properties_empty_search_title' : 'properties_empty_title',
+      hasSearchParams ? 'No properties found' : 'No properties yet'
+    );
+    const emptySubtitle = await tServer(
+      hasSearchParams ? 'properties_empty_search_subtitle' : 'properties_empty_subtitle',
+      hasSearchParams
+        ? 'Try adjusting your search filters.'
+        : 'Come back soon or load properties from the admin panel.'
+    );
     return (
       <div className="text-center py-12 col-span-1 md:col-span-2 lg:col-span-3">
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          {hasSearchParams ? 'No se encontraron propiedades' : 'Aún no hay propiedades cargadas'}
+          {emptyTitle}
         </h3>
         <p className="text-gray-600">
-          {hasSearchParams 
-            ? 'Intenta ajustar tus filtros de búsqueda.' 
-            : 'Vuelve pronto o carga propiedades desde el panel de administración.'}
+          {emptySubtitle}
         </p>
       </div>
     );
@@ -82,6 +91,15 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
     guests: params.guests ? Number(params.guests) : undefined,
   };
 
+  const pageTitle = await tServer(
+    hasFilters ? 'properties_title_results' : 'properties_title_all',
+    hasFilters ? 'Search Results' : 'All Properties'
+  );
+  const pageSubtitle = await tServer(
+    hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all',
+    hasFilters ? 'Properties matching your search' : 'Browse our curated collection of premium vacation stays.'
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -89,13 +107,10 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {hasFilters ? 'Resultados de Búsqueda' : 'Todas las Propiedades'}
+              {pageTitle}
             </h1>
             <p className="text-lg text-gray-600">
-              {hasFilters 
-                ? 'Propiedades que coinciden con tu búsqueda'
-                : 'Descubre nuestra colección completa de propiedades excepcionales' 
-              }
+              {pageSubtitle}
             </p>
           </div>
            <SearchForm />

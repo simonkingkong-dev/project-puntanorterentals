@@ -20,6 +20,14 @@ const commonAmenities = [
   'WiFi de alta velocidad', 'Aire acondicionado', 'Piscina', 'Vista al mar',
   'Cocina equipada', 'Terraza privada', 'Estacionamiento', 'Servicio de limpieza',
   'Seguridad 24/7', 'Acceso a playa', 'Gym', 'Spa', 'Jacuzzi', 'Barbacoa', 'Jardín',
+  'WiFi', 'TV', 'Smart TV', 'Cable TV', 'Heating', 'Kitchen', 'Kitchenette',
+  'Pool', 'Parking', 'Free Parking', 'Beach Access', 'Downtown',
+  'Hot Water', 'Towels', 'Cooking Basics', 'Pots and Pans', 'Desk',
+  'Lock on Bedroom Door', 'Washer', 'Dryer', 'Hair Dryer', 'Refrigerator',
+  'Microwave', 'Coffee Maker', 'BBQ Grill', 'Patio / Balcony',
+  'Private Entrance', 'Smoke Detector', 'Carbon Monoxide Detector',
+  'First Aid Kit', 'Fire Extinguisher', 'Pets Allowed', 'Smoking Allowed',
+  'Events Allowed',
 ];
 
 interface PropertyEditFormProps {
@@ -41,6 +49,7 @@ type PropertyEditFormState = Omit<
 
 export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
   const [isPending, setIsPending] = useState(false);
+  const [contentLang, setContentLang] = useState<'es' | 'en'>('es');
   
   // 1. El estado del formulario principal
   const [formData, setFormData] = useState<PropertyEditFormState>({
@@ -68,14 +77,36 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         ? String(initialData.hostfullyCalendarMonthsToDisplay)
         : '',
     shortDescription: initialData.shortDescription ?? '',
+    shortDescriptionEs: initialData.shortDescriptionEs ?? '',
+    shortDescriptionEn: initialData.shortDescriptionEn ?? '',
     longDescription: initialData.longDescription ?? '',
+    longDescriptionEs: initialData.longDescriptionEs ?? '',
+    longDescriptionEn: initialData.longDescriptionEn ?? '',
     notes: initialData.notes ?? '',
+    notesEs: initialData.notesEs ?? '',
+    notesEn: initialData.notesEn ?? '',
     interaction: initialData.interaction ?? '',
+    interactionEs: initialData.interactionEs ?? '',
+    interactionEn: initialData.interactionEn ?? '',
     neighborhood: initialData.neighborhood ?? '',
+    neighborhoodEs: initialData.neighborhoodEs ?? '',
+    neighborhoodEn: initialData.neighborhoodEn ?? '',
     access: initialData.access ?? '',
+    accessEs: initialData.accessEs ?? '',
+    accessEn: initialData.accessEn ?? '',
     space: initialData.space ?? '',
+    spaceEs: initialData.spaceEs ?? '',
+    spaceEn: initialData.spaceEn ?? '',
     transit: initialData.transit ?? '',
+    transitEs: initialData.transitEs ?? '',
+    transitEn: initialData.transitEn ?? '',
     houseManual: initialData.houseManual ?? '',
+    houseManualEs: initialData.houseManualEs ?? '',
+    houseManualEn: initialData.houseManualEn ?? '',
+    descriptionEs: initialData.descriptionEs ?? '',
+    descriptionEn: initialData.descriptionEn ?? '',
+    summaryEs: initialData.summaryEs ?? '',
+    summaryEn: initialData.summaryEn ?? '',
     latitude: initialData.latitude,
     longitude: initialData.longitude,
   });
@@ -88,6 +119,32 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
   // ---
   
   const [newAmenity, setNewAmenity] = useState('');
+
+  const getLangValue = (
+    baseKey: string,
+    esKey: string,
+    enKey: string
+  ): string => {
+    const active = contentLang === 'es' ? esKey : enKey;
+    const value = (formData as Record<string, unknown>)[active];
+    if (typeof value === 'string' && value.trim().length > 0) return value;
+    const base = (formData as Record<string, unknown>)[baseKey];
+    return typeof base === 'string' ? base : '';
+  };
+
+  const setLangValue = (
+    baseKey: string,
+    esKey: string,
+    enKey: string,
+    value: string
+  ) => {
+    const active = contentLang === 'es' ? esKey : enKey;
+    setFormData(prev => ({
+      ...prev,
+      [baseKey]: value,
+      [active]: value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,6 +246,35 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Idioma de contenido</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="inline-flex rounded-md border border-gray-200 p-1 gap-1 bg-gray-50">
+            <Button
+              type="button"
+              variant={contentLang === 'es' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setContentLang('es')}
+            >
+              Español
+            </Button>
+            <Button
+              type="button"
+              variant={contentLang === 'en' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setContentLang('en')}
+            >
+              English
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Card de Información Básica (sin cambios) */}
       <Card>
         <CardHeader><CardTitle>Información Básica</CardTitle></CardHeader>
@@ -240,8 +326,16 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción *</Label>
-            <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={4} required />
+            <Label htmlFor="description">
+              {contentLang === 'es' ? 'Descripción *' : 'Description *'}
+            </Label>
+            <Textarea
+              id="description"
+              value={getLangValue('description', 'descriptionEs', 'descriptionEn')}
+              onChange={(e) => setLangValue('description', 'descriptionEs', 'descriptionEn', e.target.value)}
+              rows={4}
+              required
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -430,6 +524,9 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
       <Card>
         <CardHeader>
           <CardTitle>Contenido Hostfully</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Mostrando campos para: <strong>{contentLang === 'es' ? 'Español' : 'English'}</strong>
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -438,10 +535,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="shortDescription"
                 rows={3}
-                value={formData.shortDescription ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, shortDescription: e.target.value }))
-                }
+                value={getLangValue('shortDescription', 'shortDescriptionEs', 'shortDescriptionEn')}
+                onChange={(e) => setLangValue('shortDescription', 'shortDescriptionEs', 'shortDescriptionEn', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -449,10 +544,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="longDescription"
                 rows={3}
-                value={formData.longDescription ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, longDescription: e.target.value }))
-                }
+                value={getLangValue('longDescription', 'longDescriptionEs', 'longDescriptionEn')}
+                onChange={(e) => setLangValue('longDescription', 'longDescriptionEs', 'longDescriptionEn', e.target.value)}
               />
             </div>
           </div>
@@ -462,10 +555,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             <Textarea
               id="notes"
               rows={3}
-              value={formData.notes ?? ''}
-              onChange={(e) =>
-                setFormData(prev => ({ ...prev, notes: e.target.value }))
-              }
+              value={getLangValue('notes', 'notesEs', 'notesEn')}
+              onChange={(e) => setLangValue('notes', 'notesEs', 'notesEn', e.target.value)}
             />
           </div>
 
@@ -475,10 +566,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="interaction"
                 rows={3}
-                value={formData.interaction ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, interaction: e.target.value }))
-                }
+                value={getLangValue('interaction', 'interactionEs', 'interactionEn')}
+                onChange={(e) => setLangValue('interaction', 'interactionEs', 'interactionEn', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -486,10 +575,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="neighborhood"
                 rows={3}
-                value={formData.neighborhood ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, neighborhood: e.target.value }))
-                }
+                value={getLangValue('neighborhood', 'neighborhoodEs', 'neighborhoodEn')}
+                onChange={(e) => setLangValue('neighborhood', 'neighborhoodEs', 'neighborhoodEn', e.target.value)}
               />
             </div>
           </div>
@@ -500,10 +587,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="access"
                 rows={3}
-                value={formData.access ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, access: e.target.value }))
-                }
+                value={getLangValue('access', 'accessEs', 'accessEn')}
+                onChange={(e) => setLangValue('access', 'accessEs', 'accessEn', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -511,10 +596,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="space"
                 rows={3}
-                value={formData.space ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, space: e.target.value }))
-                }
+                value={getLangValue('space', 'spaceEs', 'spaceEn')}
+                onChange={(e) => setLangValue('space', 'spaceEs', 'spaceEn', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -522,10 +605,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               <Textarea
                 id="transit"
                 rows={3}
-                value={formData.transit ?? ''}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, transit: e.target.value }))
-                }
+                value={getLangValue('transit', 'transitEs', 'transitEn')}
+                onChange={(e) => setLangValue('transit', 'transitEs', 'transitEn', e.target.value)}
               />
             </div>
           </div>
@@ -535,10 +616,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             <Textarea
               id="houseManual"
               rows={3}
-              value={formData.houseManual ?? ''}
-              onChange={(e) =>
-                setFormData(prev => ({ ...prev, houseManual: e.target.value }))
-              }
+              value={getLangValue('houseManual', 'houseManualEs', 'houseManualEn')}
+              onChange={(e) => setLangValue('houseManual', 'houseManualEs', 'houseManualEn', e.target.value)}
             />
           </div>
         </CardContent>

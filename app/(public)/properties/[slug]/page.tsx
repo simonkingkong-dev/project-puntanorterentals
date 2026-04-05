@@ -5,6 +5,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PropertyPageContent from '@/components/property-page-content';
 import { getPropertyBySlugAdmin } from '@/lib/firebase-admin-queries';
+import { getServerLocale } from '@/lib/i18n/server';
+import { messages } from '@/lib/i18n/messages';
 
 interface PropertyPageProps {
   params: Promise<{
@@ -15,9 +17,11 @@ interface PropertyPageProps {
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { slug } = await params;
   const property = await getPropertyBySlugAdmin(slug);
+  const locale = await getServerLocale();
+  const m = messages[locale];
 
   if (!property) {
-    return { title: 'Propiedad no encontrada' };
+    return { title: m.property_not_found_title };
   }
 
   return {
@@ -41,6 +45,8 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { slug } = await params;
   const property = await getPropertyBySlugAdmin(slug);
+  const locale = await getServerLocale();
+  const m = messages[locale];
 
   if (!property) {
     notFound();
@@ -54,7 +60,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <Button asChild variant="ghost" className="mb-4">
             <Link href="/properties">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Propiedades
+              {m.property_breadcrumb_back}
             </Link>
           </Button>
         </div>

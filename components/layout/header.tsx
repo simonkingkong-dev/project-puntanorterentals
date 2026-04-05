@@ -8,23 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
-
-const navigation = [
-  { name: 'Inicio', href: '/', icon: Home },
-  { name: 'Propiedades', href: '/properties', icon: Building },
-  { name: 'Mis reservas', href: '/my-reservations', icon: Calendar },
-];
+import { useLocale } from '@/components/providers/locale-provider';
 
 function CartLink({ className }: { className?: string }) {
   const { cartCount } = useCart();
+  const { t } = useLocale();
   return (
     <Link
       href="/cart"
       className={className}
-      aria-label="Ver carrito"
+      aria-label={t('nav_view_cart', 'View cart')}
     >
       <ShoppingCart className="w-5 h-5" />
-      <span>Carrito</span>
+      <span>{t('nav_cart', 'Cart')}</span>
       {cartCount > 0 && (
         <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white leading-none">
           {cartCount > 99 ? '99+' : cartCount}
@@ -36,6 +32,7 @@ function CartLink({ className }: { className?: string }) {
 
 function CartLinkMobile({ onClose }: { onClose: () => void }) {
   const { cartCount } = useCart();
+  const { t } = useLocale();
   return (
     <Link
       href="/cart"
@@ -43,7 +40,7 @@ function CartLinkMobile({ onClose }: { onClose: () => void }) {
       className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors w-full"
     >
       <ShoppingCart className="w-4 h-4" />
-      <span>Carrito</span>
+      <span>{t('nav_cart', 'Cart')}</span>
       {cartCount > 0 && (
         <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white leading-none">
           {cartCount > 99 ? '99+' : cartCount}
@@ -57,6 +54,12 @@ export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { locale, setLocale, t } = useLocale();
+  const navigation = [
+    { name: t('nav_home', 'Home'), href: '/', icon: Home },
+    { name: t('nav_properties', 'Properties'), href: '/properties', icon: Building },
+    { name: t('nav_my_reservations', 'My reservations'), href: '/my-reservations', icon: Calendar },
+  ];
   useEffect(() => setMounted(true), []);
 
   return (
@@ -109,6 +112,15 @@ export default function Header() {
                   : "text-gray-700 hover:text-orange-600 hover:bg-gray-50"
               )}
             />
+            <select
+              value={locale}
+              onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
+              className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
+              aria-label="Language"
+            >
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+            </select>
           </nav>
 
           {/* Mobile menu: solo en cliente para evitar hydration mismatch (Radix genera IDs distintos en SSR vs cliente) */}
@@ -147,6 +159,17 @@ export default function Header() {
                     </Link>
                   ))}
                   <CartLinkMobile onClose={() => setIsOpen(false)} />
+                  <div className="px-3 pt-2">
+                    <select
+                      value={locale}
+                      onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
+                      className="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
+                      aria-label="Language"
+                    >
+                      <option value="es">Español</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
                 </nav>
               </SheetContent>
             </Sheet>

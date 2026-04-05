@@ -1,27 +1,40 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getServerLocale } from '@/lib/i18n/server';
+import { messages } from '@/lib/i18n/messages';
 
-export const metadata: Metadata = {
-  title: 'Política de Privacidad',
-  description: 'Política de privacidad y datos personales de Punta Norte Rentals.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+  return {
+    title: m.page_privacy_title,
+    description: m.page_privacy_meta,
+  };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 prose prose-gray">
-        <h1 className="text-3xl font-bold text-gray-900">Política de Privacidad</h1>
-        <p className="text-gray-500 text-sm">Última actualización: 2025</p>
-        <div className="text-gray-600 space-y-4 mt-6">
-          <p>En Punta Norte Rentals respetamos tu privacidad. Los datos que nos proporcionas (nombre, email, teléfono) se utilizan únicamente para procesar reservas y enviarte confirmaciones.</p>
-          <p>No vendemos ni compartimos tu información con terceros con fines comerciales. Los pagos se procesan de forma segura a través de Stripe.</p>
-        </div>
-        <div className="mt-8">
-          <Link href="/">
-            <Button variant="outline">Volver al inicio</Button>
-          </Link>
-        </div>
+    <div className="min-h-[70vh] bg-gradient-to-b from-muted/50 to-background">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+        <article className="rounded-2xl border bg-card/80 backdrop-blur-sm shadow-sm p-8 sm:p-10">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+            {m.page_privacy_title}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">{m.page_privacy_updated}</p>
+          <div className="mt-8 space-y-5 text-muted-foreground leading-relaxed">
+            <p>{m.page_privacy_p1}</p>
+            <p>{m.page_privacy_p2}</p>
+          </div>
+          <div className="mt-10">
+            <Button asChild variant="outline">
+              <Link href="/">{m.not_found_cta_home}</Link>
+            </Button>
+          </div>
+        </article>
       </div>
     </div>
   );

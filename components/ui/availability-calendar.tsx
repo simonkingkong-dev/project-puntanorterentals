@@ -4,14 +4,16 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { roundForDisplay } from '@/lib/round-display-money';
+import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { Property } from '@/lib/types';
 import { Day, type DayProps } from 'react-day-picker';
 import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es as esLocale, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { generateDateRange, getFirstBlockedNight } from '@/lib/utils/date';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
+import { useLocale } from '@/components/providers/locale-provider';
 
 interface AvailabilityCalendarProps {
   property: Property;
@@ -19,6 +21,7 @@ interface AvailabilityCalendarProps {
   selectedDates?: { checkIn?: Date; checkOut?: Date };
   currency?: Currency;
   usdMxnRate?: number | null;
+  usdEurRate?: number | null;
 }
 
 /** Mismo día (solo fecha) */
@@ -50,7 +53,10 @@ export default function AvailabilityCalendar({
   selectedDates,
   currency = 'USD',
   usdMxnRate = null,
+  usdEurRate = null,
 }: AvailabilityCalendarProps) {
+  const { locale, t } = useLocale();
+  const dateFnsLocale = locale === 'en' ? enUS : esLocale;
   const [hoveredDate, setHoveredDate] = useState<Date | undefined>();
   const [rangeFrom, setRangeFrom] = useState<Date | undefined>();
   /** Cuando ya hay rango confirmado, el próximo clic es "nuevo check-in" (reiniciar). Guardamos el día clicado. */
@@ -119,7 +125,10 @@ export default function AvailabilityCalendar({
         if (cancelled) return;
         if (data?.warning) {
           toast.warning(
-            "Mostrando disponibilidad guardada en el sitio (Hostfully no respondió)."
+            t(
+              'calendar_warning_fallback',
+              'Showing saved on-site availability (Hostfully did not respond).'
+            )
           );
         }
         if (data?.availability && typeof data.availability === "object") {
@@ -138,7 +147,10 @@ export default function AvailabilityCalendar({
           setRealtimeAvailability({});
           setRealtimeDailyRates({});
           toast.error(
-            "No se pudo cargar disponibilidad en tiempo real de Hostfully."
+            t(
+              'calendar_error_realtime',
+              'Could not load live availability from Hostfully.'
+            )
           );
         }
       })
@@ -149,7 +161,7 @@ export default function AvailabilityCalendar({
     return () => {
       cancelled = true;
     };
-  }, [property.id, property.hostfullyPropertyId]);
+  }, [property.id, property.hostfullyPropertyId, t]);
 
   const availabilityMap = useMemo(
     () => (property.hostfullyPropertyId ? realtimeAvailability ?? {} : property.availability),
@@ -254,7 +266,12 @@ export default function AvailabilityCalendar({
         const dateStrings = generateDateRange(range.from, addDays(range.to, -1));
         const firstBlocked = getFirstBlockedNight(dateStrings, availabilityMap ?? {});
         if (firstBlocked) {
-          toast.error('Solo se pueden seleccionar fechas con todas las noches libres. Hay una noche no disponible en ese rango.');
+          toast.error(
+            t(
+              'toast_range_has_blocked_night',
+              'You can only select ranges where every night is available. This range includes an unavailable night.'
+            )
+          );
           setRangeFrom(undefined);
           setHoveredDate(undefined);
           return;
@@ -270,7 +287,7 @@ export default function AvailabilityCalendar({
         onDateSelect({ checkIn: range.from });
       }
     },
-    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut, availabilityMap]
+    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut, availabilityMap, t]
   );
 
   /** Rango mostrado: si hay rangeFrom (selección en curso), priorizar; si no, rango confirmado */
@@ -369,6 +386,7 @@ export default function AvailabilityCalendar({
     property.pricePerNight,
     displayRate,
     currency,
+    usdEurRate,
   ]);
   const formatPrice = (amount: number) => {
     if (currency === 'MXN') {
@@ -384,12 +402,14 @@ export default function AvailabilityCalendar({
         style: 'currency',
         currency: 'EUR',
         minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(amount);
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -397,11 +417,11 @@ export default function AvailabilityCalendar({
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
-          <CardTitle>Disponibilidad</CardTitle>
+          <CardTitle>{t('availability_title', 'Availability')}</CardTitle>
           <p className="text-sm text-gray-600 mt-1">
             {isSelectingRange
-              ? 'Selecciona la fecha de salida (o haz clic en otra fecha para cambiar la entrada)'
-              : 'Selecciona las fechas de tu estancia'}
+              ? t('calendar_hint_select_checkout', 'Pick check-out (or click another date to change check-in)')
+              : t('calendar_hint_select_stay', 'Select your stay dates')}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0 rounded-md border border-gray-200 bg-gray-50 p-0.5">
@@ -409,7 +429,7 @@ export default function AvailabilityCalendar({
             type="button"
             onClick={goPrevMonth}
             disabled={!canGoPrev}
-            aria-label="Mes anterior"
+            aria-label={t('calendar_prev_month', 'Previous month')}
             className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -418,7 +438,7 @@ export default function AvailabilityCalendar({
             type="button"
             onClick={goNextMonth}
             disabled={!canGoNext}
-            aria-label="Mes siguiente"
+            aria-label={t('calendar_next_month', 'Next month')}
             className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
@@ -434,7 +454,7 @@ export default function AvailabilityCalendar({
           onSelect={handleSelect}
           onDayClick={handleDayClick}
           disabled={isDateDisabled}
-          locale={es}
+          locale={dateFnsLocale}
           numberOfMonths={MONTHS_VISIBLE}
           month={currentMonth}
           onMonthChange={setCurrentMonth}
@@ -470,23 +490,29 @@ export default function AvailabilityCalendar({
         <div className="mt-4 flex items-start justify-between gap-4 text-sm text-gray-700">
           <div className="space-y-1">
             <p>
-              <span className="font-medium">Fecha del check in:</span>{' '}
+              <span className="font-medium">{t('calendar_check_in_label', 'Check-in date:')}</span>{' '}
               {displayCheckIn
-                ? format(displayCheckIn, 'dd MMMM yyyy', { locale: es })
+                ? format(displayCheckIn, 'dd MMMM yyyy', { locale: dateFnsLocale })
                 : '—'}
             </p>
             <p>
-              <span className="font-medium">Fecha del check out:</span>{' '}
+              <span className="font-medium">{t('calendar_check_out_label', 'Check-out date:')}</span>{' '}
               {displayCheckOut
-                ? format(displayCheckOut, 'dd MMMM yyyy', { locale: es }) + (checkOutIsPreview ? ' (preview)' : '')
+                ? format(displayCheckOut, 'dd MMMM yyyy', { locale: dateFnsLocale }) +
+                    (checkOutIsPreview ? ` (${t('calendar_preview', 'preview')})` : '')
                 : '—'}
             </p>
           </div>
           <div className="min-w-[260px] border-l border-gray-200 pl-4">
-            <p className="font-semibold text-gray-900">Resumen de precios</p>
+            <p className="font-semibold text-gray-900">{t('calendar_price_summary', 'Price summary')}</p>
             {nightsCount > 0 ? (
               <div className="mt-2 flex items-center justify-between gap-4 text-gray-900">
-                <span>{nightsCount} {nightsCount === 1 ? 'noche' : 'noches'}</span>
+                <span>
+                  {nightsCount}{' '}
+                  {nightsCount === 1
+                    ? t('night_singular', 'night')
+                    : t('night_plural', 'nights')}
+                </span>
                 <span>{formatPrice(nightsSubtotal)}</span>
               </div>
             ) : <p className="mt-2 text-gray-500">—</p>}

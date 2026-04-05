@@ -397,6 +397,39 @@ export async function getPropertyDetails(
   );
 }
 
+/** Devuelve descripciones por idioma para una propiedad. */
+export async function getPropertyDescriptions(
+  propertyUid: string
+): Promise<Array<Record<string, unknown>>> {
+  const data = await hostfullyFetch<Record<string, unknown>>(
+    `/property-descriptions?propertyUid=${encodeURIComponent(propertyUid)}`
+  );
+  const list = (data?.propertyDescriptions ?? data?.content ?? data?.data ?? []) as unknown;
+  return Array.isArray(list) ? (list as Array<Record<string, unknown>>) : [];
+}
+
+/** Devuelve fotos de la propiedad (varios tamaños de URL). */
+export async function getPropertyPhotos(
+  propertyUid: string
+): Promise<Array<Record<string, unknown>>> {
+  const data = await hostfullyFetch<Record<string, unknown>>(
+    `/photos?propertyUid=${encodeURIComponent(propertyUid)}`
+  );
+  const list = (data?.photos ?? data?.content ?? data?.data ?? []) as unknown;
+  return Array.isArray(list) ? (list as Array<Record<string, unknown>>) : [];
+}
+
+/** Devuelve amenidades activas de la propiedad. */
+export async function getPropertyAmenities(
+  propertyUid: string
+): Promise<Array<Record<string, unknown>>> {
+  const data = await hostfullyFetch<Record<string, unknown>>(
+    `/amenities?propertyUid=${encodeURIComponent(propertyUid)}`
+  );
+  const list = (data?.amenities ?? data?.content ?? data?.data ?? []) as unknown;
+  return Array.isArray(list) ? (list as Array<Record<string, unknown>>) : [];
+}
+
 /**
  * Obtiene los días bloqueados/ocupados de una propiedad para generar iCal.
  */

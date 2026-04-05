@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Reservation } from '@/lib/types';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es as esLocale, enUS } from 'date-fns/locale';
+import { useLocale } from '@/components/providers/locale-provider';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
@@ -46,6 +47,8 @@ function formatMoney(amount: number, currency: string): string {
 }
 
 function SuccessContent() {
+  const { t, locale } = useLocale();
+  const dateFnsLocale = locale === 'en' ? enUS : esLocale;
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
   const reservationId = searchParams.get('reservation');
@@ -128,7 +131,7 @@ function SuccessContent() {
     };
 
     if (!paymentIntentId && !reservationId) {
-      setError('ID de pago o reserva no encontrado.');
+      setError(t('success_error_id', 'Payment or reservation ID not found.'));
       setLoading(false);
       return;
     }
@@ -174,7 +177,7 @@ function SuccessContent() {
         }
       }
 
-      setError('La confirmación está tardando más de lo habitual. Revisa tu correo; si el pago fue exitoso, recibirás la confirmación ahí.');
+      setError(t('success_error_slow', 'Confirmation is taking longer than usual. Check your email.'));
       setLoading(false);
       setPolling(false);
     };
@@ -184,7 +187,7 @@ function SuccessContent() {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [paymentIntentId, reservationId]);
+  }, [paymentIntentId, reservationId, t]);
 
   // Estado de Carga (inicial o polling)
   if (loading) {
@@ -192,12 +195,10 @@ function SuccessContent() {
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-gray-400 mb-4" />
         <p className="text-lg text-gray-600">
-          {polling ? 'Procesando tu pago... Un momento.' : 'Cargando confirmación...'}
+          {polling ? t('success_processing', 'Processing your payment…') : t('success_loading', 'Loading confirmation…')}
         </p>
         {polling && (
-          <p className="text-sm text-gray-500 mt-2">
-            El webhook puede tardar unos segundos en confirmar la reserva.
-          </p>
+          <p className="text-sm text-gray-500 mt-2">{t('success_webhook_note', 'Webhook may take a few seconds.')}</p>
         )}
       </div>
     );
@@ -208,10 +209,10 @@ function SuccessContent() {
     return (
       <Card className="max-w-2xl mx-auto border-red-200 bg-red-50">
         <CardContent className="pt-6 text-center">
-          <h2 className="text-2xl font-bold text-red-800 mb-2">Error al Cargar tu Reserva</h2>
-          <p className="text-red-700">{error || 'No se pudieron cargar los detalles de la reservación.'}</p>
+          <h2 className="text-2xl font-bold text-red-800 mb-2">{t('error_loading_reservation', 'Error Loading Your Reservation')}</h2>
+          <p className="text-red-700">{error || t('success_error_generic', 'Could not load booking details.')}</p>
           <Button asChild className="mt-6">
-            <Link href="/">Volver al Inicio</Link>
+            <Link href="/">{t('back_home', 'Back Home')}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -251,12 +252,12 @@ function SuccessContent() {
             <Check className="w-8 h-8 text-white" />
           </div>
           <h2 className={`text-2xl font-bold mb-2 ${pendingConfirmation ? 'text-amber-800' : 'text-green-800'}`}>
-            {pendingConfirmation ? 'Pago recibido' : '¡Pago Exitoso!'}
+            {pendingConfirmation ? t('payment_received', 'Payment received') : t('payment_success', 'Payment Successful!')}
           </h2>
           <p className={pendingConfirmation ? 'text-amber-700' : 'text-green-700'}>
             {pendingConfirmation
-              ? 'Tu pago está siendo procesado. Si el pago fue exitoso, recibirás la confirmación por correo en breve. En desarrollo local, configura el webhook con Stripe CLI para ver la confirmación al instante.'
-              : 'Tu reserva ha sido confirmada. Recibirás un correo de confirmación en breve.'}
+              ? t('payment_received_subtitle', 'Your payment is processing…')
+              : t('payment_success_subtitle', 'Your booking is confirmed. You will receive an email shortly.')}
           </p>
         </CardContent>
       </Card>
@@ -264,35 +265,35 @@ function SuccessContent() {
       {/* Reservation Details */}
       <Card>
         <CardHeader>
-          <CardTitle>Detalles de tu Reserva</CardTitle>
+          <CardTitle>{t('reservation_details', 'Your Booking Details')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">
-              {reservationData.propertyTitle ?? 'Tu reserva'}
+              {reservationData.propertyTitle ?? t('booking_title_fallback', 'Your booking')}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-600">Check-in</p>
-                  <p className="font-medium">{format(reservationData.checkIn, 'dd MMMM yyyy', { locale: es })}</p>
+                  <p className="text-sm text-gray-600">{t('check_in', 'Check-in')}</p>
+                  <p className="font-medium">{format(reservationData.checkIn, 'dd MMMM yyyy', { locale: dateFnsLocale })}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-600">Check-out</p>
-                  <p className="font-medium">{format(reservationData.checkOut, 'dd MMMM yyyy', { locale: es })}</p>
+                  <p className="text-sm text-gray-600">{t('check_out', 'Check-out')}</p>
+                  <p className="font-medium">{format(reservationData.checkOut, 'dd MMMM yyyy', { locale: dateFnsLocale })}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-600">Huéspedes</p>
+                  <p className="text-sm text-gray-600">{t('guests', 'Guests')}</p>
                   <p className="font-medium">{reservationData.guests}</p>
                 </div>
               </div>
@@ -301,13 +302,15 @@ function SuccessContent() {
                 <CreditCard className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
                   <p className="text-sm text-gray-600">
-                    {hasPaidDisplay ? 'Total pagado' : showUsdReferenceOnly ? 'Total reserva (referencia)' : 'Total pagado'}
+                    {hasPaidDisplay ? t('total_paid', 'Total paid') : showUsdReferenceOnly ? t('reservation_total_reference', 'Reservation total (reference)') : t('total_paid', 'Total paid')}
                   </p>
                   <p className="font-medium tabular-nums flex items-center gap-2 min-h-[1.5rem]">
                     {waitStripeForTotal ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                        <span className="text-gray-500 text-sm font-normal">Obteniendo importe del cobro…</span>
+                        <span className="text-gray-500 text-sm font-normal">
+                          {t('success_fetching_amount', 'Fetching charge amount…')}
+                        </span>
                       </>
                     ) : hasPaidDisplay && paidTotalFormatted ? (
                       paidTotalFormatted
@@ -319,13 +322,11 @@ function SuccessContent() {
                   </p>
                   {showUsdEquivalent && (
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Importe base de la reserva (USD): {formatMoney(reservationData.totalAmount, 'USD')}
+                      {t('success_base_usd', 'Reservation base (USD):')} {formatMoney(reservationData.totalAmount, 'USD')}
                     </p>
                   )}
                   {showUsdReferenceOnly && (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Importe en USD guardado en la reserva; si pagaste en MXN u otra moneda, revisa el recibo de Stripe.
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{t('success_usd_reference_note', 'USD amount on file; check Stripe for other currencies.')}</p>
                   )}
                 </div>
               </div>
@@ -334,10 +335,10 @@ function SuccessContent() {
 
           <div className="pt-4 border-t">
              <p className="text-sm text-gray-600 mb-2">
-              <strong>ID de Reserva:</strong> {reservationData.id}
+              <strong>{t('reservation_id', 'Booking ID')}:</strong> {reservationData.id}
             </p>
             <p className="text-sm text-gray-600">
-              <strong>Confirmación enviada a:</strong> {reservationData.guestEmail}
+              <strong>{t('confirmation_sent_to', 'Confirmation sent to')}:</strong> {reservationData.guestEmail}
             </p>
            </div>
         </CardContent>
@@ -346,15 +347,15 @@ function SuccessContent() {
       {/* What's Next (sin cambios) */}
       <Card>
         <CardHeader>
-          <CardTitle>¿Qué sigue?</CardTitle>
+          <CardTitle>{t('whats_next', "What's next?")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
             <Mail className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
-              <p className="font-medium">Confirmación por email</p>
+              <p className="font-medium">{t('confirmation_by_email', 'Email confirmation')}</p>
               <p className="text-sm text-gray-600">
-                Recibirás todos los detalles de tu reserva y las instrucciones de check-in.
+                {t('confirmation_by_email_subtitle', "You'll receive all booking details and check-in instructions.")}
               </p>
             </div>
           </div>
@@ -366,12 +367,12 @@ function SuccessContent() {
       <div className="flex flex-col sm:flex-row gap-4">
         <Button asChild className="flex-1">
           <Link href="/properties">
-             Explorar Más Propiedades
+             {t('explore_more_properties', 'Explore More Properties')}
           </Link>
         </Button>
         <Button asChild variant="outline" className="flex-1">
           <Link href="/services">
-            Descubrir Experiencias
+            {t('discover_experiences', 'Discover Experiences')}
           </Link>
         </Button>
       </div>

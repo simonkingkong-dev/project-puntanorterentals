@@ -9,15 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Loader2, Mail, Pencil } from 'lucide-react';
 import { format, isValid } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
 import { getPropertyBySlug } from '@/lib/firebase/properties';
-
-function formatDateSafe(value: string | undefined): string {
-  if (value == null || value === '') return '—';
-  const d = new Date(value);
-  return isValid(d) ? format(d, 'dd MMM yyyy', { locale: es }) : '—';
-}
 import { Property } from '@/lib/types';
+import { useLocale } from '@/components/providers/locale-provider';
+import type { Locale } from '@/lib/i18n/messages';
 
 type ConfirmedReservation = {
   id: string;
@@ -32,7 +28,15 @@ type ConfirmedReservation = {
   modifyToken: string | null;
 };
 
+function formatDateSafe(value: string | undefined, locale: Locale): string {
+  if (value == null || value === '') return '—';
+  const d = new Date(value);
+  const df = locale === 'en' ? enUS : es;
+  return isValid(d) ? format(d, 'dd MMM yyyy', { locale: df }) : '—';
+}
+
 export default function MyReservationsPage() {
+  const { t } = useLocale();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,35 +53,37 @@ export default function MyReservationsPage() {
         `/api/reservations/by-email?email=${encodeURIComponent(trimmed)}&for=reservations`
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Error al buscar');
+      if (!res.ok) throw new Error(data.error ?? t('my_reservations_error_fetch'));
       setReservations(data.reservations ?? []);
       if (!data.reservations?.length) {
-        setError('No se encontraron reservas confirmadas con ese email.');
+        setError(t('my_reservations_error_none'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al buscar reservas');
+      setError(err instanceof Error ? err.message : t('my_reservations_error_search'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[60vh] max-w-2xl mx-auto py-12 px-4">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Mis reservas</h1>
-      <p className="text-gray-600 mb-6">
-        Ingresa el email con el que reservaste para ver tus reservas confirmadas.
-      </p>
+    <div className="min-h-[60vh] max-w-2xl mx-auto py-12 sm:py-16 px-4">
+      <header className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          {t('my_reservations_title')}
+        </h1>
+        <p className="mt-2 text-muted-foreground leading-relaxed">{t('my_reservations_intro')}</p>
+      </header>
 
-      <div className="space-y-4 mb-8">
-        <Label htmlFor="my-reservations-email" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <Mail className="w-4 h-4" />
-          Email
+      <div className="space-y-4 mb-8 rounded-2xl border bg-card/80 p-6 shadow-sm">
+        <Label htmlFor="my-reservations-email" className="flex items-center gap-2 text-sm font-medium">
+          <Mail className="w-4 h-4 text-muted-foreground" />
+          {t('my_reservations_email_label')}
         </Label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             id="my-reservations-email"
             type="email"
-            placeholder="tu@email.com"
+            placeholder={t('placeholder_email')}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -91,16 +97,17 @@ export default function MyReservationsPage() {
             variant="secondary"
             disabled={loading || !email.trim()}
             onClick={handleSearch}
+            className="shrink-0 sm:min-w-[120px]"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('my_reservations_search')}
           </Button>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
       {reservations !== null && reservations.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Tus reservas confirmadas</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t('my_reservations_list_title')}</h2>
           {reservations.map((r) => (
             <ReservationCard key={r.id} reservation={r} />
           ))}
@@ -108,20 +115,20 @@ export default function MyReservationsPage() {
       )}
 
       {reservations !== null && reservations.length === 0 && !error && (
-        <Card className="border-gray-200">
-          <CardContent className="py-8 text-center">
-            <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600">No hay reservas confirmadas con ese email.</p>
-            <Button asChild variant="outline" className="mt-4">
-              <Link href="/properties">Ver propiedades</Link>
+        <Card className="border-border/80">
+          <CardContent className="py-10 text-center">
+            <Calendar className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
+            <p className="text-muted-foreground">{t('my_reservations_empty_card')}</p>
+            <Button asChild variant="outline" className="mt-6">
+              <Link href="/properties">{t('cart_explore')}</Link>
             </Button>
           </CardContent>
         </Card>
       )}
 
-      <div className="mt-8">
+      <div className="mt-10">
         <Button asChild variant="outline">
-          <Link href="/cart">Ir al carrito</Link>
+          <Link href="/cart">{t('my_reservations_go_cart')}</Link>
         </Button>
       </div>
     </div>
@@ -129,6 +136,7 @@ export default function MyReservationsPage() {
 }
 
 function ReservationCard({ reservation }: { reservation: ConfirmedReservation }) {
+  const { t, locale } = useLocale();
   const [property, setProperty] = useState<Property | null>(null);
 
   useEffect(() => {
@@ -149,25 +157,27 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
         ? `/properties/${reservation.propertySlug}`
         : '/properties';
 
+  const titleFallback = t('my_reservations_property_fallback');
+
   return (
-    <Card>
+    <Card className="overflow-hidden border-border/80 shadow-sm">
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">
-            {reservation.propertyTitle ?? property?.title ?? 'Propiedad'}
+        <div className="flex justify-between items-start gap-3">
+          <CardTitle className="text-lg leading-snug">
+            {reservation.propertyTitle ?? property?.title ?? titleFallback}
           </CardTitle>
-          <span className="text-xs font-medium px-2 py-1 rounded bg-green-100 text-green-800">
-            Confirmada
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 shrink-0">
+            {t('my_reservations_status_confirmed')}
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-4">
           {property?.images?.[0] && (
-            <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
               <Image
                 src={property.images[0]}
-                alt={property.title ?? 'Propiedad'}
+                alt={property.title ?? titleFallback}
                 fill
                 className="object-cover"
                 unoptimized
@@ -175,24 +185,25 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
               />
             </div>
           )}
-          <div className="flex-1 min-w-0 space-y-1 text-sm text-gray-600">
+          <div className="flex-1 min-w-0 space-y-1 text-sm text-muted-foreground">
             <p>
-              <span className="text-gray-500">Check-in:</span>{' '}
-              {formatDateSafe(reservation.checkIn)}
+              <span className="text-foreground/70">{t('check_in')}:</span>{' '}
+              {formatDateSafe(reservation.checkIn, locale)}
             </p>
             <p>
-              <span className="text-gray-500">Check-out:</span>{' '}
-              {formatDateSafe(reservation.checkOut)}
+              <span className="text-foreground/70">{t('check_out')}:</span>{' '}
+              {formatDateSafe(reservation.checkOut, locale)}
             </p>
             <p>
-              <span className="text-gray-500">Total:</span> ${reservation.totalAmount}
+              <span className="text-foreground/70">{t('my_reservations_total')}:</span>{' '}
+              ${reservation.totalAmount}
             </p>
           </div>
         </div>
-        <Button asChild variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+        <Button asChild variant="outline" size="sm" className="border-orange-300 text-orange-800 hover:bg-orange-50 dark:text-orange-200">
           <Link href={modifyHref} className="flex items-center gap-2">
             <Pencil className="w-4 h-4" />
-            Modificar reserva
+            {t('my_reservations_modify')}
           </Link>
         </Button>
       </CardContent>

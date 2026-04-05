@@ -26,14 +26,6 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalIndex, setModalIndex] = useState(0);
 
-  const nextImage = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
-
   const openModal = (index: number) => {
     setModalIndex(index);
     setIsModalOpen(true);
@@ -57,10 +49,10 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 h-96 lg:h-80">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-96 lg:h-[420px]">
         {/* Main Image */}
         <div 
-          className="lg:col-span-2 lg:row-span-2 relative overflow-hidden rounded-lg cursor-pointer group"
+          className="relative overflow-hidden rounded-lg cursor-pointer group h-full"
           onClick={() => openModal(currentIndex)}
         >
           <Image
@@ -71,53 +63,14 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
             unoptimized
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-          <Button
-            type="button"
-            variant="secondary"
-            className="absolute bottom-3 right-3 bg-black/70 hover:bg-black/80 text-white text-sm font-medium z-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              openModal(currentIndex);
-            }}
-          >
-            Mostrar todas las fotos
-          </Button>
-          
-          {/* Navigation arrows */}
-          {images.length > 1 && (
-            <>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prevImage();
-                }}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nextImage();
-                }}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </>
-          )}
         </div>
 
         {/* Thumbnail Grid */}
-        <div className="hidden lg:grid grid-cols-2 gap-2 lg:col-span-2 relative">
+        <div className="hidden lg:grid grid-cols-2 grid-rows-2 gap-2 h-full relative">
           {images.slice(1, 5).map((image, index) => (
             <div
               key={index + 1}
-              className="relative overflow-hidden rounded-lg cursor-pointer group bg-gray-200 aspect-square"
+              className="relative overflow-hidden rounded-lg cursor-pointer group bg-gray-200 h-full min-h-0"
               onClick={() => openModal(index + 1)}
             >
               <Image
@@ -130,26 +83,18 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
             </div>
           ))}
-          {images.length > 5 && (
-            <div
-              className="relative overflow-hidden rounded-lg cursor-pointer group bg-gray-900/80 flex items-center justify-center aspect-square"
-              onClick={() => openModal(5)}
-            >
-              <span className="text-white font-semibold">
-                +{images.length - 5} más
-              </span>
-            </div>
-          )}
           <Button
             type="button"
             variant="secondary"
-            className="absolute bottom-3 right-3 bg-black/70 hover:bg-black/80 text-white text-sm font-medium hidden lg:flex"
+            className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-gray-900 text-sm font-medium hidden lg:flex shadow"
             onClick={(e) => {
               e.stopPropagation();
               openModal(0);
             }}
           >
-            Mostrar todas las fotos
+            {images.length > 5
+              ? `Mostrar todas las fotos (+${images.length - 5})`
+              : 'Mostrar todas las fotos'}
           </Button>
         </div>
       </div>

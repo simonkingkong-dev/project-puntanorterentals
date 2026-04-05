@@ -10,10 +10,12 @@ import { Loader2, CreditCard, Shield, Calendar } from 'lucide-react';
 import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es as esLocale, enUS } from 'date-fns/locale';
 import { calculateNights } from '@/lib/utils/date';
 import { roundForDisplay } from '@/lib/round-display-money';
+import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
+import { useLocale } from '@/components/providers/locale-provider';
 
 // Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
@@ -48,6 +50,7 @@ function CheckoutForm({ reservationId }: { reservationId: string | null }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLocale();
 
   /**
    * Handles the payment confirmation process.
@@ -102,12 +105,12 @@ function CheckoutForm({ reservationId }: { reservationId: string | null }) {
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Procesando Pago...
+            {t('payment_processing', 'Processing Payment...')}
           </>
         ) : (
           <>
             <CreditCard className="w-4 h-4 mr-2" />
-            Confirmar Pago
+            {t('payment_confirm', 'Confirm Payment')}
           </>
         )}
       </Button>
@@ -153,6 +156,8 @@ function PaymentContent() {
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
   const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
   const previousCurrencyRef = useRef<Currency>('USD');
+  const { t, locale } = useLocale();
+  const dateFnsLocale = locale === 'en' ? enUS : esLocale;
 
   useEffect(() => {
     const draft = getDraft() || getDraftFromStorage();
@@ -385,7 +390,7 @@ function PaymentContent() {
     return (
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6 text-center">
-          <div className="text-red-500 mb-4">Error</div>
+          <div className="text-red-500 mb-4">{t('payment_error', 'Error')}</div>
           <p>{error}</p>
         </CardContent>
       </Card>
@@ -396,7 +401,7 @@ function PaymentContent() {
     return (
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6 text-center">
-          <div className="text-gray-500 mb-4">Cargando...</div>
+          <div className="text-gray-500 mb-4">{t('payment_loading', 'Loading…')}</div>
         </CardContent>
       </Card>
     );
@@ -405,12 +410,7 @@ function PaymentContent() {
   const displayAmountUsd = amount ?? 0;
   const serviceFeeUsd = Math.round(displayAmountUsd * 0.1);
   const subtotalUsd = displayAmountUsd - serviceFeeUsd;
-  const rate =
-    currency === 'MXN' && usdMxnRate != null
-      ? usdMxnRate
-      : currency === 'EUR' && usdEurRate != null
-        ? usdEurRate
-        : 1;
+  const rate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
   const displayAmount = roundForDisplay(displayAmountUsd * rate, currency);
   const serviceFee = roundForDisplay(serviceFeeUsd * rate, currency);
   const subtotal = roundForDisplay(subtotalUsd * rate, currency);
@@ -428,11 +428,16 @@ function PaymentContent() {
       return new Intl.NumberFormat('de-DE', {
         style: 'currency',
         currency: 'EUR',
-        minimumFractionDigits: 0,
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(val);
     }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val);
   }
   const checkInDate = reservationInfo?.checkIn ? new Date(reservationInfo.checkIn) : null;
   const checkOutDate = reservationInfo?.checkOut ? new Date(reservationInfo.checkOut) : null;
@@ -447,7 +452,7 @@ function PaymentContent() {
           <span className={`font-mono text-lg font-semibold ${secondsLeft <= 60 ? 'text-red-600' : 'text-gray-800'}`}>
             {formatTimeLeft(secondsLeft)}
           </span>
-          <span className="text-sm text-gray-500">restantes</span>
+          <span className="text-sm text-gray-500">{t('payment_timer_remaining', 'left')}</span>
         </div>
       )}
 
@@ -455,13 +460,13 @@ function PaymentContent() {
       {/* Aviso 10 minutos (solo reserva nueva; en modificación no hay tiempo límite) */}
       {secondsLeft !== null && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 text-sm">
-          <p className="font-medium">Tienes 10 minutos para completar el pago.</p>
-          <p className="mt-1">Pasado ese tiempo las fechas quedarán libres y tendrás que elegirlas de nuevo.</p>
+          <p className="font-medium">{t('payment_minutes_warning', 'You have 10 minutes to complete payment.')}</p>
+          <p className="mt-1">{t('payment_minutes_warning_detail', 'After that, dates will be released.')}</p>
         </div>
       )}
       {modification && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800 text-sm">
-          <p className="font-medium">Pago por diferencia de modificación de reserva.</p>
+          <p className="font-medium">{t('payment_modification_notice', 'Payment for reservation change.')}</p>
         </div>
       )}
 
@@ -471,29 +476,29 @@ function PaymentContent() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Resumen de reserva
+              {t('payment_reservation_summary', 'Booking summary')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-gray-600">Propiedad:</span>
+              <span className="text-gray-600">{t('payment_property_label', 'Property:')}</span>
               <span className="font-medium text-right">{reservationInfo.propertyTitle ?? '—'}</span>
             </div>
             <div className="flex justify-between items-baseline">
-              <span className="text-gray-600">Check-in:</span>
-              <span className="font-medium">{format(checkInDate, 'dd MMMM yyyy', { locale: es })}</span>
+              <span className="text-gray-600">{t('check_in', 'Check-in')}:</span>
+              <span className="font-medium">{format(checkInDate, 'dd MMMM yyyy', { locale: dateFnsLocale })}</span>
             </div>
             <div className="flex justify-between items-baseline">
-              <span className="text-gray-600">Check-out:</span>
-              <span className="font-medium">{format(checkOutDate, 'dd MMMM yyyy', { locale: es })}</span>
+              <span className="text-gray-600">{t('check_out', 'Check-out')}:</span>
+              <span className="font-medium">{format(checkOutDate, 'dd MMMM yyyy', { locale: dateFnsLocale })}</span>
             </div>
             <div className="flex justify-between items-baseline">
-              <span className="text-gray-600">Total huéspedes:</span>
+              <span className="text-gray-600">{t('payment_total_guests', 'Total guests:')}</span>
               <span className="font-medium">{reservationInfo.guests ?? 1}</span>
             </div>
             <div className="border-t pt-3 mt-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-gray-600">Total noches:</span>
+                <span className="text-gray-600">{t('payment_total_nights', 'Total nights:')}</span>
                 <span className="font-medium">{nights}</span>
               </div>
             </div>
@@ -504,24 +509,31 @@ function PaymentContent() {
       {/* Resumen de pago */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-          <CardTitle className="leading-none">Resumen de Pago</CardTitle>
+          <CardTitle className="leading-none">{t('payment_summary', 'Payment Summary')}</CardTitle>
           <CurrencySelect value={currency} onValueChange={setCurrency} />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between">
-            <span>Subtotal</span>
+            <span>{t('payment_subtotal', 'Subtotal')}</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Tarifa de servicio</span>
+            <span>{t('payment_service_fee', 'Service fee')}</span>
             <span>{formatPrice(serviceFee)}</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-            <span>Total</span>
+            <span>{t('payment_total', 'Total')}</span>
             <span>{formatPrice(displayAmount)}</span>
           </div>
           <p className="text-xs text-gray-500 pt-1">
-            El cobro se realizará en {currency === 'MXN' ? 'pesos mexicanos (MXN)' : currency === 'EUR' ? 'euros (EUR)' : 'dólares estadounidenses (USD)'} según la moneda seleccionada.
+            {t('payment_currency_note', 'You will be charged in {currency} based on the selected currency.').replace(
+              '{currency}',
+              currency === 'MXN'
+                ? t('payment_currency_name_mxn', 'Mexican pesos (MXN)')
+                : currency === 'EUR'
+                  ? t('payment_currency_name_eur', 'euros (EUR)')
+                  : t('payment_currency_name_usd', 'US dollars (USD)')
+            )}
           </p>
         </CardContent>
       </Card>
@@ -531,7 +543,7 @@ function PaymentContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            Información de Pago
+            {t('payment_info', 'Payment Information')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -547,8 +559,8 @@ function PaymentContent() {
           <div className="flex items-center gap-3">
             <Shield className="w-5 h-5 text-green-600" />
             <div className="text-sm text-green-800">
-              <p className="font-medium mb-1">Pago 100% Seguro</p>
-              <p>Tu información está protegida con encriptación SSL de nivel bancario.</p>
+              <p className="font-medium mb-1">{t('payment_secure_title', '100% Secure Payment')}</p>
+              <p>{t('payment_secure_subtitle', 'Your information is protected with bank-level SSL encryption.')}</p>
             </div>
           </div>
         </CardContent>
@@ -566,12 +578,13 @@ function PaymentContent() {
  * @returns {JSX.Element} JSX component of the payment page.
  */
 export default function PaymentPage() {
+  const { t } = useLocale();
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Finalizar Reserva</h1>
-          <p className="text-gray-600">Completa tu pago para confirmar la reserva</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{t('payment_title', 'Complete Reservation')}</h1>
+          <p className="text-gray-600">{t('payment_subtitle', 'Complete your payment to confirm your booking')}</p>
         </div>
 
         <Suspense fallback={

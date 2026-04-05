@@ -1,27 +1,43 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getServerLocale } from '@/lib/i18n/server';
+import { messages } from '@/lib/i18n/messages';
 
-export const metadata: Metadata = {
-  title: 'Política de Cancelación',
-  description: 'Condiciones de cancelación de reservas en Punta Norte Rentals.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+  return {
+    title: m.page_cancellation_title,
+    description: m.page_cancellation_meta,
+  };
+}
 
-export default function CancellationPage() {
+export default async function CancellationPage() {
+  const locale = await getServerLocale();
+  const m = messages[locale];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 prose prose-gray">
-        <h1 className="text-3xl font-bold text-gray-900">Política de Cancelación</h1>
-        <p className="text-gray-500 text-sm">Última actualización: 2025</p>
-        <div className="text-gray-600 space-y-4 mt-6">
-          <p>Cancelación gratuita hasta 24 horas antes del check-in. Después de ese plazo, el monto de la reserva no será reembolsable salvo acuerdo expreso.</p>
-          <p>Para cancelar, contacta a nuestro equipo con tu número de reserva. Los reembolsos se procesan en un plazo de 5 a 10 días hábiles.</p>
-        </div>
-        <div className="mt-8">
-          <Link href="/contact">
-            <Button>Contactar</Button>
-          </Link>
-        </div>
+    <div className="min-h-[70vh] bg-gradient-to-b from-muted/50 to-background">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+        <article className="rounded-2xl border bg-card/80 backdrop-blur-sm shadow-sm p-8 sm:p-10">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+            {m.page_cancellation_title}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">{m.page_cancellation_updated}</p>
+          <div className="mt-8 space-y-5 text-muted-foreground leading-relaxed">
+            <p>{m.page_cancellation_p1}</p>
+            <p>{m.page_cancellation_p2}</p>
+          </div>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Button asChild className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+              <Link href="/contact">{m.page_help_cta}</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/help">{m.page_help_title}</Link>
+            </Button>
+          </div>
+        </article>
       </div>
     </div>
   );

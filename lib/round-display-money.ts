@@ -1,8 +1,8 @@
-/** Redondeo para UI: MXN con centavos; USD/EUR se mantienen en unidades enteras para mostrar. */
+/** Redondeo para UI: MXN y EUR con centavos; USD en unidades enteras. */
 export function roundForDisplay(
   amount: number,
   currency: 'USD' | 'MXN' | 'EUR'
 ): number {
-  if (currency === 'MXN') return Math.round(amount * 100) / 100;
+  if (currency === 'MXN' || currency === 'EUR') return Math.round(amount * 100) / 100;
   return Math.round(amount);
 }

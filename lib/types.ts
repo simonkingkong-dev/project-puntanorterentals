@@ -20,22 +20,45 @@ export interface Property {
   summary?: string;
   /** Descripción corta local/Hostfully (Short Description). */
   shortDescription?: string;
+  shortDescriptionEs?: string;
+  shortDescriptionEn?: string;
   /** Descripción larga local/Hostfully (Long Description). */
   longDescription?: string;
+  longDescriptionEs?: string;
+  longDescriptionEn?: string;
   /** Notas para el huésped (Notes/booking notes). */
   notes?: string;
+  notesEs?: string;
+  notesEn?: string;
   /** Interacción con huéspedes (Hostfully). */
   interaction?: string;
+  interactionEs?: string;
+  interactionEn?: string;
   /** Descripción del barrio (Hostfully). */
   neighborhood?: string;
+  neighborhoodEs?: string;
+  neighborhoodEn?: string;
   /** Cómo acceder a la propiedad (Access). */
   access?: string;
+  accessEs?: string;
+  accessEn?: string;
   /** Descripción del espacio (Space). */
   space?: string;
+  spaceEs?: string;
+  spaceEn?: string;
   /** Información de transporte (Transit). */
   transit?: string;
+  transitEs?: string;
+  transitEn?: string;
   /** Manual de la casa / instrucciones (House Manual). */
   houseManual?: string;
+  houseManualEs?: string;
+  houseManualEn?: string;
+  /** Campos base localizados para render público por idioma. */
+  descriptionEs?: string;
+  descriptionEn?: string;
+  summaryEs?: string;
+  summaryEn?: string;
   /** Latitud para mapa (Hostfully). */
   latitude?: number;
   /** Longitud para mapa (Hostfully). */

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, MapPin, Users, Building, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Users, Building, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { getAdminProperties } from '@/lib/firebase-admin-queries';
 import DeletePropertyButton from './delete-property-button';
@@ -62,10 +62,6 @@ export default async function AdminPropertiesPage() {
                 <CardTitle className="text-lg line-clamp-1">{property.title}</CardTitle>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span className="truncate">{property.location}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
                     <span>{property.maxGuests} huéspedes</span>
                   </div>
@@ -73,11 +69,6 @@ export default async function AdminPropertiesPage() {
               </CardHeader>
               
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-gray-900">${property.pricePerNight}</span>
-                  <span className="text-sm text-gray-500">por noche</span>
-                </div>
-                
                 <div className="flex gap-2">
                   <Button asChild variant="outline" size="sm" className="flex-1">
                     <Link href={`/admin/properties/${property.id}/edit`}>

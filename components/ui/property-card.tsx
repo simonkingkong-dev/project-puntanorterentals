@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Users, Star } from 'lucide-react';
+import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
@@ -89,11 +89,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
               {property.title}
             </h3>
-            
-            <div className="flex items-center gap-2 text-gray-600">
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm">{property.location}</span>
-            </div>
             
             <div className="flex items-center gap-2 text-gray-600">
               <Users className="w-4 h-4" />
