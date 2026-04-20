@@ -14,6 +14,7 @@ import { getPropertyBySlug } from '@/lib/firebase/properties';
 import { Property } from '@/lib/types';
 import { useLocale } from '@/components/providers/locale-provider';
 import type { Locale } from '@/lib/i18n/messages';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 
 type ConfirmedReservation = {
   id: string;
@@ -180,8 +181,8 @@ function ReservationCard({ reservation }: { reservation: ConfirmedReservation })
                 alt={property.title ?? titleFallback}
                 fill
                 className="object-cover"
-                unoptimized
                 sizes="80px"
+                unoptimized={remoteImageShouldBypassOptimization(property.images[0])}
               />
             </div>
           )}

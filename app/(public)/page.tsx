@@ -12,9 +12,21 @@ import {
 } from "@/lib/firebase-admin-queries";
 import { getServerLocale } from "@/lib/i18n/server";
 import { messages } from "@/lib/i18n/messages";
+import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',
+  description: 'Descubre propiedades vacacionales excepcionales en Punta Norte. Reserva tu estadía ideal con el mejor servicio y ubicaciones únicas.',
+  openGraph: {
+    title: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',
+    description: 'Descubre propiedades vacacionales excepcionales en Punta Norte. Reserva tu estadía ideal con el mejor servicio.',
+    url: '/',
+    type: 'website',
+  },
+};
 
 function contentMap(items: { key: string; value: string }[]) {
   return Object.fromEntries(items.map((i) => [i.key, i.value]));

@@ -15,6 +15,15 @@ export const metadata: Metadata = {
     template: '%s | Punta Norte Rentals',
   },
   description: 'Descubre propiedades vacacionales excepcionales en destinos únicos.',
+  twitter: {
+    card: 'summary_large_image',
+    site: '@PuntaNorteRentals',
+  },
+  openGraph: {
+    siteName: 'Punta Norte Rentals',
+    type: 'website',
+    locale: 'es_MX',
+  },
 };
 
 export default function RootLayout({

@@ -19,6 +19,12 @@ import { roundForDisplay } from '@/lib/round-display-money';
 import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { toast } from 'sonner';
 import { useLocale } from '@/components/providers/locale-provider';
+import {
+  computeExtraGuestFeesUsd,
+  getExtraGuestFeePerNightUsd,
+  getIncludedGuests,
+} from '@/lib/pricing-guests';
+import { computeLodgingTaxesUsd } from '@/lib/lodging-taxes';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
@@ -27,6 +33,8 @@ function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): 
 interface ReservationFormProps {
   property: Property;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
+  bookingGuests: number;
+  onBookingGuestsChange: (n: number) => void;
   onReservationComplete?: () => void;
   currency?: Currency;
   pricePerNightDisplay?: number;
@@ -71,6 +79,8 @@ function formatPrice(amount: number, currency: Currency): string {
 export default function ReservationForm({ 
   property, 
   selectedDates,
+  bookingGuests,
+  onBookingGuestsChange,
   onReservationComplete,
   currency = 'USD',
   pricePerNightDisplay,
@@ -90,7 +100,6 @@ export default function ReservationForm({
     guestEmail: '',
     guestPhone: '',
     phoneCountryCode: defaultCountryShort,
-    guests: 1,
   });
   const [countrySearch, setCountrySearch] = useState('');
   const [hostfullyNightlyTotal, setHostfullyNightlyTotal] = useState<number | null>(null);
@@ -175,12 +184,23 @@ export default function ReservationForm({
       cancelled = true;
     };
   }, [property.id, property.hostfullyPropertyId, selectedCheckInTime, selectedCheckOutTime, pricePerNight, selectedCheckInDate, selectedCheckOutDate]);
-  const subtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
-  const feesUsd = Math.round(subtotalUsd * 0.1); // 10% service fee
-  const totalUsd = subtotalUsd + feesUsd;
+  const nightlySubtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
+  const extraGuestFeesUsd = useMemo(
+    () => computeExtraGuestFeesUsd(bookingGuests, nights, property),
+    [bookingGuests, nights, property.includedGuests, property.extraGuestFeePerNight, property]
+  );
+  const subtotalUsd = nightlySubtotalUsd + extraGuestFeesUsd;
+  const { ivaUsd, ishUsd, taxesUsd } = useMemo(
+    () => computeLodgingTaxesUsd(subtotalUsd),
+    [subtotalUsd]
+  );
+  const totalUsd = subtotalUsd + taxesUsd;
   const displayRate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
+  const nightlyDisplay = roundForDisplay(nightlySubtotalUsd * displayRate, currency);
+  const extraGuestDisplay = roundForDisplay(extraGuestFeesUsd * displayRate, currency);
   const subtotal = roundForDisplay(subtotalUsd * displayRate, currency);
-  const fees = roundForDisplay(feesUsd * displayRate, currency);
+  const ivaDisplay = roundForDisplay(ivaUsd * displayRate, currency);
+  const ishDisplay = roundForDisplay(ishUsd * displayRate, currency);
   const total = roundForDisplay(totalUsd * displayRate, currency);
 
   /**
@@ -199,7 +219,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    if (formData.guests > property.maxGuests) {
+    if (bookingGuests > property.maxGuests) {
       toast.error(
         t('toast_max_guests', 'This property accepts up to {n} guests').replace(
           '{n}',
@@ -254,7 +274,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           slug: property.slug,
           checkIn: checkInStr,
           checkOut: checkOutStr,
-          guests: formData.guests,
+          guests: bookingGuests,
           guestName: `${formData.guestFirstName} ${formData.guestLastName}`.trim(),
           guestFirstName: formData.guestFirstName,
           guestLastName: formData.guestLastName,
@@ -433,9 +453,9 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             <div>
               <Label htmlFor="guests">{t('reservation_guests_label', 'Number of guests *')}</Label>
-              <Select 
-                value={formData.guests.toString()} 
-                onValueChange={(value) => setFormData({ ...formData, guests: parseInt(value) })}
+              <Select
+                value={bookingGuests.toString()}
+                onValueChange={(value) => onBookingGuestsChange(parseInt(value, 10))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -459,11 +479,37 @@ const handleSubmit = async (e: React.FormEvent) => {
           {/* Price Breakdown */}
           <div className="space-y-3">
             <h3 className="font-semibold">{t('reservation_price_summary', 'Price summary')}</h3>
-            
+            <p className="text-xs text-gray-500">
+              {t('pricing_guests_included_short', 'Base rate includes {n} guests').replace(
+                '{n}',
+                String(getIncludedGuests(property))
+              )}
+              {getExtraGuestFeePerNightUsd(property) > 0
+                ? ` · +${getExtraGuestFeePerNightUsd(property)} USD/${t('night_singular', 'night')}/${t('property_guest_singular', 'guest')}`
+                : ''}
+            </p>
+
             <div className="flex justify-between text-sm">
+              <span>{t('pricing_accommodation', 'Accommodation (nights)')}</span>
+              <span>{formatPrice(nightlyDisplay, currency)}</span>
+            </div>
+            {extraGuestFeesUsd > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>
+                  {t('pricing_extra_guests', 'Extra guests')}
+                  <span className="block text-xs text-gray-500 font-normal">
+                    {t('pricing_extra_guests_detail', '{extra} × {nights} nights × {rate} USD/guest/night')
+                      .replace('{extra}', String(Math.max(0, bookingGuests - getIncludedGuests(property))))
+                      .replace('{nights}', String(nights))
+                      .replace('{rate}', String(getExtraGuestFeePerNightUsd(property)))}
+                  </span>
+                </span>
+                <span>{formatPrice(extraGuestDisplay, currency)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-gray-600">
               <span>
-                {nights}{' '}
-                {nights === 1 ? t('night_singular', 'night') : t('night_plural', 'nights')}
+                {t('payment_subtotal', 'Subtotal')}
               </span>
               <span>{formatPrice(subtotal, currency)}</span>
             </div>
@@ -488,8 +534,12 @@ const handleSubmit = async (e: React.FormEvent) => {
             )}
             
             <div className="flex justify-between text-sm">
-              <span>{t('payment_service_fee', 'Service fee')}</span>
-              <span>{formatPrice(fees, currency)}</span>
+              <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
+              <span>{formatPrice(ivaDisplay, currency)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+              <span>{formatPrice(ishDisplay, currency)}</span>
             </div>
             
             <Separator />

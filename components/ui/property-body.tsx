@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Property } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 import { Wifi, Car, Utensils, Home, Waves, Shield, Star } from "lucide-react";
@@ -14,6 +14,7 @@ import GoogleMap from "@/components/ui/google-map";
 import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
 import { useLocale } from "@/components/providers/locale-provider";
+import { getIncludedGuests } from "@/lib/pricing-guests";
 
 const amenityIcons: Record<string, LucideIcon> = {
   "WiFi de alta velocidad": Wifi,
@@ -67,6 +68,12 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const [selectedDates, setSelectedDates] = useState<
     { checkIn: Date; checkOut?: Date } | undefined
   >();
+  const [bookingGuests, setBookingGuests] = useState(() =>
+    Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property)))
+  );
+  useEffect(() => {
+    setBookingGuests(Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property))));
+  }, [property.id, property.maxGuests, property.includedGuests]);
   const useHostfullyWidgets = isHostfullyBookingEngine();
 
   const hasMap = property.latitude != null && property.longitude != null;
@@ -267,6 +274,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
               property={property}
               onDateSelect={setSelectedDates}
               selectedDates={selectedDates}
+              guestCount={bookingGuests}
               currency={currency}
               usdMxnRate={props.usdMxnRate}
               usdEurRate={props.usdEurRate}
@@ -290,6 +298,8 @@ export default function PropertyBody(props: PropertyBodyProps) {
             <ReservationForm
               property={property}
               selectedDates={selectedDates}
+              bookingGuests={bookingGuests}
+              onBookingGuestsChange={setBookingGuests}
               currency={currency}
               pricePerNightDisplay={pricePerNightDisplay}
               usdMxnRate={props.usdMxnRate}

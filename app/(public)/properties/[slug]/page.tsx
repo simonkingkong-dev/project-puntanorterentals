@@ -24,12 +24,16 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
     return { title: m.property_not_found_title };
   }
 
+  const description = property.description.length > 157
+    ? property.description.slice(0, 157) + '...'
+    : property.description;
+
   return {
     title: property.title,
-    description: property.description.slice(0, 160) + '...',
+    description,
     openGraph: {
       title: property.title + ' | Punta Norte Rentals',
-      description: property.description.slice(0, 160) + '...',
+      description,
       images: [
         {
           url: property.images[0] || '',

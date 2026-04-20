@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useCart, getCartItemKey, isDraft, type CartItem } from '@/lib/cart-context';
 import { getPropertyBySlug } from '@/lib/firebase/properties';
 import { Property } from '@/lib/types';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -236,8 +237,8 @@ function CartItemCard({
                   alt={property.title ?? 'Propiedad'}
                   fill
                   className="object-cover"
-                  unoptimized
                   sizes="96px"
+                  unoptimized={remoteImageShouldBypassOptimization(property.images[0])}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">

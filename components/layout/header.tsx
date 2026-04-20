@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Home, Building, ShoppingCart, Calendar } from 'lucide-react';
+import { Menu, Home, Building, ShoppingCart, Calendar, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -58,6 +58,7 @@ export default function Header() {
   const navigation = [
     { name: t('nav_home', 'Home'), href: '/', icon: Home },
     { name: t('nav_properties', 'Properties'), href: '/properties', icon: Building },
+    { name: t('nav_services', 'Services'), href: '/services', icon: Compass },
     { name: t('nav_my_reservations', 'My reservations'), href: '/my-reservations', icon: Calendar },
   ];
   useEffect(() => setMounted(true), []);
@@ -67,7 +68,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo con Título y Subtítulo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2" aria-label="Punta Norte Rentals - Inicio">
             {/* Ícono */}
             <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
               <Home className="w-4 h-4 text-white" />
@@ -116,10 +117,10 @@ export default function Header() {
               value={locale}
               onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
               className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-              aria-label="Language"
+              aria-label={t('nav_select_language', 'Select language')}
             >
-              <option value="es">ES</option>
-              <option value="en">EN</option>
+              <option value="es">Español</option>
+              <option value="en">English</option>
             </select>
           </nav>
 
@@ -127,7 +128,7 @@ export default function Header() {
           {mounted ? (
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label={t('nav_open_menu', 'Open menu')}>
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>

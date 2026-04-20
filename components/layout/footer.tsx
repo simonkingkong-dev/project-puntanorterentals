@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import { Compass, Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { tServer } from '@/lib/i18n/server';
 
@@ -10,6 +10,7 @@ export default async function Footer() {
   const about = await tServer('footer_about', 'About Us');
   const contactLabel = await tServer('footer_contact', 'Contact');
   const support = await tServer('footer_support', 'Support');
+  const services = await tServer('nav_services', 'Services');
   const helpCenter = await tServer('footer_help_center', 'Help Center');
   const terms = await tServer('footer_terms', 'Terms of Use');
   const privacy = await tServer('footer_privacy', 'Privacy Policy');
@@ -37,26 +38,20 @@ export default async function Footer() {
               {tagline}
             </p>
             <div className="flex space-x-4">
-              {social.facebook ? (
-                <Link href={social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
+              {social.facebook && (
+                <Link href={social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Facebook">
                   <Facebook className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Facebook className="w-5 h-5" /></span>
               )}
-              {social.instagram ? (
-                <Link href={social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
+              {social.instagram && (
+                <Link href={social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Instagram">
                   <Instagram className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Instagram className="w-5 h-5" /></span>
               )}
-              {social.twitter ? (
-                <Link href={social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Twitter">
+              {social.twitter && (
+                <Link href={social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Twitter / X">
                   <Twitter className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Twitter className="w-5 h-5" /></span>
               )}
             </div>
           </div>
@@ -68,6 +63,11 @@ export default async function Footer() {
               <li>
                 <Link href="/properties" className="text-gray-400 hover:text-white transition-colors">
                   {properties}
+                </Link>
+              </li>
+              <li>
+                <Link href="/services" className="text-gray-400 hover:text-white transition-colors">
+                  {services}
                 </Link>
               </li>
               <li>

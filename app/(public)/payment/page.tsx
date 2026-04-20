@@ -16,6 +16,7 @@ import { roundForDisplay } from '@/lib/round-display-money';
 import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
 import { useLocale } from '@/components/providers/locale-provider';
+import { resolveLodgingPricingFromTotalUsd } from '@/lib/lodging-taxes';
 
 // Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
@@ -408,12 +409,12 @@ function PaymentContent() {
   }
 
   const displayAmountUsd = amount ?? 0;
-  const serviceFeeUsd = Math.round(displayAmountUsd * 0.1);
-  const subtotalUsd = displayAmountUsd - serviceFeeUsd;
+  const { subtotalUsd, ivaUsd, ishUsd } = resolveLodgingPricingFromTotalUsd(displayAmountUsd);
   const rate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
   const displayAmount = roundForDisplay(displayAmountUsd * rate, currency);
-  const serviceFee = roundForDisplay(serviceFeeUsd * rate, currency);
   const subtotal = roundForDisplay(subtotalUsd * rate, currency);
+  const ivaDisplay = roundForDisplay(ivaUsd * rate, currency);
+  const ishDisplay = roundForDisplay(ishUsd * rate, currency);
 
   function formatPrice(val: number): string {
     if (currency === 'MXN') {
@@ -518,8 +519,12 @@ function PaymentContent() {
             <span>{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>{t('payment_service_fee', 'Service fee')}</span>
-            <span>{formatPrice(serviceFee)}</span>
+            <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
+            <span>{formatPrice(ivaDisplay)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+            <span>{formatPrice(ishDisplay)}</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
             <span>{t('payment_total', 'Total')}</span>

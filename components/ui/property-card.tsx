@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -7,6 +7,7 @@ import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 
 interface PropertyCardProps {
   property: Property;
@@ -53,7 +54,8 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             alt={property.title}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
-            unoptimized
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized={remoteImageShouldBypassOptimization(images[currentImageIndex])}
           />
           {images.length > 1 && (
             <>

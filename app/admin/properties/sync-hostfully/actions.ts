@@ -226,6 +226,17 @@ function findDescriptionLocale(
   );
 }
 
+function firstNumeric(...vals: unknown[]): number | undefined {
+  for (const v of vals) {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "createdAt" | "updatedAt"> {
   const name = extractDisplayName(h);
   const addr = h.address;
@@ -234,6 +245,28 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
   const pricing = (h.pricing ?? {}) as Record<string, unknown>;
   const maxGuests = Number(avail.maxGuests ?? avail.baseGuests ?? h.maxGuests ?? 4) || 4;
   const dailyRate = Number(pricing.dailyRate ?? pricing.rate ?? h.pricePerNight ?? 0) || 0;
+
+  const includedRaw = firstNumeric(
+    pricing.includedGuests,
+    pricing.baseGuests,
+    pricing.baseOccupancy,
+    avail.includedGuests,
+    h.includedGuests,
+    h.baseGuests
+  );
+  const includedGuests =
+    includedRaw !== undefined && includedRaw >= 1 ? Math.floor(includedRaw) : 2;
+
+  const extraFeeRaw = firstNumeric(
+    pricing.extraGuestFeePerNight,
+    pricing.extraGuestFee,
+    pricing.additionalGuestFeePerNight,
+    pricing.extraPersonFeePerNight,
+    pricing.extraPersonFee,
+    h.extraGuestFeePerNight
+  );
+  const extraGuestFeePerNight =
+    extraFeeRaw !== undefined && extraFeeRaw >= 0 ? extraFeeRaw : 10;
 
   // Descripción: priorizar campos largos/públicos si existen
   const descriptionCandidate =
@@ -353,6 +386,8 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
     descriptionEn: typeof (h as HostfullyRaw).descriptionEn === "string" ? (h as HostfullyRaw).descriptionEn as string : undefined,
     location,
     maxGuests,
+    includedGuests,
+    extraGuestFeePerNight,
     amenities,
     images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800"],
     pricePerNight: dailyRate,

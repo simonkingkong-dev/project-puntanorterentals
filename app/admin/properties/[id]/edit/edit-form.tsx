@@ -11,6 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from "@/lib/types";
+import {
+  DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
+  DEFAULT_INCLUDED_GUESTS,
+} from "@/lib/pricing-guests";
 import { handleUpdateProperty, UpdatePropertyFormData } from "../../actions";
 import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
@@ -58,6 +62,9 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     location: initialData.location,
     maxGuests: initialData.maxGuests,
     pricePerNight: initialData.pricePerNight,
+    includedGuests: initialData.includedGuests ?? DEFAULT_INCLUDED_GUESTS,
+    extraGuestFeePerNight:
+      initialData.extraGuestFeePerNight ?? DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
     featured: initialData.featured,
     amenities: initialData.amenities,
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
@@ -352,6 +359,39 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
                 <Switch checked={formData.featured} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))} />
                 <span className="text-sm text-gray-600">{formData.featured ? 'Sí' : 'No'}</span>
               </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="includedGuests">Huéspedes incluidos en la tarifa</Label>
+              <Input
+                id="includedGuests"
+                type="number"
+                min="1"
+                value={formData.includedGuests}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    includedGuests: parseInt(e.target.value, 10) || 1,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="extraGuestFeePerNight">Cargo extra / huésped / noche (USD)</Label>
+              <Input
+                id="extraGuestFeePerNight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.extraGuestFeePerNight}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    extraGuestFeePerNight: parseFloat(e.target.value) || 0,
+                  }))
+                }
+              />
             </div>
           </div>
         </CardContent>
