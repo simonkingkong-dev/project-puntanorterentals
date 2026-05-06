@@ -1,0 +1,14 @@
+{
+  "allowedPathPatterns": [
+    "environment-config-files"
+  ],
+  "paths": [
+    "C:/Users/Simon/Desktop/Proyectos/project/.env.local"
+  ],
+  "falsePositives": [
+    {
+      "pattern": "\\.env(\\.local)?$",
+      "reason": "Archivos de configuracion local del proyecto - no son secretos de produccion"
+    }
+  ]
+}

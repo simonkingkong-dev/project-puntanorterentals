@@ -15,6 +15,7 @@ import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
 import { useLocale } from "@/components/providers/locale-provider";
 import { getIncludedGuests } from "@/lib/pricing-guests";
+import ReviewForm from "@/components/ui/review-form";
 
 const amenityIcons: Record<string, LucideIcon> = {
   "WiFi de alta velocidad": Wifi,
@@ -228,7 +229,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
         )}
       </TabsContent>
 
-      <TabsContent value="reviews" className="mt-4">
+      <TabsContent value="reviews" className="mt-4 space-y-6">
         {hasReviews ? (
           <div className="space-y-4">
             {property.reviews!.map((review, index) => (
@@ -252,10 +253,11 @@ export default function PropertyBody(props: PropertyBodyProps) {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">
-            Las reseñas están disponibles en los canales de reserva (p. ej. Airbnb).
+          <p className="text-gray-500 text-sm">
+            {t("reviews_empty", "Aún no hay reseñas aprobadas para esta propiedad.")}
           </p>
         )}
+        <ReviewForm propertyId={property.id} />
       </TabsContent>
     </Tabs>
   );

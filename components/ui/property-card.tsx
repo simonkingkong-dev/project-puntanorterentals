@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
 import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
+import { useLocale } from '@/components/providers/locale-provider';
+import { getLocalizedPropertyTitle } from '@/lib/property-localization';
 
 interface PropertyCardProps {
   property: Property;
@@ -27,9 +29,11 @@ interface PropertyCardProps {
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const { locale } = useLocale();
   const images = property.images && property.images.length > 0
     ? property.images
     : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -51,7 +55,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <div className="relative h-64 overflow-hidden">
           <Image
             src={images[currentImageIndex]}
-            alt={property.title}
+            alt={propertyTitle}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -89,7 +93,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <CardContent className="p-6">
           <div className="space-y-3">
             <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
-              {property.title}
+              {propertyTitle}
             </h3>
             
             <div className="flex items-center gap-2 text-gray-600">

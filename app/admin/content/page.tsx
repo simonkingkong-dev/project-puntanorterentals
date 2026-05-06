@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Info, Save, type LucideIcon } from 'lucide-react';
+import { Home, Info, Save, X, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSiteContentForAdmin, updateSiteContentAdmin } from './actions';
+import { uploadImageToStorage } from '@/lib/firebase/storage';
 
 interface ContentSection {
   section: string;
@@ -18,7 +19,7 @@ interface ContentSection {
   fields: {
     key: string;
     label: string;
-    type: 'text' | 'textarea' | 'image' | 'url';
+    type: 'text' | 'textarea' | 'image' | 'imageGallery' | 'url';
     placeholder?: string;
   }[];
 }
@@ -40,6 +41,12 @@ const contentSections: ContentSection[] = [
         label: 'Subtítulo',
         type: 'textarea',
         placeholder: 'Propiedades vacacionales excepcionales en los destinos más hermosos...'
+      },
+      {
+        key: 'hero_cover_images',
+        label: 'Imágenes de portada (rotación)',
+        type: 'imageGallery',
+        placeholder: 'Una URL por línea'
       },
       {
         key: 'featured_properties_title',
@@ -139,6 +146,8 @@ const contentSections: ContentSection[] = [
  */
 export default function AdminContentPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(null);
+  const [draggingImageIndex, setDraggingImageIndex] = useState<number | null>(null);
   const [contentData, setContentData] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -175,6 +184,75 @@ export default function AdminContentPage() {
       ...prev,
       [fullKey]: value
     }));
+  };
+
+  const handleImageUpload = async (section: string, key: string, file: File) => {
+    const fullKey = `${section}_${key}`;
+    try {
+      setUploadingImageKey(fullKey);
+      const imageUrl = await uploadImageToStorage(file, 'site-content');
+      handleInputChange(section, key, imageUrl);
+      toast.success('Imagen cargada. Recuerda guardar los cambios.');
+    } catch (error) {
+      toast.error('No se pudo subir la imagen');
+    } finally {
+      setUploadingImageKey(null);
+    }
+  };
+
+  const parseImageList = (value: string): string[] => {
+    return value
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const serializeImageList = (images: string[]): string => images.join('\n');
+
+  const addImagesToGallery = async (section: string, key: string, files: File[]) => {
+    const fullKey = `${section}_${key}`;
+    try {
+      setUploadingImageKey(fullKey);
+      const uploadedUrls = await Promise.all(
+        files.map((file) => uploadImageToStorage(file, 'site-content'))
+      );
+
+      const current = parseImageList(contentData[fullKey] || '');
+      const merged = [...current, ...uploadedUrls];
+      handleInputChange(section, key, serializeImageList(merged));
+      toast.success('Imágenes cargadas. Recuerda guardar los cambios.');
+    } catch (error) {
+      toast.error('No se pudieron subir las imágenes');
+    } finally {
+      setUploadingImageKey(null);
+    }
+  };
+
+  const removeImageFromGallery = (section: string, key: string, urlToRemove: string) => {
+    const fullKey = `${section}_${key}`;
+    const current = parseImageList(contentData[fullKey] || '');
+    const updated = current.filter((url) => url !== urlToRemove);
+    handleInputChange(section, key, serializeImageList(updated));
+  };
+
+  const reorderGalleryImages = (section: string, key: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const fullKey = `${section}_${key}`;
+    const current = parseImageList(contentData[fullKey] || '');
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= current.length ||
+      toIndex >= current.length
+    ) {
+      return;
+    }
+
+    const updated = [...current];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    handleInputChange(section, key, serializeImageList(updated));
   };
 
   /**
@@ -257,6 +335,108 @@ export default function AdminContentPage() {
                               placeholder={field.placeholder}
                               rows={4}
                             />
+                          ) : field.type === 'image' ? (
+                            <div className="space-y-3">
+                              {value && (
+                                <div className="overflow-hidden rounded-md border bg-muted/20">
+                                  {/* eslint-disable-next-line @next/next/no-img-element -- Preview de imagen CMS */}
+                                  <img
+                                    src={value}
+                                    alt={field.label}
+                                    className="h-48 w-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <Input
+                                id={fullKey}
+                                type="url"
+                                value={value}
+                                onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                              />
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingImageKey === fullKey}
+                                onChange={(e) => {
+                                  const selectedFile = e.target.files?.[0];
+                                  if (selectedFile) {
+                                    void handleImageUpload(section.section, field.key, selectedFile);
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : field.type === 'imageGallery' ? (
+                            <div className="space-y-3">
+                              {parseImageList(value).length > 0 && (
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                  {parseImageList(value).map((imageUrl, index) => (
+                                    <div
+                                      key={`${imageUrl}-${index}`}
+                                      className={`relative overflow-hidden rounded-md border bg-muted/20 ${
+                                        draggingImageIndex === index ? "ring-2 ring-primary" : ""
+                                      }`}
+                                      draggable
+                                      onDragStart={() => setDraggingImageIndex(index)}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        if (draggingImageIndex !== null) {
+                                          reorderGalleryImages(
+                                            section.section,
+                                            field.key,
+                                            draggingImageIndex,
+                                            index
+                                          );
+                                        }
+                                        setDraggingImageIndex(null);
+                                      }}
+                                      onDragEnd={() => setDraggingImageIndex(null)}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element -- Preview de galería CMS */}
+                                      <img
+                                        src={imageUrl}
+                                        alt="Imagen de portada"
+                                        className="h-28 w-full object-cover"
+                                      />
+                                      <div className="pointer-events-none absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                                        {index + 1}
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute right-1 top-1 h-6 w-6"
+                                        onClick={() =>
+                                          removeImageFromGallery(section.section, field.key, imageUrl)
+                                        }
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <Textarea
+                                id={fullKey}
+                                value={value}
+                                onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                                rows={4}
+                              />
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                disabled={uploadingImageKey === fullKey}
+                                onChange={(e) => {
+                                  const selectedFiles = Array.from(e.target.files || []);
+                                  if (selectedFiles.length > 0) {
+                                    void addImagesToGallery(section.section, field.key, selectedFiles);
+                                  }
+                                }}
+                              />
+                            </div>
                           ) : (
                             <Input
                               id={fullKey}

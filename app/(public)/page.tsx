@@ -1,10 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, MapPin, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
 import ServiceCard from "@/components/ui/service-card";
+import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
 import {
   getFeaturedPropertiesAdmin,
   getFeaturedServicesAdmin,
@@ -45,19 +45,22 @@ export default async function HomePage() {
   const c = contentMap(homepageContent);
   const tx = (cmsKey: string, i18nKey: keyof (typeof messages)[Locale]) =>
     c[cmsKey]?.trim() || L[i18nKey];
+  const heroCoverImageFallback =
+    c.hero_cover_image?.trim() ||
+    "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=2070&auto=format&fit=crop";
+  const heroCoverImages = c.hero_cover_images
+    ? c.hero_cover_images
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [heroCoverImageFallback];
 
   return (
     <div className="flex flex-col min-h-screen">
       <section className="relative min-h-[520px] sm:min-h-[600px] flex items-center justify-center">
         <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=2070&auto=format&fit=crop"
-            alt=""
-            fill
-            className="object-cover brightness-[0.45]"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+          <HeroBackgroundRotator images={heroCoverImages} intervalMs={20000} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-center text-white pt-8 pb-12">
           <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/80 mb-4">
@@ -77,8 +80,8 @@ export default async function HomePage() {
 
       <section className="py-16 md:py-20 bg-background">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-10 md:mb-12">
-            <div className="max-w-2xl">
+          <div className="flex flex-col items-center gap-6 mb-10 md:mb-12">
+            <div className="max-w-2xl text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-gray-900">
                 {tx("featured_properties_title", "home_featured_title")}
               </h2>
@@ -95,10 +98,17 @@ export default async function HomePage() {
           </div>
 
           {featuredProperties.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {featuredProperties.map((property) => (
-                <PropertyCard key={property.id} property={property} />
-              ))}
+            <div className="relative">
+              <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3 md:gap-8">
+                {featuredProperties.map((property) => (
+                  <div
+                    key={property.id}
+                    className="min-w-[300px] max-w-[300px] snap-start sm:min-w-[340px] sm:max-w-[340px] lg:min-w-[360px] lg:max-w-[360px]"
+                  >
+                    <PropertyCard property={property} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center py-14 rounded-xl border border-dashed bg-muted/30">

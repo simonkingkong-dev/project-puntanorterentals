@@ -1,5 +1,11 @@
 export interface Property {
   id: string;
+  /** Nombre interno para operación/admin. No se muestra a clientes. */
+  internalName?: string;
+  /** Título público en español. */
+  titleEs?: string;
+  /** Título público en inglés. */
+  titleEn?: string;
   title: string;
   description: string;
   location: string;

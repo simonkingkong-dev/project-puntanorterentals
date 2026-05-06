@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPropertiesPage() {
   const data = await getAdminProperties();
   const properties = [...data].sort((a, b) =>
-    a.title.localeCompare(b.title, "es", { sensitivity: "base" })
+    (a.internalName || a.title).localeCompare((b.internalName || b.title), "es", { sensitivity: "base" })
   );
 
   return (
@@ -64,7 +64,9 @@ export default async function AdminPropertiesPage() {
               </div>
               
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg line-clamp-1">{property.title}</CardTitle>
+                <CardTitle className="text-lg line-clamp-1">
+                  {property.internalName || property.title}
+                </CardTitle>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4" />

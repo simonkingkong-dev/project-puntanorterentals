@@ -9,13 +9,15 @@ import PropertyBody from "@/components/ui/property-body";
 import { roundForDisplay } from "@/lib/round-display-money";
 import { getUsdDisplayMultiplier } from "@/lib/display-exchange-rate";
 import { useLocale } from "@/components/providers/locale-provider";
+import { getLocalizedPropertyTitle } from "@/lib/property-localization";
 
 interface PropertyPageContentProps {
   property: Property;
 }
 
 export default function PropertyPageContent({ property }: PropertyPageContentProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const [currency, setCurrency] = useState<"USD" | "MXN" | "EUR">("USD");
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
   const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
@@ -86,7 +88,7 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
 
   return (
     <div className="space-y-8">
-      <PropertyGallery images={property.images} title={property.title} />
+      <PropertyGallery images={property.images} title={propertyTitle} />
 
       {/* Título y datos bajo la galería */}
       <div>
@@ -98,7 +100,7 @@ export default function PropertyPageContent({ property }: PropertyPageContentPro
           )}
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          {property.title}
+          {propertyTitle}
         </h1>
         <div className="flex flex-wrap items-center gap-4 text-gray-600 text-sm md:text-base">
           <span className="flex items-center gap-1.5">

@@ -7,6 +7,7 @@ import PropertyPageContent from '@/components/property-page-content';
 import { getPropertyBySlugAdmin } from '@/lib/firebase-admin-queries';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
+import { getLocalizedPropertyTitle } from '@/lib/property-localization';
 
 interface PropertyPageProps {
   params: Promise<{
@@ -27,19 +28,20 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   const description = property.description.length > 157
     ? property.description.slice(0, 157) + '...'
     : property.description;
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
 
   return {
-    title: property.title,
+    title: propertyTitle,
     description,
     openGraph: {
-      title: property.title + ' | Punta Norte Rentals',
+      title: propertyTitle + ' | Punta Norte Rentals',
       description,
       images: [
         {
           url: property.images[0] || '',
           width: 1200,
           height: 630,
-          alt: property.title,
+          alt: propertyTitle,
         },
       ],
     },

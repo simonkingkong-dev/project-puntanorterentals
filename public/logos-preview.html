@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista previa de Logos - Punta Norte Rentals</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 50px;
+      font-size: 2.5em;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    }
+    .card img {
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      margin-bottom: 20px;
+      background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0/20px 20px;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .card-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .card-desc {
+      font-size: 0.95em;
+      color: #666;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .og-section {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-top: 40px;
+    }
+    .og-section h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 1.8em;
+    }
+    .og-section img {
+      width: 100%;
+      max-width: 800px;
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      color: #666;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Logos de Punta Norte Rentals</h1>
+
+    <div class="grid">
+      <div class="card">
+        <img src="/favicon.png" alt="Favicon">
+        <div class="card-title">Favicon</div>
+        <div class="card-desc">Pestaña del navegador • Icono pequeño en favoritos</div>
+      </div>
+
+      <div class="card">
+        <img src="/logo.png" alt="Logo Principal">
+        <div class="card-title">Logo Principal</div>
+        <div class="card-desc">Header y footer de la página • Logo del sitio</div>
+      </div>
+    </div>
+
+    <div class="og-section">
+      <h2>OG Image - Redes Sociales</h2>
+      <img src="/og-image.png" alt="OG Image">
+      <p style="text-align: center; margin-top: 20px; color: #666;">Vista previa para Facebook, Twitter, LinkedIn y otras plataformas</p>
+    </div>
+
+    <div class="footer">
+      <p>✓ Logos listos para usar en la aplicación</p>
+    </div>
+  </div>
+</body>
+</html>

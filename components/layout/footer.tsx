@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Compass, Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import Image from 'next/image';
+import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { tServer } from '@/lib/i18n/server';
 
@@ -26,9 +27,7 @@ export default async function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <Home className="w-4 h-4 text-white" />
-              </div>
+              <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
               <div className="flex flex-col leading-none">
                 <span className="text-lg font-bold leading-none">Punta Norte</span>
                 <span className="text-sm font-light leading-none">Rentals</span>

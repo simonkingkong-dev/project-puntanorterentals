@@ -30,6 +30,7 @@ import { useLocale } from "@/components/providers/locale-provider";
 import { remoteImageShouldBypassOptimization } from "@/lib/remote-image";
 import { computeExtraGuestFeesUsd } from "@/lib/pricing-guests";
 import { computeLodgingTaxesUsd, computeTotalWithLodgingTaxesUsd } from "@/lib/lodging-taxes";
+import { getLocalizedPropertyTitle } from "@/lib/property-localization";
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 type ReservationData = {
@@ -278,6 +279,7 @@ export default function ModifyReservationPage() {
   }
 
   const { reservation, property } = data;
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const confirmedAtMs = reservation.confirmedAt ? new Date(reservation.confirmedAt).getTime() : 0;
   const withinTwoHours = confirmedAtMs > 0 && Date.now() - confirmedAtMs < TWO_HOURS_MS;
 
@@ -334,14 +336,14 @@ export default function ModifyReservationPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{t("modify_title")}</h1>
-          <p className="text-muted-foreground">{property.title}</p>
+          <p className="text-muted-foreground">{propertyTitle}</p>
         </div>
 
         {property.images?.[0] && (
           <div className="relative h-48 rounded-xl overflow-hidden bg-muted">
             <Image
               src={property.images[0]}
-              alt={property.title}
+              alt={propertyTitle}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 896px"

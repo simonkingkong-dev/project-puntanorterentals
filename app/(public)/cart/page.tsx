@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useLocale } from '@/components/providers/locale-provider';
+import { getLocalizedPropertyTitle } from '@/lib/property-localization';
 
 type ReservationStatus = {
   status: string;
@@ -48,6 +49,7 @@ function CartItemCard({
   item: CartItem;
   onRemove: (key: string) => void;
 }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const key = getCartItemKey(item);
   const [property, setProperty] = useState<Property | null>(null);
@@ -55,6 +57,7 @@ function CartItemCard({
   const [statusLoading, setStatusLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const propertyTitle = property ? getLocalizedPropertyTitle(property, locale) : 'Cargando...';
 
   useEffect(() => {
     if (!item.slug) return;
@@ -234,7 +237,7 @@ function CartItemCard({
               {property?.images?.[0] ? (
                 <Image
                   src={property.images[0]}
-                  alt={property.title ?? 'Propiedad'}
+                  alt={propertyTitle}
                   fill
                   className="object-cover"
                   sizes="96px"
@@ -248,7 +251,7 @@ function CartItemCard({
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 truncate">
-                {property?.title ?? 'Cargando...'}
+                {propertyTitle}
               </h3>
               <div className="mt-2 space-y-1 text-sm text-gray-600">
                 <p>
