@@ -7,6 +7,8 @@ import { Property, SearchParams } from '@/lib/types';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 import { tServer } from '@/lib/i18n/server';
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: 'Propiedades Vacacionales',
   description: 'Explora nuestra colección completa de propiedades vacacionales excepcionales en destinos únicos.',

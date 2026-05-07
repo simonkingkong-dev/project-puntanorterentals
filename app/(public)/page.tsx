@@ -15,7 +15,7 @@ import { messages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: 'Punta Norte Rentals - Propiedades Vacacionales de Lujo',

@@ -9,6 +9,8 @@ import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
 import { getLocalizedPropertyTitle } from '@/lib/property-localization';
 
+export const dynamic = "force-dynamic";
+
 interface PropertyPageProps {
   params: Promise<{
     slug: string;
