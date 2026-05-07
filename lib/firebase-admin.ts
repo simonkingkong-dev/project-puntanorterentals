@@ -5,6 +5,28 @@ function formatPrivateKey(key: string) {
   return key.replace(/\\n/g, "\n");
 }
 
+function getProjectId(): string | undefined {
+  if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    return process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  }
+  if (process.env.GOOGLE_CLOUD_PROJECT) {
+    return process.env.GOOGLE_CLOUD_PROJECT;
+  }
+  if (process.env.GCLOUD_PROJECT) {
+    return process.env.GCLOUD_PROJECT;
+  }
+  const webapp = process.env.FIREBASE_WEBAPP_CONFIG;
+  if (webapp) {
+    try {
+      const parsed = JSON.parse(webapp) as { projectId?: string };
+      if (parsed.projectId) return parsed.projectId;
+    } catch {
+      // ignore malformed FIREBASE_WEBAPP_CONFIG and let validation fail below
+    }
+  }
+  return undefined;
+}
+
 function getAdminApp() {
   if (admin.apps.length > 0) {
     return admin.app();
@@ -16,9 +38,15 @@ function getAdminApp() {
   if (!process.env.FIREBASE_CLIENT_EMAIL) {
     throw new Error('❌ FALTA LA VARIABLE DE ENTORNO: FIREBASE_CLIENT_EMAIL en .env.local o en Firebase App Hosting secrets');
   }
+  const projectId = getProjectId();
+  if (!projectId) {
+    throw new Error(
+      '❌ FALTA projectId para Firebase Admin. Define NEXT_PUBLIC_FIREBASE_PROJECT_ID o usa entorno App Hosting/Cloud Run con GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT.'
+    );
+  }
   return admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+      projectId,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
       privateKey: formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY),
     }),
