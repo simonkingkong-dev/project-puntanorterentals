@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Property } from "@/lib/types";
 import PropertyCard from "@/components/ui/property-card";
 import GoogleMap, { GoogleMapMarker } from "@/components/ui/google-map";
+import { listingSearchQueryFromURLSearchParams } from "@/lib/listing-search-params";
 
 interface PropertiesMapLayoutProps {
   properties: Property[];
@@ -11,6 +13,8 @@ interface PropertiesMapLayoutProps {
 
 export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
 
   const markers = useMemo<GoogleMapMarker[]>(() => {
     return properties
@@ -20,9 +24,9 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
         lat: p.latitude as number,
         lng: p.longitude as number,
         title: p.title,
-        url: `/properties/${p.slug}`,
+        url: listingQs ? `/properties/${p.slug}?${listingQs}` : `/properties/${p.slug}`,
       }));
-  }, [properties]);
+  }, [properties, listingQs]);
 
   const initialCenter = useMemo(() => {
     if (markers.length > 0) {

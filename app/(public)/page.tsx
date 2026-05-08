@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight, MapPin, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
-import ServiceCard from "@/components/ui/service-card";
 import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
 import {
   getFeaturedPropertiesAdmin,
-  getFeaturedServicesAdmin,
   getSiteContentBySectionAdmin,
 } from "@/lib/firebase-admin-queries";
 import { getServerLocale } from "@/lib/i18n/server";
@@ -36,9 +35,8 @@ export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
 
-  const [featuredProperties, featuredServices, homepageContent] = await Promise.all([
+  const [featuredProperties, homepageContent] = await Promise.all([
     getFeaturedPropertiesAdmin(),
-    getFeaturedServicesAdmin(),
     getSiteContentBySectionAdmin("homepage"),
   ]);
 
@@ -98,18 +96,31 @@ export default async function HomePage() {
           </div>
 
           {featuredProperties.length > 0 ? (
-            <div className="relative">
-              <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3 md:gap-8">
-                {featuredProperties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="min-w-[300px] max-w-[300px] snap-start sm:min-w-[340px] sm:max-w-[340px] lg:min-w-[360px] lg:max-w-[360px]"
-                  >
-                    <PropertyCard property={property} />
-                  </div>
-                ))}
+            <Suspense
+              fallback={
+                <div className="flex gap-6 overflow-hidden pb-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="min-w-[300px] h-[420px] animate-pulse rounded-xl bg-muted sm:min-w-[340px] lg:min-w-[360px]"
+                    />
+                  ))}
+                </div>
+              }
+            >
+              <div className="relative">
+                <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3 md:gap-8">
+                  {featuredProperties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="min-w-[300px] max-w-[300px] snap-start sm:min-w-[340px] sm:max-w-[340px] lg:min-w-[360px] lg:max-w-[360px]"
+                    >
+                      <PropertyCard property={property} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Suspense>
           ) : (
             <div className="text-center py-14 rounded-xl border border-dashed bg-muted/30">
               <p className="text-muted-foreground">{L.home_featured_empty}</p>
@@ -124,31 +135,6 @@ export default async function HomePage() {
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12 md:mb-16 max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-gray-900">
-              {tx("features_title", "home_services_title")}
-            </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              {tx("features_subtitle", "home_services_subtitle")}
-            </p>
-          </div>
-
-          {featuredServices.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredServices.map((service) => (
-                <ServiceCard key={service.id} service={service} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 rounded-xl border border-dashed bg-background/80">
-              <p className="text-muted-foreground">{L.home_services_empty}</p>
-            </div>
-          )}
         </div>
       </section>
 

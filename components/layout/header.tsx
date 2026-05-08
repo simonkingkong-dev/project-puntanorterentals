@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, Home, Building, ShoppingCart, Calendar, Compass } from 'lucide-react';
+import { Menu, Home, Building, ShoppingCart, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -59,7 +59,6 @@ export default function Header() {
   const navigation = [
     { name: t('nav_home', 'Home'), href: '/', icon: Home },
     { name: t('nav_properties', 'Properties'), href: '/properties', icon: Building },
-    { name: t('nav_services', 'Services'), href: '/services', icon: Compass },
     { name: t('nav_my_reservations', 'My reservations'), href: '/my-reservations', icon: Calendar },
   ];
   useEffect(() => setMounted(true), []);

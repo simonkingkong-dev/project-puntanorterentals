@@ -115,7 +115,9 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
               {pageSubtitle}
             </p>
           </div>
-           <SearchForm />
+          <Suspense fallback={<Skeleton className="h-56 w-full max-w-4xl mx-auto rounded-xl" />}>
+            <SearchForm />
+          </Suspense>
         </div>
       </div>
 

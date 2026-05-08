@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Property } from '@/lib/types';
 import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { useLocale } from '@/components/providers/locale-provider';
 import { getLocalizedPropertyTitle } from '@/lib/property-localization';
+import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
 
 interface PropertyCardProps {
   property: Property;
@@ -29,6 +31,11 @@ interface PropertyCardProps {
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const searchParams = useSearchParams();
+  const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
+  const detailHref = listingQs
+    ? `/properties/${property.slug}?${listingQs}`
+    : `/properties/${property.slug}`;
   const { locale } = useLocale();
   const images = property.images && property.images.length > 0
     ? property.images
@@ -50,7 +57,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   };
 
   return (
-    <Link href={`/properties/${property.slug}`}>
+    <Link href={detailHref}>
       <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white">
         <div className="relative h-64 overflow-hidden">
           <Image
