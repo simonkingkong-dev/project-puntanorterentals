@@ -7,7 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Info, Save, X, type LucideIcon } from 'lucide-react';
+import {
+  FileText,
+  HelpCircle,
+  Home,
+  Info,
+  Save,
+  ScrollText,
+  ShieldCheck,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { getSiteContentForAdmin, updateSiteContentAdmin } from './actions';
 import { uploadImageToStorage } from '@/lib/firebase/storage';
@@ -104,6 +115,18 @@ const contentSections: ContentSection[] = [
         placeholder: 'Nuestra Historia'
       },
       {
+        key: 'page_about_title',
+        label: 'Título página About',
+        type: 'text',
+        placeholder: 'Acerca de nosotros'
+      },
+      {
+        key: 'page_about_meta',
+        label: 'Meta descripción página About',
+        type: 'textarea',
+        placeholder: 'Descripción SEO de la página About.'
+      },
+      {
         key: 'about_description',
         label: 'Descripción',
         type: 'textarea',
@@ -132,7 +155,92 @@ const contentSections: ContentSection[] = [
         label: 'Descripción Visión',
         type: 'textarea',
         placeholder: 'Ser la plataforma líder en...'
+      },
+      {
+        key: 'page_about_lead',
+        label: 'Lead página About',
+        type: 'textarea',
+        placeholder: 'Texto introductorio destacado de la página About.'
+      },
+      {
+        key: 'page_about_body',
+        label: 'Contenido página About',
+        type: 'textarea',
+        placeholder: 'Contenido principal de la página About.'
       }
+    ]
+  },
+  {
+    section: 'help',
+    title: 'Página de Ayuda',
+    icon: HelpCircle,
+    fields: [
+      { key: 'page_help_title', label: 'Título', type: 'text', placeholder: 'Centro de Ayuda' },
+      { key: 'page_help_meta', label: 'Meta descripción', type: 'textarea', placeholder: 'Descripción SEO de la página de ayuda.' },
+      { key: 'page_help_intro', label: 'Introducción', type: 'textarea', placeholder: 'Texto introductorio de ayuda.' },
+      { key: 'page_help_how_book_title', label: 'Título: Cómo reservar', type: 'text', placeholder: '¿Cómo reservar?' },
+      { key: 'page_help_how_book', label: 'Texto: Cómo reservar', type: 'textarea', placeholder: 'Explicación del proceso de reserva.' },
+      { key: 'page_help_how_cancel_title', label: 'Título: Cómo cancelar', type: 'text', placeholder: '¿Cómo cancelar o modificar?' },
+      { key: 'page_help_how_cancel', label: 'Texto: Cómo cancelar', type: 'textarea', placeholder: 'Explicación de cancelación o modificación.' },
+      { key: 'page_help_link_cancellation', label: 'Texto link a cancelación', type: 'text', placeholder: 'Ver políticas de cancelación' }
+    ]
+  },
+  {
+    section: 'terms',
+    title: 'Términos y Condiciones',
+    icon: ScrollText,
+    fields: [
+      { key: 'page_terms_title', label: 'Título', type: 'text', placeholder: 'Términos de uso' },
+      { key: 'page_terms_meta', label: 'Meta descripción', type: 'textarea', placeholder: 'Descripción SEO de términos.' },
+      { key: 'page_terms_updated', label: 'Texto de actualización', type: 'text', placeholder: 'Última actualización: ...' },
+      { key: 'page_terms_p1', label: 'Párrafo 1', type: 'textarea', placeholder: 'Primer párrafo de términos.' },
+      { key: 'page_terms_p2', label: 'Párrafo 2', type: 'textarea', placeholder: 'Segundo párrafo de términos.' }
+    ]
+  },
+  {
+    section: 'privacy',
+    title: 'Política de Privacidad',
+    icon: ShieldCheck,
+    fields: [
+      { key: 'page_privacy_title', label: 'Título', type: 'text', placeholder: 'Política de privacidad' },
+      { key: 'page_privacy_meta', label: 'Meta descripción', type: 'textarea', placeholder: 'Descripción SEO de privacidad.' },
+      { key: 'page_privacy_updated', label: 'Texto de actualización', type: 'text', placeholder: 'Última actualización: ...' },
+      { key: 'page_privacy_p1', label: 'Párrafo 1', type: 'textarea', placeholder: 'Primer párrafo de privacidad.' },
+      { key: 'page_privacy_p2', label: 'Párrafo 2', type: 'textarea', placeholder: 'Segundo párrafo de privacidad.' }
+    ]
+  },
+  {
+    section: 'cancellation',
+    title: 'Política de Cancelación',
+    icon: FileText,
+    fields: [
+      { key: 'page_cancellation_title', label: 'Título', type: 'text', placeholder: 'Políticas de cancelación' },
+      { key: 'page_cancellation_meta', label: 'Meta descripción', type: 'textarea', placeholder: 'Descripción SEO de cancelación.' },
+      { key: 'page_cancellation_updated', label: 'Texto de actualización', type: 'text', placeholder: 'Última actualización: ...' },
+      { key: 'page_cancellation_p1', label: 'Párrafo 1', type: 'textarea', placeholder: 'Primer párrafo de cancelación.' },
+      { key: 'page_cancellation_p2', label: 'Párrafo 2', type: 'textarea', placeholder: 'Segundo párrafo de cancelación.' }
+    ]
+  },
+  {
+    section: 'services_page',
+    title: 'Página de Servicios',
+    icon: Sparkles,
+    fields: [
+      { key: 'page_services_title', label: 'Título', type: 'text', placeholder: 'Servicios' },
+      { key: 'page_services_meta', label: 'Subtítulo/Meta', type: 'textarea', placeholder: 'Describe los servicios disponibles.' },
+      { key: 'page_services_intro', label: 'Texto en estado vacío', type: 'textarea', placeholder: 'Texto cuando no hay servicios cargados.' },
+      { key: 'services_more_title', label: 'Título sección secundaria', type: 'text', placeholder: 'Más experiencias' }
+    ]
+  },
+  {
+    section: 'properties_page',
+    title: 'Página de Propiedades',
+    icon: Home,
+    fields: [
+      { key: 'properties_title_all', label: 'Título (sin filtros)', type: 'text', placeholder: 'Todas las propiedades' },
+      { key: 'properties_subtitle_all', label: 'Subtítulo (sin filtros)', type: 'textarea', placeholder: 'Explora nuestra colección de propiedades.' },
+      { key: 'properties_title_results', label: 'Título (con filtros)', type: 'text', placeholder: 'Resultados de búsqueda' },
+      { key: 'properties_subtitle_results', label: 'Subtítulo (con filtros)', type: 'textarea', placeholder: 'Propiedades que coinciden con tu búsqueda.' }
     ]
   }
 ];
@@ -300,9 +408,13 @@ export default function AdminContentPage() {
 
         {/* Content Tabs */}
         <Tabs defaultValue="homepage" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="flex h-auto w-full flex-wrap gap-2 bg-transparent p-0">
             {contentSections.map((section) => (
-              <TabsTrigger key={section.section} value={section.section} className="flex items-center gap-2">
+              <TabsTrigger
+                key={section.section}
+                value={section.section}
+                className="flex items-center gap-2 border bg-white data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <section.icon className="w-4 h-4" />
                 {section.title}
               </TabsTrigger>

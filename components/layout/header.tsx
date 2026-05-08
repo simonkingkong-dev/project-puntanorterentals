@@ -121,6 +121,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-64">
+                <SheetTitle className="sr-only">{t('nav_mobile_menu_title', 'Navigation menu')}</SheetTitle>
                 <div className="flex items-center space-x-2 mb-8">
                   <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
                   <div className="flex flex-col leading-none">

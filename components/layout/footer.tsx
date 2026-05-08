@@ -1,12 +1,21 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import { Facebook, Instagram, Mail, MapPin, MessageCircle, Twitter } from 'lucide-react';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { tServer } from '@/lib/i18n/server';
+
+function getWhatsAppLink(phone?: string): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  return `https://wa.me/${digits}`;
+}
 
 export default async function Footer() {
   const contact = await getContactInfoAdmin();
   const social = contact?.socialMedia ?? {};
+  const directWhatsAppProfileLink = process.env.NEXT_PUBLIC_WHATSAPP_CHAT_URL?.trim();
+  const whatsappHref = directWhatsAppProfileLink || getWhatsAppLink(contact?.phone);
   const quickLinks = await tServer('footer_quick_links', 'Quick Links');
   const about = await tServer('footer_about', 'About Us');
   const contactLabel = await tServer('footer_contact', 'Contact');
@@ -74,11 +83,6 @@ export default async function Footer() {
                   {about}
                 </Link>
               </li>
-              <li>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
-                  {contactLabel}
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -118,9 +122,16 @@ export default async function Footer() {
                 <span className="text-gray-400 text-sm">{contact?.address ?? '—'}</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                {contact?.phone ? (
-                  <a href={`tel:${contact.phone}`} className="text-gray-400 text-sm hover:text-white">{contact.phone}</a>
+                <MessageCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                {contact?.phone && whatsappHref ? (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 text-sm hover:text-white"
+                  >
+                    {contact.phone}
+                  </a>
                 ) : (
                   <span className="text-gray-400 text-sm">—</span>
                 )}

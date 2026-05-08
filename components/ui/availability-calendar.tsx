@@ -49,7 +49,7 @@ function isInPreviewRangeNotStart(date: Date, from: Date, to: Date): boolean {
 }
 
 const MONTHS_WINDOW = 12;
-const MONTHS_VISIBLE = 3;
+const MOBILE_BREAKPOINT = 1024; // lg
 
 export default function AvailabilityCalendar({
   property,
@@ -71,6 +71,7 @@ export default function AvailabilityCalendar({
   const fromMonth = today;
   const toMonth = addMonths(today, MONTHS_WINDOW - 1);
   const [currentMonth, setCurrentMonth] = useState(() => today);
+  const [monthsVisible, setMonthsVisible] = useState(3);
   const [realtimeAvailability, setRealtimeAvailability] = useState<
     Record<string, boolean> | null
   >(null);
@@ -79,8 +80,18 @@ export default function AvailabilityCalendar({
   );
   const [loadingRealtime, setLoadingRealtime] = useState(false);
 
+  useEffect(() => {
+    const computeMonthsVisible = () =>
+      window.innerWidth < MOBILE_BREAKPOINT ? 1 : 3;
+
+    setMonthsVisible(computeMonthsVisible());
+    const handleResize = () => setMonthsVisible(computeMonthsVisible());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const canGoPrev = currentMonth > fromMonth;
-  const canGoNext = currentMonth < subMonths(toMonth, MONTHS_VISIBLE - 1);
+  const canGoNext = currentMonth < subMonths(toMonth, monthsVisible - 1);
 
   const goPrevMonth = useCallback(() => {
     if (canGoPrev) setCurrentMonth((m) => subMonths(m, 1));
@@ -490,7 +501,7 @@ export default function AvailabilityCalendar({
           onDayClick={handleDayClick}
           disabled={isDateDisabled}
           locale={dateFnsLocale}
-          numberOfMonths={MONTHS_VISIBLE}
+          numberOfMonths={monthsVisible}
           month={currentMonth}
           onMonthChange={setCurrentMonth}
           fromMonth={fromMonth}
@@ -522,23 +533,23 @@ export default function AvailabilityCalendar({
           </div>
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-4 text-sm text-gray-700">
-          <div className="space-y-1">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] gap-3 text-sm text-gray-700">
+          <div className="space-y-1 rounded-md border border-gray-200 p-3 md:border-0 md:p-0">
             <p>
-              <span className="font-medium">{t('calendar_check_in_label', 'Check-in date:')}</span>{' '}
+              <span className="font-medium">{locale === 'es' ? 'Entrada:' : 'Check-in:'}</span>{' '}
               {displayCheckIn
                 ? format(displayCheckIn, 'dd MMMM yyyy', { locale: dateFnsLocale })
                 : '—'}
             </p>
             <p>
-              <span className="font-medium">{t('calendar_check_out_label', 'Check-out date:')}</span>{' '}
+              <span className="font-medium">{locale === 'es' ? 'Salida:' : 'Check-out:'}</span>{' '}
               {displayCheckOut
                 ? format(displayCheckOut, 'dd MMMM yyyy', { locale: dateFnsLocale }) +
                     (checkOutIsPreview ? ` (${t('calendar_preview', 'preview')})` : '')
                 : '—'}
             </p>
           </div>
-          <div className="min-w-[260px] border-l border-gray-200 pl-4">
+          <div className="rounded-md border border-gray-200 p-3 md:rounded-none md:border-0 md:border-l md:pl-4 md:pr-0 md:py-0">
             <p className="font-semibold text-gray-900">{t('calendar_price_summary', 'Price summary')}</p>
             {nightsCount > 0 ? (
               <div className="mt-2 space-y-1.5 text-gray-900">

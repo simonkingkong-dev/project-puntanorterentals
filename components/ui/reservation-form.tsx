@@ -13,7 +13,7 @@ import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
 import { useCart } from '@/lib/cart-context';
-import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
+import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { roundForDisplay } from '@/lib/round-display-money';
 import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
@@ -289,7 +289,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       if (!reservationId) throw new Error('No se recibió ID de reserva');
 
       toast.success(t('toast_redirecting', 'Redirecting to payment…'));
-      router.push(`/payment?reservation=${reservationId}`);
+      router.push(`/payment?reservation=${reservationId}&currency=${currency}`);
       onReservationComplete?.();
     } catch (error: unknown) {
       const message =
@@ -484,39 +484,16 @@ const handleSubmit = async (e: React.FormEvent) => {
                 '{n}',
                 String(getIncludedGuests(property))
               )}
-              {getExtraGuestFeePerNightUsd(property) > 0
-                ? ` · +${getExtraGuestFeePerNightUsd(property)} USD/${t('night_singular', 'night')}/${t('property_guest_singular', 'guest')}`
-                : ''}
             </p>
 
             <div className="flex justify-between text-sm">
               <span>{t('pricing_accommodation', 'Accommodation (nights)')}</span>
               <span>{formatPrice(nightlyDisplay, currency)}</span>
             </div>
-            {extraGuestFeesUsd > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>
-                  {t('pricing_extra_guests', 'Extra guests')}
-                  <span className="block text-xs text-gray-500 font-normal">
-                    {t('pricing_extra_guests_detail', '{extra} × {nights} nights × {rate} USD/guest/night')
-                      .replace('{extra}', String(Math.max(0, bookingGuests - getIncludedGuests(property))))
-                      .replace('{nights}', String(nights))
-                      .replace('{rate}', String(getExtraGuestFeePerNightUsd(property)))}
-                  </span>
-                </span>
-                <span>{formatPrice(extraGuestDisplay, currency)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>
-                {t('payment_subtotal', 'Subtotal')}
-              </span>
-              <span>{formatPrice(subtotal, currency)}</span>
-            </div>
             {nights > 0 && (
               <details className="rounded-md p-2 text-sm [&[open]_.nightly-chevron]:rotate-90">
-                <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
-                  <span className="nightly-chevron text-gray-500 inline-block transition-transform duration-200 ease-out">{'>'}</span>
+                <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="nightly-chevron h-4 w-4 text-gray-500 transition-transform duration-200 ease-out" />
                   <span>{t('reservation_nightly_detail', 'View nightly breakdown')}</span>
                 </summary>
                 <div className="mt-2 space-y-1">
@@ -532,7 +509,23 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </details>
             )}
-            
+            {extraGuestFeesUsd > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>
+                  {t('pricing_extra_guests', 'Extra guests')}
+                  <span className="block text-xs text-gray-500 font-normal">
+                    ({Math.max(0, bookingGuests - getIncludedGuests(property))} x {getExtraGuestFeePerNightUsd(property)} USD {t('pricing_per_night', 'por noche')})
+                  </span>
+                </span>
+                <span>{formatPrice(extraGuestDisplay, currency)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>
+                {t('payment_subtotal', 'Subtotal')}
+              </span>
+              <span>{formatPrice(subtotal, currency)}</span>
+            </div>
             <div className="flex justify-between text-sm">
               <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
               <span>{formatPrice(ivaDisplay, currency)}</span>

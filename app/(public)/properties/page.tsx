@@ -2,10 +2,18 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getAdminProperties, searchPropertiesAdmin } from '@/lib/firebase-admin-queries';
+import {
+  getAdminProperties,
+  getSiteContentBySectionAdmin,
+  searchPropertiesAdmin,
+} from '@/lib/firebase-admin-queries';
 import { Property, SearchParams } from '@/lib/types';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 import { tServer } from '@/lib/i18n/server';
+
+function contentMap(items: { key: string; value: string }[]) {
+  return Object.fromEntries(items.map((i) => [i.key, i.value]));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +95,8 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
   const params = (await searchParams) ?? {};
+  const pageContent = await getSiteContentBySectionAdmin('properties_page');
+  const c = contentMap(pageContent);
   const hasFilters = Object.keys(params).length > 0;
   const numericSearchParams: SearchParams = {
     ...params,
@@ -101,6 +111,12 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
     hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all',
     hasFilters ? 'Properties matching your search' : 'Browse our curated collection of premium vacation stays.'
   );
+  const finalTitle = hasFilters
+    ? c.properties_title_results?.trim() || pageTitle
+    : c.properties_title_all?.trim() || pageTitle;
+  const finalSubtitle = hasFilters
+    ? c.properties_subtitle_results?.trim() || pageSubtitle
+    : c.properties_subtitle_all?.trim() || pageSubtitle;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -109,10 +125,10 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {pageTitle}
+              {finalTitle}
             </h1>
             <p className="text-lg text-gray-600">
-              {pageSubtitle}
+              {finalSubtitle}
             </p>
           </div>
           <Suspense fallback={<Skeleton className="h-56 w-full max-w-4xl mx-auto rounded-xl" />}>

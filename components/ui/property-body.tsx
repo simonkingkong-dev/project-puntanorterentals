@@ -282,10 +282,30 @@ export default function PropertyBody(props: PropertyBodyProps) {
               usdEurRate={props.usdEurRate}
             />
           </div>
+          {/* Mobile: formulario de reserva inmediatamente después del calendario */}
+          <div id="booking-section" className="lg:hidden mt-6 space-y-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+              <p className="font-medium text-gray-900 mb-2">Reserva en 2 pasos</p>
+              <p>Elige fechas en el calendario y completa tus datos para pagar de forma segura (Stripe).</p>
+              <div className="mt-4">
+                <CurrencySelect value={currency} onValueChange={onCurrencyChange} />
+              </div>
+            </div>
+            <ReservationForm
+              property={property}
+              selectedDates={selectedDates}
+              bookingGuests={bookingGuests}
+              onBookingGuestsChange={setBookingGuests}
+              currency={currency}
+              pricePerNightDisplay={pricePerNightDisplay}
+              usdMxnRate={props.usdMxnRate}
+              usdEurRate={props.usdEurRate}
+            />
+          </div>
           {propertyTabs}
         </div>
 
-        <div id="booking-section" className="lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
+        <div className="hidden lg:block lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
           <div className="max-h-[calc(100vh-6rem)] space-y-4 overflow-y-auto [scrollbar-gutter:stable] pr-1">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-gray-900 mb-2">Reserva directa</p>

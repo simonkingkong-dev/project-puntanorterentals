@@ -49,6 +49,12 @@ export async function updateSiteContentAdmin(
     revalidatePath("/admin/content");
     revalidatePath("/");
     revalidatePath("/about");
+    revalidatePath("/help");
+    revalidatePath("/terms");
+    revalidatePath("/privacy");
+    revalidatePath("/cancellation");
+    revalidatePath("/services");
+    revalidatePath("/properties");
     return { success: true };
   } catch (error) {
     console.error("Error updating site content:", error);

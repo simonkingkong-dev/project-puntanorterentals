@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import WhatsAppFab from '@/components/layout/whatsapp-fab';
 import { CartProvider } from '@/lib/cart-context';
 import { LocaleProvider } from '@/components/providers/locale-provider';
 import { getServerLocale } from '@/lib/i18n/server';
@@ -37,6 +38,7 @@ async function LocaleLayout({
         <main id="main-content" className="flex-1">
           {children}
         </main>
+        <WhatsAppFab />
         <Footer />
       </CartProvider>
     </LocaleProvider>

@@ -69,17 +69,24 @@ export default async function HomePage() {
           <HeroBackgroundRotator images={heroCoverImages} intervalMs={20000} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
         </div>
-        <div className="relative z-10 container mx-auto px-4 text-center text-white pt-8 pb-12">
-          <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/80 mb-4">
-            Punta Norte Rentals
-          </p>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-5 max-w-4xl mx-auto leading-tight">
-            {tx("hero_title", "home_hero_title")}
-          </h1>
-          <p className="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
-            {tx("hero_subtitle", "home_hero_subtitle")}
-          </p>
-          <div className="bg-white/10 backdrop-blur-md p-5 sm:p-6 rounded-xl max-w-4xl mx-auto border border-white/10 shadow-xl">
+        <div className="relative z-10 container mx-auto px-4 text-white min-h-[520px] sm:min-h-[600px] flex flex-col justify-center py-10 sm:py-12 md:py-14">
+          <div className="text-center mt-10 sm:mt-14 md:mt-20">
+            <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/80 mb-4">
+              Punta Norte Rentals
+            </p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-5 max-w-4xl mx-auto leading-tight">
+              {tx("hero_title", "home_hero_title")}
+            </h1>
+            <p className="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
+              {tx("hero_subtitle", "home_hero_subtitle")}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-background py-6 sm:py-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
             <SearchFormClient />
           </div>
         </div>
@@ -193,11 +200,6 @@ export default async function HomePage() {
             <Link href="/properties">
               <Button size="lg" className="w-full sm:w-auto min-w-[200px]">
                 {tx("cta_properties", "home_cta_properties")}
-              </Button>
-            </Link>
-            <Link href="/contact">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto min-w-[200px]">
-                {tx("cta_contact", "home_cta_contact")}
               </Button>
             </Link>
           </div>
