@@ -430,12 +430,12 @@ export default function ModifyReservationPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           {withinTwoHours ? (
             <>
               <Button
                 variant="destructive"
-                className="bg-red-600 hover:bg-red-700"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={actionLoading}
               >
@@ -446,68 +446,44 @@ export default function ModifyReservationPage() {
                 )}
               </Button>
               {priceDiff > 0 ? (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    payDiffLabel(t, priceDiff)
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : payDiffLabel(t, priceDiff)}
                 </Button>
               ) : priceDiff < 0 ? (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleRefundDifference} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_refund_difference")
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleRefundDifference} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_refund_difference")}
                 </Button>
               ) : (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_apply_changes")
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_apply_changes")}
                 </Button>
               )}
             </>
           ) : (
             <>
-              <Button variant="outline" disabled className="opacity-50 cursor-not-allowed bg-red-50 text-red-800 border-red-200">
+              <Button variant="outline" disabled className="w-full sm:w-auto opacity-50 cursor-not-allowed bg-red-50 text-red-800 border-red-200">
                 {t("modify_cancel_booking")}
               </Button>
               {canApplyAdditive ? (
                 <>
                   {priceDiff > 0 ? (
-                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
-                      {actionLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        payDiffLabel(t, priceDiff)
-                      )}
+                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : payDiffLabel(t, priceDiff)}
                     </Button>
                   ) : (
-                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
-                      {actionLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        t("modify_apply_changes")
-                      )}
+                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_apply_changes")}
                     </Button>
                   )}
                 </>
               ) : (
                 <Button
                   variant="outline"
-                  className="border-orange-300 text-orange-800 hover:bg-orange-50"
+                  className="w-full sm:w-auto border-orange-300 text-orange-800 hover:bg-orange-50"
                   onClick={handleRequestModification}
                   disabled={actionLoading}
                 >
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_request_change")
-                  )}
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_request_change")}
                 </Button>
               )}
             </>

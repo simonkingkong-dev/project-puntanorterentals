@@ -264,7 +264,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
 
   if (!useHostfullyWidgets) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -285,7 +285,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
           {propertyTabs}
         </div>
 
-        <div className="lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
+        <div id="booking-section" className="lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
           <div className="max-h-[calc(100vh-6rem)] space-y-4 overflow-y-auto [scrollbar-gutter:stable] pr-1">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-gray-900 mb-2">Reserva directa</p>
@@ -347,7 +347,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
       <div className="lg:col-span-2 space-y-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Reservar</h2>
