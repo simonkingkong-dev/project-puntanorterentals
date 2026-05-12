@@ -27,6 +27,10 @@ import type { Property } from "@/lib/types";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
 import { useLocale } from "@/components/providers/locale-provider";
+import { remoteImageShouldBypassOptimization } from "@/lib/remote-image";
+import { computeExtraGuestFeesUsd } from "@/lib/pricing-guests";
+import { computeLodgingTaxesUsd, computeTotalWithLodgingTaxesUsd } from "@/lib/lodging-taxes";
+import { getLocalizedPropertyTitle } from "@/lib/property-localization";
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 type ReservationData = {
@@ -149,7 +153,10 @@ export default function ModifyReservationPage() {
   const handleUpdateConfirmed = async () => {
     if (!id || !token || !data || !selectedDates?.checkIn || !selectedDates?.checkOut) return;
     const nightsHere = calculateNights(selectedDates.checkIn, selectedDates.checkOut);
-    const total = Math.round(nightsHere * (data.property?.pricePerNight ?? 0) * 1.1);
+    const p = data.property;
+    const nightly = nightsHere * (p?.pricePerNight ?? 0);
+    const extraGuest = p ? computeExtraGuestFeesUsd(guests, nightsHere, p) : 0;
+    const total = Math.round(computeTotalWithLodgingTaxesUsd(nightly + extraGuest));
     setActionLoading(true);
     try {
       const res = await fetch(`/api/reservations/${id}/update-confirmed`, {
@@ -185,7 +192,10 @@ export default function ModifyReservationPage() {
   const handleRefundDifference = async () => {
     if (!id || !token || !data || !selectedDates?.checkIn || !selectedDates?.checkOut) return;
     const nightsHere = calculateNights(selectedDates.checkIn, selectedDates.checkOut);
-    const total = Math.round(nightsHere * (data.property?.pricePerNight ?? 0) * 1.1);
+    const p = data.property;
+    const nightly = nightsHere * (p?.pricePerNight ?? 0);
+    const extraGuest = p ? computeExtraGuestFeesUsd(guests, nightsHere, p) : 0;
+    const total = Math.round(computeTotalWithLodgingTaxesUsd(nightly + extraGuest));
     setActionLoading(true);
     try {
       const res = await fetch(`/api/reservations/${id}/refund-difference`, {
@@ -269,6 +279,7 @@ export default function ModifyReservationPage() {
   }
 
   const { reservation, property } = data;
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const confirmedAtMs = reservation.confirmedAt ? new Date(reservation.confirmedAt).getTime() : 0;
   const withinTwoHours = confirmedAtMs > 0 && Date.now() - confirmedAtMs < TWO_HOURS_MS;
 
@@ -278,9 +289,11 @@ export default function ModifyReservationPage() {
     selectedDates?.checkIn && selectedDates?.checkOut
       ? calculateNights(selectedDates.checkIn, selectedDates.checkOut)
       : calculateNights(reservation.checkIn, reservation.checkOut);
-  const subtotal = nights * property.pricePerNight;
-  const fees = Math.round(subtotal * 0.1);
-  const newTotal = subtotal + fees;
+  const nightlyOnlyUsd = nights * property.pricePerNight;
+  const extraGuestUsd = computeExtraGuestFeesUsd(guests, nights, property);
+  const subtotalBeforeService = nightlyOnlyUsd + extraGuestUsd;
+  const { ivaUsd, ishUsd, taxesUsd } = computeLodgingTaxesUsd(subtotalBeforeService);
+  const newTotal = subtotalBeforeService + taxesUsd;
   const previousTotal = reservation.totalAmount;
   const priceDiff = newTotal - previousTotal;
 
@@ -323,18 +336,18 @@ export default function ModifyReservationPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{t("modify_title")}</h1>
-          <p className="text-muted-foreground">{property.title}</p>
+          <p className="text-muted-foreground">{propertyTitle}</p>
         </div>
 
         {property.images?.[0] && (
           <div className="relative h-48 rounded-xl overflow-hidden bg-muted">
             <Image
               src={property.images[0]}
-              alt={property.title}
+              alt={propertyTitle}
               fill
               className="object-cover"
-              unoptimized
               sizes="(max-width: 768px) 100vw, 896px"
+              unoptimized={remoteImageShouldBypassOptimization(property.images[0])}
             />
           </div>
         )}
@@ -382,6 +395,24 @@ export default function ModifyReservationPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("pricing_accommodation")}</span>
+              <span>${nightlyOnlyUsd}</span>
+            </div>
+            {extraGuestUsd > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("pricing_extra_guests")}</span>
+                <span>${extraGuestUsd}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("payment_tax_iva")}</span>
+              <span>${ivaUsd}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("payment_tax_ish")}</span>
+              <span>${ishUsd}</span>
+            </div>
+            <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("modify_previous_total")}</span>
               <span>${previousTotal}</span>
             </div>
@@ -399,12 +430,12 @@ export default function ModifyReservationPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           {withinTwoHours ? (
             <>
               <Button
                 variant="destructive"
-                className="bg-red-600 hover:bg-red-700"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={actionLoading}
               >
@@ -415,68 +446,44 @@ export default function ModifyReservationPage() {
                 )}
               </Button>
               {priceDiff > 0 ? (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    payDiffLabel(t, priceDiff)
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : payDiffLabel(t, priceDiff)}
                 </Button>
               ) : priceDiff < 0 ? (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleRefundDifference} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_refund_difference")
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleRefundDifference} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_refund_difference")}
                 </Button>
               ) : (
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_apply_changes")
-                  )}
+                <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_apply_changes")}
                 </Button>
               )}
             </>
           ) : (
             <>
-              <Button variant="outline" disabled className="opacity-50 cursor-not-allowed bg-red-50 text-red-800 border-red-200">
+              <Button variant="outline" disabled className="w-full sm:w-auto opacity-50 cursor-not-allowed bg-red-50 text-red-800 border-red-200">
                 {t("modify_cancel_booking")}
               </Button>
               {canApplyAdditive ? (
                 <>
                   {priceDiff > 0 ? (
-                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
-                      {actionLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        payDiffLabel(t, priceDiff)
-                      )}
+                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handlePayDifference} disabled={actionLoading}>
+                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : payDiffLabel(t, priceDiff)}
                     </Button>
                   ) : (
-                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
-                      {actionLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        t("modify_apply_changes")
-                      )}
+                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600" onClick={handleUpdateConfirmed} disabled={actionLoading}>
+                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_apply_changes")}
                     </Button>
                   )}
                 </>
               ) : (
                 <Button
                   variant="outline"
-                  className="border-orange-300 text-orange-800 hover:bg-orange-50"
+                  className="w-full sm:w-auto border-orange-300 text-orange-800 hover:bg-orange-50"
                   onClick={handleRequestModification}
                   disabled={actionLoading}
                 >
-                  {actionLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("modify_request_change")
-                  )}
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("modify_request_change")}
                 </Button>
               )}
             </>

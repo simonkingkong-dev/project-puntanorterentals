@@ -11,6 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from "@/lib/types";
+import {
+  DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
+  DEFAULT_INCLUDED_GUESTS,
+} from "@/lib/pricing-guests";
 import { handleUpdateProperty, UpdatePropertyFormData } from "../../actions";
 import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
@@ -34,6 +38,12 @@ interface PropertyEditFormProps {
   initialData: Property;
 }
 
+const isNextRedirectError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") return false;
+  const maybeDigest = (error as { digest?: unknown }).digest;
+  return typeof maybeDigest === "string" && maybeDigest.startsWith("NEXT_REDIRECT");
+};
+
 /** Campos numéricos de widgets como string en inputs HTML. */
 type PropertyEditFormState = Omit<
   UpdatePropertyFormData,
@@ -53,11 +63,17 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
   
   // 1. El estado del formulario principal
   const [formData, setFormData] = useState<PropertyEditFormState>({
+    internalName: initialData.internalName ?? '',
+    titleEs: initialData.titleEs ?? initialData.title ?? '',
+    titleEn: initialData.titleEn ?? '',
     title: initialData.title,
     description: initialData.description,
     location: initialData.location,
     maxGuests: initialData.maxGuests,
     pricePerNight: initialData.pricePerNight,
+    includedGuests: initialData.includedGuests ?? DEFAULT_INCLUDED_GUESTS,
+    extraGuestFeePerNight:
+      initialData.extraGuestFeePerNight ?? DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
     featured: initialData.featured,
     amenities: initialData.amenities,
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
@@ -191,6 +207,10 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
       const propertyData: UpdatePropertyFormData = {
         ...formRest,
+        internalName: formData.internalName?.trim() || undefined,
+        titleEs: formData.titleEs?.trim() || undefined,
+        titleEn: formData.titleEn?.trim() || undefined,
+        title: formData.titleEs?.trim() || formData.title?.trim() || '',
         images: finalImageUrls,
         hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
         hostfullyLeadWidgetUuid: formData.hostfullyLeadWidgetUuid?.trim() || undefined,
@@ -213,6 +233,9 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         toast.success("Propiedad actualizada exitosamente.");
       }
     } catch (error) {
+      if (isNextRedirectError(error)) {
+        return;
+      }
       console.error("Error al actualizar la propiedad:", error);
       toast.error("Error al subir las imágenes. Revisa la consola.");
     } finally {
@@ -246,6 +269,17 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Submit superior sticky */}
+      <div className="sticky top-3 z-20 flex gap-4 rounded-lg border bg-background/95 p-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <Button type="submit" disabled={isPending} className="flex-1">
+          {isPending ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+          ) : (
+            <><Save className="w-4 h-4 mr-2" /> Guardar Cambios</>
+          )}
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Idioma de contenido</CardTitle>
@@ -280,9 +314,43 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         <CardHeader><CardTitle>Información Básica</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="internalName">Nombre interno (solo admin)</Label>
+              <Input
+                id="internalName"
+                value={formData.internalName ?? ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, internalName: e.target.value }))
+                }
+                placeholder="Ej: Casa Naranja Principal / Unidad A"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este nombre es solo para operación interna. No se muestra a los clientes.
+              </p>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="title">Título *</Label>
-              <Input id="title" value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} required />
+              <Label htmlFor="titleEs">Título (ES) *</Label>
+              <Input
+                id="titleEs"
+                value={formData.titleEs ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    titleEs: e.target.value,
+                    title: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="titleEn">Title (EN) *</Label>
+              <Input
+                id="titleEn"
+                value={formData.titleEn ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, titleEn: e.target.value }))}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Ubicación *</Label>
@@ -352,6 +420,39 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
                 <Switch checked={formData.featured} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))} />
                 <span className="text-sm text-gray-600">{formData.featured ? 'Sí' : 'No'}</span>
               </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="includedGuests">Huéspedes incluidos en la tarifa</Label>
+              <Input
+                id="includedGuests"
+                type="number"
+                min="1"
+                value={formData.includedGuests}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    includedGuests: parseInt(e.target.value, 10) || 1,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="extraGuestFeePerNight">Cargo extra / huésped / noche (USD)</Label>
+              <Input
+                id="extraGuestFeePerNight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.extraGuestFeePerNight}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    extraGuestFeePerNight: parseFloat(e.target.value) || 0,
+                  }))
+                }
+              />
             </div>
           </div>
         </CardContent>

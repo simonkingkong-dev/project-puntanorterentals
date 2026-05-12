@@ -1,12 +1,17 @@
- "use client";
+"use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
+import { useLocale } from '@/components/providers/locale-provider';
+import { getLocalizedPropertyTitle } from '@/lib/property-localization';
+import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
 
 interface PropertyCardProps {
   property: Property;
@@ -26,9 +31,16 @@ interface PropertyCardProps {
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const searchParams = useSearchParams();
+  const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
+  const detailHref = listingQs
+    ? `/properties/${property.slug}?${listingQs}`
+    : `/properties/${property.slug}`;
+  const { locale } = useLocale();
   const images = property.images && property.images.length > 0
     ? property.images
     : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
+  const propertyTitle = getLocalizedPropertyTitle(property, locale);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -45,15 +57,16 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   };
 
   return (
-    <Link href={`/properties/${property.slug}`}>
+    <Link href={detailHref}>
       <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white">
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
           <Image
             src={images[currentImageIndex]}
-            alt={property.title}
+            alt={propertyTitle}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
-            unoptimized
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized={remoteImageShouldBypassOptimization(images[currentImageIndex])}
           />
           {images.length > 1 && (
             <>
@@ -84,10 +97,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         
-        <CardContent className="p-6">
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
-              {property.title}
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
+              {propertyTitle}
             </h3>
             
             <div className="flex items-center gap-2 text-gray-600">

@@ -14,11 +14,15 @@ import { generateDateRange, getFirstBlockedNight } from '@/lib/utils/date';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { useLocale } from '@/components/providers/locale-provider';
+import { computeExtraGuestFeesUsd, getIncludedGuests } from '@/lib/pricing-guests';
+import { computeLodgingTaxesUsd } from '@/lib/lodging-taxes';
 
 interface AvailabilityCalendarProps {
   property: Property;
   onDateSelect: (dates: { checkIn: Date; checkOut?: Date }) => void;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
+  /** Huéspedes seleccionados (para estimar cargo extra en el resumen). */
+  guestCount?: number;
   currency?: Currency;
   usdMxnRate?: number | null;
   usdEurRate?: number | null;
@@ -45,12 +49,13 @@ function isInPreviewRangeNotStart(date: Date, from: Date, to: Date): boolean {
 }
 
 const MONTHS_WINDOW = 12;
-const MONTHS_VISIBLE = 3;
+const MOBILE_BREAKPOINT = 1024; // lg
 
 export default function AvailabilityCalendar({
   property,
   onDateSelect,
   selectedDates,
+  guestCount = 1,
   currency = 'USD',
   usdMxnRate = null,
   usdEurRate = null,
@@ -66,6 +71,7 @@ export default function AvailabilityCalendar({
   const fromMonth = today;
   const toMonth = addMonths(today, MONTHS_WINDOW - 1);
   const [currentMonth, setCurrentMonth] = useState(() => today);
+  const [monthsVisible, setMonthsVisible] = useState(3);
   const [realtimeAvailability, setRealtimeAvailability] = useState<
     Record<string, boolean> | null
   >(null);
@@ -74,8 +80,18 @@ export default function AvailabilityCalendar({
   );
   const [loadingRealtime, setLoadingRealtime] = useState(false);
 
+  useEffect(() => {
+    const computeMonthsVisible = () =>
+      window.innerWidth < MOBILE_BREAKPOINT ? 1 : 3;
+
+    setMonthsVisible(computeMonthsVisible());
+    const handleResize = () => setMonthsVisible(computeMonthsVisible());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const canGoPrev = currentMonth > fromMonth;
-  const canGoNext = currentMonth < subMonths(toMonth, MONTHS_VISIBLE - 1);
+  const canGoNext = currentMonth < subMonths(toMonth, monthsVisible - 1);
 
   const goPrevMonth = useCallback(() => {
     if (canGoPrev) setCurrentMonth((m) => subMonths(m, 1));
@@ -351,7 +367,7 @@ export default function AvailabilityCalendar({
         )
       : 0;
   const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
-  const nightsSubtotal = useMemo(() => {
+  const nightlySumUsd = useMemo(() => {
     if (!displayCheckIn || !displayCheckOut || nightsCount <= 0) return 0;
     const rates = property.hostfullyPropertyId ? realtimeDailyRates ?? {} : property.dailyRates ?? {};
     const cursor = new Date(
@@ -375,7 +391,7 @@ export default function AvailabilityCalendar({
       total += usdAmount;
       cursor.setDate(cursor.getDate() + 1);
     }
-    return roundForDisplay(total * displayRate, currency);
+    return total;
   }, [
     displayCheckIn,
     displayCheckOut,
@@ -384,10 +400,40 @@ export default function AvailabilityCalendar({
     realtimeDailyRates,
     property.dailyRates,
     property.pricePerNight,
-    displayRate,
-    currency,
-    usdEurRate,
   ]);
+  const extraGuestFeesUsd = useMemo(
+    () => computeExtraGuestFeesUsd(guestCount, nightsCount, property),
+    [guestCount, nightsCount, property.includedGuests, property.extraGuestFeePerNight, property]
+  );
+  const accommodationDisplay = useMemo(
+    () => roundForDisplay(nightlySumUsd * displayRate, currency),
+    [nightlySumUsd, displayRate, currency]
+  );
+  const extraGuestDisplay = useMemo(
+    () => roundForDisplay(extraGuestFeesUsd * displayRate, currency),
+    [extraGuestFeesUsd, displayRate, currency]
+  );
+  const staySubtotalUsd = nightlySumUsd + extraGuestFeesUsd;
+  const { ivaUsd, ishUsd, taxesUsd } = useMemo(
+    () => computeLodgingTaxesUsd(staySubtotalUsd),
+    [staySubtotalUsd]
+  );
+  const staySubtotalDisplay = useMemo(
+    () => roundForDisplay(staySubtotalUsd * displayRate, currency),
+    [staySubtotalUsd, displayRate, currency]
+  );
+  const ivaDisplay = useMemo(
+    () => roundForDisplay(ivaUsd * displayRate, currency),
+    [ivaUsd, displayRate, currency]
+  );
+  const ishDisplay = useMemo(
+    () => roundForDisplay(ishUsd * displayRate, currency),
+    [ishUsd, displayRate, currency]
+  );
+  const grandTotalDisplay = useMemo(
+    () => roundForDisplay((staySubtotalUsd + taxesUsd) * displayRate, currency),
+    [staySubtotalUsd, taxesUsd, displayRate, currency]
+  );
   const formatPrice = (amount: number) => {
     if (currency === 'MXN') {
       return new Intl.NumberFormat('es-MX', {
@@ -455,7 +501,7 @@ export default function AvailabilityCalendar({
           onDayClick={handleDayClick}
           disabled={isDateDisabled}
           locale={dateFnsLocale}
-          numberOfMonths={MONTHS_VISIBLE}
+          numberOfMonths={monthsVisible}
           month={currentMonth}
           onMonthChange={setCurrentMonth}
           fromMonth={fromMonth}
@@ -487,35 +533,62 @@ export default function AvailabilityCalendar({
           </div>
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-4 text-sm text-gray-700">
-          <div className="space-y-1">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] gap-3 text-sm text-gray-700">
+          <div className="space-y-1 rounded-md border border-gray-200 p-3 md:border-0 md:p-0">
             <p>
-              <span className="font-medium">{t('calendar_check_in_label', 'Check-in date:')}</span>{' '}
+              <span className="font-medium">{locale === 'es' ? 'Entrada:' : 'Check-in:'}</span>{' '}
               {displayCheckIn
                 ? format(displayCheckIn, 'dd MMMM yyyy', { locale: dateFnsLocale })
                 : '—'}
             </p>
             <p>
-              <span className="font-medium">{t('calendar_check_out_label', 'Check-out date:')}</span>{' '}
+              <span className="font-medium">{locale === 'es' ? 'Salida:' : 'Check-out:'}</span>{' '}
               {displayCheckOut
                 ? format(displayCheckOut, 'dd MMMM yyyy', { locale: dateFnsLocale }) +
                     (checkOutIsPreview ? ` (${t('calendar_preview', 'preview')})` : '')
                 : '—'}
             </p>
           </div>
-          <div className="min-w-[260px] border-l border-gray-200 pl-4">
+          <div className="rounded-md border border-gray-200 p-3 md:rounded-none md:border-0 md:border-l md:pl-4 md:pr-0 md:py-0">
             <p className="font-semibold text-gray-900">{t('calendar_price_summary', 'Price summary')}</p>
             {nightsCount > 0 ? (
-              <div className="mt-2 flex items-center justify-between gap-4 text-gray-900">
-                <span>
-                  {nightsCount}{' '}
-                  {nightsCount === 1
-                    ? t('night_singular', 'night')
-                    : t('night_plural', 'nights')}
-                </span>
-                <span>{formatPrice(nightsSubtotal)}</span>
+              <div className="mt-2 space-y-1.5 text-gray-900">
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">{t('pricing_accommodation', 'Accommodation')}</span>
+                  <span>{formatPrice(accommodationDisplay)}</span>
+                </div>
+                {extraGuestFeesUsd > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-gray-600">{t('pricing_extra_guests', 'Extra guests')}</span>
+                    <span>{formatPrice(extraGuestDisplay)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-4 text-sm pt-1 border-t border-gray-100">
+                  <span className="text-gray-600">{t('payment_subtotal', 'Subtotal')}</span>
+                  <span>{formatPrice(staySubtotalDisplay)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">{t('payment_tax_iva', 'VAT (16%)')}</span>
+                  <span>{formatPrice(ivaDisplay)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+                  <span>{formatPrice(ishDisplay)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 pt-1 border-t border-gray-100 font-semibold">
+                  <span>{t('payment_total', 'Total')}</span>
+                  <span>{formatPrice(grandTotalDisplay)}</span>
+                </div>
+                <p className="text-xs text-gray-500 pt-1">
+                  {t('pricing_guests_included_short', 'Base rate includes {n} guests').replace(
+                    '{n}',
+                    String(getIncludedGuests(property))
+                  )}
+                </p>
               </div>
-            ) : <p className="mt-2 text-gray-500">—</p>}
+            ) : (
+              <p className="mt-2 text-gray-500">—</p>
+            )}
           </div>
         </div>
       </CardContent>

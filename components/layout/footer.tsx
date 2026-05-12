@@ -1,15 +1,26 @@
 import Link from 'next/link';
-import { Facebook, Home, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import Image from 'next/image';
+import { Facebook, Instagram, Mail, MapPin, MessageCircle, Twitter } from 'lucide-react';
 import { getContactInfoAdmin } from '@/lib/firebase-admin-queries';
 import { tServer } from '@/lib/i18n/server';
+
+function getWhatsAppLink(phone?: string): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  return `https://wa.me/${digits}`;
+}
 
 export default async function Footer() {
   const contact = await getContactInfoAdmin();
   const social = contact?.socialMedia ?? {};
+  const directWhatsAppProfileLink = process.env.NEXT_PUBLIC_WHATSAPP_CHAT_URL?.trim();
+  const whatsappHref = directWhatsAppProfileLink || getWhatsAppLink(contact?.phone);
   const quickLinks = await tServer('footer_quick_links', 'Quick Links');
   const about = await tServer('footer_about', 'About Us');
   const contactLabel = await tServer('footer_contact', 'Contact');
   const support = await tServer('footer_support', 'Support');
+  const services = await tServer('nav_services', 'Services');
   const helpCenter = await tServer('footer_help_center', 'Help Center');
   const terms = await tServer('footer_terms', 'Terms of Use');
   const privacy = await tServer('footer_privacy', 'Privacy Policy');
@@ -20,14 +31,12 @@ export default async function Footer() {
 
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <Home className="w-4 h-4 text-white" />
-              </div>
+              <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
               <div className="flex flex-col leading-none">
                 <span className="text-lg font-bold leading-none">Punta Norte</span>
                 <span className="text-sm font-light leading-none">Rentals</span>
@@ -37,26 +46,20 @@ export default async function Footer() {
               {tagline}
             </p>
             <div className="flex space-x-4">
-              {social.facebook ? (
-                <Link href={social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
+              {social.facebook && (
+                <Link href={social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Facebook">
                   <Facebook className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Facebook className="w-5 h-5" /></span>
               )}
-              {social.instagram ? (
-                <Link href={social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
+              {social.instagram && (
+                <Link href={social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Instagram">
                   <Instagram className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Instagram className="w-5 h-5" /></span>
               )}
-              {social.twitter ? (
-                <Link href={social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Twitter">
+              {social.twitter && (
+                <Link href={social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Síguenos en Twitter / X">
                   <Twitter className="w-5 h-5" />
                 </Link>
-              ) : (
-                <span className="text-gray-500"><Twitter className="w-5 h-5" /></span>
               )}
             </div>
           </div>
@@ -71,13 +74,13 @@ export default async function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
-                  {about}
+                <Link href="/services" className="text-gray-400 hover:text-white transition-colors">
+                  {services}
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
-                  {contactLabel}
+                <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
+                  {about}
                 </Link>
               </li>
             </ul>
@@ -119,9 +122,16 @@ export default async function Footer() {
                 <span className="text-gray-400 text-sm">{contact?.address ?? '—'}</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                {contact?.phone ? (
-                  <a href={`tel:${contact.phone}`} className="text-gray-400 text-sm hover:text-white">{contact.phone}</a>
+                <MessageCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                {contact?.phone && whatsappHref ? (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 text-sm hover:text-white"
+                  >
+                    {contact.phone}
+                  </a>
                 ) : (
                   <span className="text-gray-400 text-sm">—</span>
                 )}

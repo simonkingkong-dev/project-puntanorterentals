@@ -19,6 +19,11 @@ env:
       - RUNTIME
 
   # Firebase Admin SDK (RUNTIME only to avoid leaking keys into build/CI)
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    availability:
+    - BUILD
+    - RUNTIME
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
     availability:

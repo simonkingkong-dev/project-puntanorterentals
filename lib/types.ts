@@ -1,9 +1,19 @@
 export interface Property {
   id: string;
+  /** Nombre interno para operación/admin. No se muestra a clientes. */
+  internalName?: string;
+  /** Título público en español. */
+  titleEs?: string;
+  /** Título público en inglés. */
+  titleEn?: string;
   title: string;
   description: string;
   location: string;
   maxGuests: number;
+  /** Huéspedes incluidos en el precio por noche (Hostfully). Si falta, el sitio usa 2. */
+  includedGuests?: number;
+  /** USD por cada huésped extra por noche (Hostfully). Si falta, el sitio usa 10. */
+  extraGuestFeePerNight?: number;
   amenities: string[];
   images: string[];
   pricePerNight: number;

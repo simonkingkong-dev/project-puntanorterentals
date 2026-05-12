@@ -83,3 +83,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /*
+    Chromium/WebKit: <input type="date"> draws month/day/year in an internal edit UI.
+    On focus it paints the active segment with the OS/text-selection blue — Tailwind
+    select-none does not apply there. These pseudos reset segment styling.
+    Firefox keeps limited styling hooks for native date inputs.
+  */
+  input[type="date"].search-date-input::-webkit-datetime-edit,
+  input[type="date"].search-date-input::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  input[type="date"].search-date-input::-webkit-datetime-edit-month-field,
+  input[type="date"].search-date-input::-webkit-datetime-edit-day-field,
+  input[type="date"].search-date-input::-webkit-datetime-edit-year-field {
+    background-color: transparent;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="date"].search-date-input::-webkit-datetime-edit-month-field:focus,
+  input[type="date"].search-date-input::-webkit-datetime-edit-day-field:focus,
+  input[type="date"].search-date-input::-webkit-datetime-edit-year-field:focus {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    outline: none;
+  }
+}

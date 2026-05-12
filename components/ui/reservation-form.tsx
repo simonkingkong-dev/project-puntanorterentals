@@ -13,12 +13,18 @@ import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
 import { useCart } from '@/lib/cart-context';
-import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
+import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { roundForDisplay } from '@/lib/round-display-money';
 import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { toast } from 'sonner';
 import { useLocale } from '@/components/providers/locale-provider';
+import {
+  computeExtraGuestFeesUsd,
+  getExtraGuestFeePerNightUsd,
+  getIncludedGuests,
+} from '@/lib/pricing-guests';
+import { computeLodgingTaxesUsd } from '@/lib/lodging-taxes';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
@@ -27,6 +33,8 @@ function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): 
 interface ReservationFormProps {
   property: Property;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
+  bookingGuests: number;
+  onBookingGuestsChange: (n: number) => void;
   onReservationComplete?: () => void;
   currency?: Currency;
   pricePerNightDisplay?: number;
@@ -71,6 +79,8 @@ function formatPrice(amount: number, currency: Currency): string {
 export default function ReservationForm({ 
   property, 
   selectedDates,
+  bookingGuests,
+  onBookingGuestsChange,
   onReservationComplete,
   currency = 'USD',
   pricePerNightDisplay,
@@ -90,7 +100,6 @@ export default function ReservationForm({
     guestEmail: '',
     guestPhone: '',
     phoneCountryCode: defaultCountryShort,
-    guests: 1,
   });
   const [countrySearch, setCountrySearch] = useState('');
   const [hostfullyNightlyTotal, setHostfullyNightlyTotal] = useState<number | null>(null);
@@ -175,12 +184,23 @@ export default function ReservationForm({
       cancelled = true;
     };
   }, [property.id, property.hostfullyPropertyId, selectedCheckInTime, selectedCheckOutTime, pricePerNight, selectedCheckInDate, selectedCheckOutDate]);
-  const subtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
-  const feesUsd = Math.round(subtotalUsd * 0.1); // 10% service fee
-  const totalUsd = subtotalUsd + feesUsd;
+  const nightlySubtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
+  const extraGuestFeesUsd = useMemo(
+    () => computeExtraGuestFeesUsd(bookingGuests, nights, property),
+    [bookingGuests, nights, property.includedGuests, property.extraGuestFeePerNight, property]
+  );
+  const subtotalUsd = nightlySubtotalUsd + extraGuestFeesUsd;
+  const { ivaUsd, ishUsd, taxesUsd } = useMemo(
+    () => computeLodgingTaxesUsd(subtotalUsd),
+    [subtotalUsd]
+  );
+  const totalUsd = subtotalUsd + taxesUsd;
   const displayRate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
+  const nightlyDisplay = roundForDisplay(nightlySubtotalUsd * displayRate, currency);
+  const extraGuestDisplay = roundForDisplay(extraGuestFeesUsd * displayRate, currency);
   const subtotal = roundForDisplay(subtotalUsd * displayRate, currency);
-  const fees = roundForDisplay(feesUsd * displayRate, currency);
+  const ivaDisplay = roundForDisplay(ivaUsd * displayRate, currency);
+  const ishDisplay = roundForDisplay(ishUsd * displayRate, currency);
   const total = roundForDisplay(totalUsd * displayRate, currency);
 
   /**
@@ -199,7 +219,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    if (formData.guests > property.maxGuests) {
+    if (bookingGuests > property.maxGuests) {
       toast.error(
         t('toast_max_guests', 'This property accepts up to {n} guests').replace(
           '{n}',
@@ -254,7 +274,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           slug: property.slug,
           checkIn: checkInStr,
           checkOut: checkOutStr,
-          guests: formData.guests,
+          guests: bookingGuests,
           guestName: `${formData.guestFirstName} ${formData.guestLastName}`.trim(),
           guestFirstName: formData.guestFirstName,
           guestLastName: formData.guestLastName,
@@ -269,7 +289,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       if (!reservationId) throw new Error('No se recibió ID de reserva');
 
       toast.success(t('toast_redirecting', 'Redirecting to payment…'));
-      router.push(`/payment?reservation=${reservationId}`);
+      router.push(`/payment?reservation=${reservationId}&currency=${currency}`);
       onReservationComplete?.();
     } catch (error: unknown) {
       const message =
@@ -433,9 +453,9 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             <div>
               <Label htmlFor="guests">{t('reservation_guests_label', 'Number of guests *')}</Label>
-              <Select 
-                value={formData.guests.toString()} 
-                onValueChange={(value) => setFormData({ ...formData, guests: parseInt(value) })}
+              <Select
+                value={bookingGuests.toString()}
+                onValueChange={(value) => onBookingGuestsChange(parseInt(value, 10))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -459,18 +479,21 @@ const handleSubmit = async (e: React.FormEvent) => {
           {/* Price Breakdown */}
           <div className="space-y-3">
             <h3 className="font-semibold">{t('reservation_price_summary', 'Price summary')}</h3>
-            
+            <p className="text-xs text-gray-500">
+              {t('pricing_guests_included_short', 'Base rate includes {n} guests').replace(
+                '{n}',
+                String(getIncludedGuests(property))
+              )}
+            </p>
+
             <div className="flex justify-between text-sm">
-              <span>
-                {nights}{' '}
-                {nights === 1 ? t('night_singular', 'night') : t('night_plural', 'nights')}
-              </span>
-              <span>{formatPrice(subtotal, currency)}</span>
+              <span>{t('pricing_accommodation', 'Accommodation (nights)')}</span>
+              <span>{formatPrice(nightlyDisplay, currency)}</span>
             </div>
             {nights > 0 && (
               <details className="rounded-md p-2 text-sm [&[open]_.nightly-chevron]:rotate-90">
-                <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
-                  <span className="nightly-chevron text-gray-500 inline-block transition-transform duration-200 ease-out">{'>'}</span>
+                <summary className="cursor-pointer text-gray-500 list-none flex items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="nightly-chevron h-4 w-4 text-gray-500 transition-transform duration-200 ease-out" />
                   <span>{t('reservation_nightly_detail', 'View nightly breakdown')}</span>
                 </summary>
                 <div className="mt-2 space-y-1">
@@ -486,10 +509,30 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </details>
             )}
-            
+            {extraGuestFeesUsd > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>
+                  {t('pricing_extra_guests', 'Extra guests')}
+                  <span className="block text-xs text-gray-500 font-normal">
+                    ({Math.max(0, bookingGuests - getIncludedGuests(property))} x {getExtraGuestFeePerNightUsd(property)} USD {t('pricing_per_night', 'por noche')})
+                  </span>
+                </span>
+                <span>{formatPrice(extraGuestDisplay, currency)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>
+                {t('payment_subtotal', 'Subtotal')}
+              </span>
+              <span>{formatPrice(subtotal, currency)}</span>
+            </div>
             <div className="flex justify-between text-sm">
-              <span>{t('payment_service_fee', 'Service fee')}</span>
-              <span>{formatPrice(fees, currency)}</span>
+              <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
+              <span>{formatPrice(ivaDisplay, currency)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+              <span>{formatPrice(ishDisplay, currency)}</span>
             </div>
             
             <Separator />

@@ -4,7 +4,13 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     // Habilitamos la optimización de imágenes (crucial para performance)
-    unoptimized: false, 
+    unoptimized: false,
+    localPatterns: [
+      {
+        pathname: '/logo.png',
+        search: '?v=2',
+      },
+    ],
     remotePatterns: [
       {
         protocol: 'https',

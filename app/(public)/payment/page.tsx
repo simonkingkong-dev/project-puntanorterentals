@@ -16,11 +16,17 @@ import { roundForDisplay } from '@/lib/round-display-money';
 import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
 import { useLocale } from '@/components/providers/locale-provider';
+import { resolveLodgingPricingFromTotalUsd } from '@/lib/lodging-taxes';
 
 // Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
 
 const RESERVATION_TIMEOUT_MINUTES = 10;
+
+function parseCurrency(value: string | null): Currency {
+  if (value === 'USD' || value === 'MXN' || value === 'EUR') return value;
+  return 'USD';
+}
 
 function formatTimeLeft(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -143,6 +149,8 @@ function PaymentContent() {
   const modification = searchParams.get('modification') === '1';
   const amountParam = searchParams.get('amount');
   const tokenParam = searchParams.get('token');
+  const currencyParam = searchParams.get('currency');
+  const initialCurrency = parseCurrency(currencyParam);
   const releasedRef = useRef(false);
   const createFromDraftStartedRef = useRef(false);
   const initializedReservationIdRef = useRef<string | null>(null);
@@ -152,10 +160,10 @@ function PaymentContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [currency, setCurrency] = useState<Currency>('USD');
+  const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
   const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
-  const previousCurrencyRef = useRef<Currency>('USD');
+  const previousCurrencyRef = useRef<Currency>(initialCurrency);
   const { t, locale } = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : esLocale;
 
@@ -408,12 +416,12 @@ function PaymentContent() {
   }
 
   const displayAmountUsd = amount ?? 0;
-  const serviceFeeUsd = Math.round(displayAmountUsd * 0.1);
-  const subtotalUsd = displayAmountUsd - serviceFeeUsd;
+  const { subtotalUsd, ivaUsd, ishUsd } = resolveLodgingPricingFromTotalUsd(displayAmountUsd);
   const rate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
   const displayAmount = roundForDisplay(displayAmountUsd * rate, currency);
-  const serviceFee = roundForDisplay(serviceFeeUsd * rate, currency);
   const subtotal = roundForDisplay(subtotalUsd * rate, currency);
+  const ivaDisplay = roundForDisplay(ivaUsd * rate, currency);
+  const ishDisplay = roundForDisplay(ishUsd * rate, currency);
 
   function formatPrice(val: number): string {
     if (currency === 'MXN') {
@@ -447,7 +455,7 @@ function PaymentContent() {
     <>
       {/* Temporizador fijo: mismo aspecto que antes, justo debajo de la línea del header */}
       {secondsLeft !== null && (
-        <div className="fixed right-4 z-50 rounded-lg border bg-white px-4 py-2 shadow-md flex items-center gap-2" style={{ top: 'calc(4rem + 1cm)' }}>
+        <div className="fixed right-4 top-[4.2rem] md:top-[calc(4rem+1cm)] z-50 rounded-lg border bg-white px-4 py-2 shadow-md flex items-center gap-2">
           <Calendar className="h-5 w-5 text-orange-500" />
           <span className={`font-mono text-lg font-semibold ${secondsLeft <= 60 ? 'text-red-600' : 'text-gray-800'}`}>
             {formatTimeLeft(secondsLeft)}
@@ -518,8 +526,12 @@ function PaymentContent() {
             <span>{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>{t('payment_service_fee', 'Service fee')}</span>
-            <span>{formatPrice(serviceFee)}</span>
+            <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
+            <span>{formatPrice(ivaDisplay)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+            <span>{formatPrice(ishDisplay)}</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
             <span>{t('payment_total', 'Total')}</span>
@@ -547,7 +559,7 @@ function PaymentContent() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
             <CheckoutForm reservationId={reservationId} />
           </Elements>
         </CardContent>

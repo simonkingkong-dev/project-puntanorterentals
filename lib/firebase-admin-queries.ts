@@ -1,6 +1,7 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
 import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo, SearchParams, SiteContent } from "@/lib/types";
+import { checkHostfullyAvailability } from "@/lib/hostfully/client";
 
 /** Converts Firestore Timestamp, Date, or ISO string to Date. Returns epoch for missing/invalid to avoid Invalid Date. */
 function safeTimestampToDate(value: unknown): Date {
@@ -98,7 +99,7 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
     if (params.checkIn && params.checkOut) {
       const checkIn = new Date(params.checkIn);
       const checkOut = new Date(params.checkOut);
-      properties = properties.filter(p => {
+      const filteredByLocalAvailability = properties.filter(p => {
         let current = new Date(checkIn);
         while (current < checkOut) {
           const dateStr = current.toISOString().split('T')[0];
@@ -107,6 +108,24 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
         }
         return true;
       });
+
+      const availabilityResults = await Promise.all(
+        filteredByLocalAvailability.map(async (property) => {
+          if (!property.hostfullyPropertyId) {
+            return { property, available: true };
+          }
+          const result = await checkHostfullyAvailability(
+            property.hostfullyPropertyId,
+            checkIn,
+            checkOut
+          );
+          return { property, available: result.available };
+        })
+      );
+
+      properties = availabilityResults
+        .filter((item) => item.available)
+        .map((item) => item.property);
     }
     return properties;
   } catch (error) {

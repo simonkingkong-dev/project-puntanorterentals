@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,12 +18,24 @@ import { useLocale } from '@/components/providers/locale-provider';
  */
 export default function SearchForm() {
   const router = useRouter();
+  const urlSearchParams = useSearchParams();
   const { t } = useLocale();
-  const [searchParams, setSearchParams] = useState({
-    checkIn: '',
-    checkOut: '',
-    guests: '',
-  });
+  const checkInRef = useRef<HTMLInputElement>(null);
+  const checkOutRef = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useState(() => ({
+    checkIn: urlSearchParams.get('checkIn') ?? '',
+    checkOut: urlSearchParams.get('checkOut') ?? '',
+    guests: urlSearchParams.get('guests') ?? '',
+  }));
+
+  const urlKey = urlSearchParams.toString();
+  useEffect(() => {
+    setSearchParams({
+      checkIn: urlSearchParams.get('checkIn') ?? '',
+      checkOut: urlSearchParams.get('checkOut') ?? '',
+      guests: urlSearchParams.get('guests') ?? '',
+    });
+  }, [urlKey]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -50,13 +62,27 @@ export default function SearchForm() {
               <CalendarDays className="w-4 h-4 text-muted-foreground" />
               {t("search_check_in")}
             </label>
-            <Input
-              type="date"
-              value={searchParams.checkIn}
-              onChange={(e) => setSearchParams({ ...searchParams, checkIn: e.target.value })}
-              className="h-12"
-              min={new Date().toISOString().split('T')[0]}
-            />
+            <div
+              className="cursor-pointer select-none"
+              onClick={() => {
+                checkInRef.current?.showPicker?.();
+              }}
+            >
+              <Input
+                ref={checkInRef}
+                type="date"
+                value={searchParams.checkIn}
+                onChange={(e) => {
+                  const checkIn = e.target.value;
+                  setSearchParams((prev) => ({ ...prev, checkIn }));
+                  requestAnimationFrame(() => {
+                    checkOutRef.current?.showPicker?.();
+                  });
+                }}
+                className="search-date-input h-12 select-none caret-transparent"
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
           </div>
 
           {/* Check Out */}
@@ -65,13 +91,23 @@ export default function SearchForm() {
               <CalendarDays className="w-4 h-4 text-muted-foreground" />
               {t("search_check_out")}
             </label>
-            <Input
-              type="date"
-              value={searchParams.checkOut}
-              onChange={(e) => setSearchParams({ ...searchParams, checkOut: e.target.value })}
-              className="h-12"
-              min={searchParams.checkIn || new Date().toISOString().split('T')[0]}
-            />
+            <div
+              className="cursor-pointer select-none"
+              onClick={() => {
+                checkOutRef.current?.showPicker?.();
+              }}
+            >
+              <Input
+                ref={checkOutRef}
+                type="date"
+                value={searchParams.checkOut}
+                onChange={(e) =>
+                  setSearchParams((prev) => ({ ...prev, checkOut: e.target.value }))
+                }
+                className="search-date-input h-12 select-none caret-transparent"
+                min={searchParams.checkIn || new Date().toISOString().split('T')[0]}
+              />
+            </div>
           </div>
 
           {/* Guests */}
@@ -80,16 +116,24 @@ export default function SearchForm() {
               <Users className="w-4 h-4 text-muted-foreground" />
               {t("search_guests")}
             </label>
-            <Select value={searchParams.guests} onValueChange={(value) => setSearchParams({ ...searchParams, guests: value })}>
+            <Select
+              value={searchParams.guests}
+              onValueChange={(value) =>
+                setSearchParams((prev) => ({ ...prev, guests: value }))
+              }
+            >
               <SelectTrigger className="h-12">
                 <SelectValue placeholder={t("search_guests_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                {[1, 2, 3, 4, 5].map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     {num} {guestWord(num)}
                   </SelectItem>
                 ))}
+                <SelectItem value="6">
+                  6-14 {t("property_guests")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

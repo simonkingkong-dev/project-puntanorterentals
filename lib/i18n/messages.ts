@@ -36,7 +36,8 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Tu información está protegida con cifrado SSL de nivel bancario.",
     payment_total: "Total",
     payment_subtotal: "Subtotal",
-    payment_service_fee: "Tarifa de servicio",
+    payment_tax_iva: "IVA (16%)",
+    payment_tax_ish: "ISH / impuesto municipal (6%)",
     payment_currency_note:
       "El cobro se realizará en {currency} según la moneda seleccionada.",
     payment_currency_name_mxn: "pesos mexicanos (MXN)",
@@ -142,6 +143,11 @@ export const messages: Record<Locale, Record<string, string>> = {
     reservation_phone_number_aria: "Número de teléfono",
     reservation_guests_label: "Número de huéspedes *",
     reservation_price_summary: "Resumen de precios",
+    pricing_accommodation: "Alojamiento (noches)",
+    pricing_extra_guests: "Huéspedes extra",
+    pricing_extra_guests_detail:
+      "{extra} × {nights} noches × {rate} USD/huésped/noche",
+    pricing_guests_included_short: "Tarifa base incluye {n} huéspedes",
     reservation_nightly_detail: "Ver detalle por noche",
     reservation_select_dates_prompt:
       "Selecciona las fechas en el calendario para continuar",
@@ -376,7 +382,8 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Your information is protected with bank-grade SSL encryption.",
     payment_total: "Total",
     payment_subtotal: "Subtotal",
-    payment_service_fee: "Service fee",
+    payment_tax_iva: "VAT (16%)",
+    payment_tax_ish: "ISH / City tax (6%)",
     payment_currency_note:
       "You will be charged in {currency} based on your selection.",
     payment_currency_name_mxn: "Mexican pesos (MXN)",
@@ -481,6 +488,11 @@ export const messages: Record<Locale, Record<string, string>> = {
     reservation_phone_number_aria: "Phone number",
     reservation_guests_label: "Number of guests *",
     reservation_price_summary: "Price summary",
+    pricing_accommodation: "Accommodation (nights)",
+    pricing_extra_guests: "Extra guests",
+    pricing_extra_guests_detail:
+      "{extra} × {nights} nights × {rate} USD/guest/night",
+    pricing_guests_included_short: "Base rate includes {n} guests",
     reservation_nightly_detail: "View nightly breakdown",
     reservation_select_dates_prompt:
       "Select dates on the calendar to continue",

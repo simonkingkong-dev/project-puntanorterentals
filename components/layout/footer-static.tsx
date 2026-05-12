@@ -22,9 +22,6 @@ export default function FooterStatic() {
             <Link href="/properties" className="text-gray-400 hover:text-white transition-colors text-sm">
               Propiedades
             </Link>
-            <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">
-              Contacto
-            </Link>
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">

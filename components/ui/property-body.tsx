@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Property } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 import { Wifi, Car, Utensils, Home, Waves, Shield, Star } from "lucide-react";
@@ -14,6 +14,8 @@ import GoogleMap from "@/components/ui/google-map";
 import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
 import { useLocale } from "@/components/providers/locale-provider";
+import { getIncludedGuests } from "@/lib/pricing-guests";
+import ReviewForm from "@/components/ui/review-form";
 
 const amenityIcons: Record<string, LucideIcon> = {
   "WiFi de alta velocidad": Wifi,
@@ -67,6 +69,12 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const [selectedDates, setSelectedDates] = useState<
     { checkIn: Date; checkOut?: Date } | undefined
   >();
+  const [bookingGuests, setBookingGuests] = useState(() =>
+    Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property)))
+  );
+  useEffect(() => {
+    setBookingGuests(Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property))));
+  }, [property.id, property.maxGuests, property.includedGuests]);
   const useHostfullyWidgets = isHostfullyBookingEngine();
 
   const hasMap = property.latitude != null && property.longitude != null;
@@ -221,7 +229,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
         )}
       </TabsContent>
 
-      <TabsContent value="reviews" className="mt-4">
+      <TabsContent value="reviews" className="mt-4 space-y-6">
         {hasReviews ? (
           <div className="space-y-4">
             {property.reviews!.map((review, index) => (
@@ -245,17 +253,18 @@ export default function PropertyBody(props: PropertyBodyProps) {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">
-            Las reseñas están disponibles en los canales de reserva (p. ej. Airbnb).
+          <p className="text-gray-500 text-sm">
+            {t("reviews_empty", "Aún no hay reseñas aprobadas para esta propiedad.")}
           </p>
         )}
+        <ReviewForm propertyId={property.id} />
       </TabsContent>
     </Tabs>
   );
 
   if (!useHostfullyWidgets) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -267,7 +276,28 @@ export default function PropertyBody(props: PropertyBodyProps) {
               property={property}
               onDateSelect={setSelectedDates}
               selectedDates={selectedDates}
+              guestCount={bookingGuests}
               currency={currency}
+              usdMxnRate={props.usdMxnRate}
+              usdEurRate={props.usdEurRate}
+            />
+          </div>
+          {/* Mobile: formulario de reserva inmediatamente después del calendario */}
+          <div id="booking-section" className="lg:hidden mt-6 space-y-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+              <p className="font-medium text-gray-900 mb-2">Reserva en 2 pasos</p>
+              <p>Elige fechas en el calendario y completa tus datos para pagar de forma segura (Stripe).</p>
+              <div className="mt-4">
+                <CurrencySelect value={currency} onValueChange={onCurrencyChange} />
+              </div>
+            </div>
+            <ReservationForm
+              property={property}
+              selectedDates={selectedDates}
+              bookingGuests={bookingGuests}
+              onBookingGuestsChange={setBookingGuests}
+              currency={currency}
+              pricePerNightDisplay={pricePerNightDisplay}
               usdMxnRate={props.usdMxnRate}
               usdEurRate={props.usdEurRate}
             />
@@ -275,7 +305,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
           {propertyTabs}
         </div>
 
-        <div className="lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
+        <div className="hidden lg:block lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
           <div className="max-h-[calc(100vh-6rem)] space-y-4 overflow-y-auto [scrollbar-gutter:stable] pr-1">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-gray-900 mb-2">Reserva directa</p>
@@ -290,6 +320,8 @@ export default function PropertyBody(props: PropertyBodyProps) {
             <ReservationForm
               property={property}
               selectedDates={selectedDates}
+              bookingGuests={bookingGuests}
+              onBookingGuestsChange={setBookingGuests}
               currency={currency}
               pricePerNightDisplay={pricePerNightDisplay}
               usdMxnRate={props.usdMxnRate}
@@ -335,7 +367,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
       <div className="lg:col-span-2 space-y-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Reservar</h2>

@@ -6,13 +6,14 @@ import { Plus, Edit, Users, Building, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { getAdminProperties } from '@/lib/firebase-admin-queries';
 import DeletePropertyButton from './delete-property-button';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPropertiesPage() {
   const data = await getAdminProperties();
   const properties = [...data].sort((a, b) =>
-    a.title.localeCompare(b.title, "es", { sensitivity: "base" })
+    (a.internalName || a.title).localeCompare((b.internalName || b.title), "es", { sensitivity: "base" })
   );
 
   return (
@@ -40,16 +41,20 @@ export default async function AdminPropertiesPage() {
 
       {properties.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
+          {properties.map((property) => {
+            const thumbSrc =
+              property.images?.[0] ||
+              'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg';
+            return (
             <Card key={property.id} className="overflow-hidden">
               <div className="relative h-48">
                 <Image
-                  src={property.images?.[0] || 'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'}
+                  src={thumbSrc}
                   alt={property.title}
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  unoptimized
+                  unoptimized={remoteImageShouldBypassOptimization(thumbSrc)}
                 />
                 <div className="absolute top-2 right-2 flex gap-2">
                   {property.featured && (
@@ -59,7 +64,9 @@ export default async function AdminPropertiesPage() {
               </div>
               
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg line-clamp-1">{property.title}</CardTitle>
+                <CardTitle className="text-lg line-clamp-1">
+                  {property.internalName || property.title}
+                </CardTitle>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
@@ -80,7 +87,8 @@ export default async function AdminPropertiesPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <Card>

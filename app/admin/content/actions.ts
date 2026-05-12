@@ -6,7 +6,7 @@ import { getSiteContentAdmin } from "@/lib/firebase-admin-queries";
 
 const SITE_CONTENT_COLLECTION = "siteContent";
 
-type ContentType = "text" | "textarea" | "image" | "url";
+type ContentType = "text" | "textarea" | "image" | "url" | "imageGallery";
 
 /** Carga todo el contenido del sitio vía Admin SDK (evita Firestore desde el cliente). */
 export async function getSiteContentForAdmin() {
@@ -49,6 +49,12 @@ export async function updateSiteContentAdmin(
     revalidatePath("/admin/content");
     revalidatePath("/");
     revalidatePath("/about");
+    revalidatePath("/help");
+    revalidatePath("/terms");
+    revalidatePath("/privacy");
+    revalidatePath("/cancellation");
+    revalidatePath("/services");
+    revalidatePath("/properties");
     return { success: true };
   } catch (error) {
     console.error("Error updating site content:", error);

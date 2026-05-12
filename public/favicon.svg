@@ -1,0 +1,22 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange background circle -->
+  <circle cx="50" cy="50" r="50" fill="#FF8C42"/>
+
+  <!-- House: clean solid white silhouette -->
+  <path d="M 50 22 L 76 44 L 70 44 L 70 70 L 30 70 L 30 44 L 24 44 Z" fill="white"/>
+
+  <!-- Door cutout -->
+  <rect x="43" y="52" width="14" height="18" fill="#FF8C42"/>
+
+  <!-- Left palm: trunk + fronds (white, very simple) -->
+  <line x1="20" y1="70" x2="22" y2="50" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 22 50 Q 14 44 10 38" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 22 50 Q 20 42 22 36" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 22 50 Q 28 44 32 40" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Right palm: trunk + fronds (white, very simple) -->
+  <line x1="80" y1="70" x2="78" y2="50" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 78 50 Q 86 44 90 38" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 78 50 Q 80 42 78 36" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 78 50 Q 72 44 68 40" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

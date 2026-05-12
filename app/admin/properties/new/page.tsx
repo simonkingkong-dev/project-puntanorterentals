@@ -30,6 +30,8 @@ export default function NewPropertyPage() {
   
   // El estado del formulario
   const [formData, setFormData] = useState({
+    titleEs: '',
+    titleEn: '',
     title: '',
     description: '',
     location: '',
@@ -50,7 +52,7 @@ export default function NewPropertyPage() {
     setIsLoading(true);
 
     // Validación de formulario
-    if (!formData.title || !formData.description || !formData.location) {
+    if (!formData.titleEs || !formData.titleEn || !formData.description || !formData.location) {
       toast.error('Por favor completa todos los campos requeridos');
       setIsLoading(false);
       return;
@@ -72,7 +74,8 @@ export default function NewPropertyPage() {
       const imageUrls = await Promise.all(uploadPromises);
 
       // Generamos el slug básico para el objeto (aunque el server action lo regenera por seguridad)
-      const slug = formData.title
+      const canonicalTitle = formData.titleEs.trim();
+      const slug = canonicalTitle
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
@@ -81,6 +84,9 @@ export default function NewPropertyPage() {
       // NOTA: 'availability' se inicializa vacío. Las fechas se manejan como Objetos Date.
       const propertyData: Omit<Property, 'id'> = {
         ...formData,
+        title: canonicalTitle,
+        titleEs: formData.titleEs.trim(),
+        titleEn: formData.titleEn.trim(),
         images: imageUrls, 
         slug,
         availability: {},
@@ -149,11 +155,20 @@ export default function NewPropertyPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título *</Label>
+                  <Label htmlFor="titleEs">Título (ES) *</Label>
                   <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    id="titleEs"
+                    value={formData.titleEs}
+                    onChange={(e) => setFormData(prev => ({ ...prev, titleEs: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="titleEn">Title (EN) *</Label>
+                  <Input
+                    id="titleEn"
+                    value={formData.titleEn}
+                    onChange={(e) => setFormData(prev => ({ ...prev, titleEn: e.target.value }))}
                     required
                   />
                 </div>

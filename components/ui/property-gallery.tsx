@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface PropertyGalleryProps {
@@ -51,37 +52,44 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-96 lg:h-[420px]">
         {/* Main Image */}
-        <div 
+        <button
+          type="button"
           className="relative overflow-hidden rounded-lg cursor-pointer group h-full"
           onClick={() => openModal(currentIndex)}
+          aria-label={`${title} - Ver galería completa`}
         >
           <Image
             src={images[currentIndex]}
             alt={`${title} - Imagen principal`}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            unoptimized
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority
+            unoptimized={remoteImageShouldBypassOptimization(images[currentIndex])}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-        </div>
+        </button>
 
         {/* Thumbnail Grid */}
         <div className="hidden lg:grid grid-cols-2 grid-rows-2 gap-2 h-full relative">
           {images.slice(1, 5).map((image, index) => (
-            <div
+            <button
               key={index + 1}
+              type="button"
               className="relative overflow-hidden rounded-lg cursor-pointer group bg-gray-200 h-full min-h-0"
               onClick={() => openModal(index + 1)}
+              aria-label={`${title} - Ver imagen ${index + 2}`}
             >
               <Image
                 src={image}
                 alt={`${title} - Imagen ${index + 2}`}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
-                unoptimized
+                sizes="25vw"
+                unoptimized={remoteImageShouldBypassOptimization(image)}
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-            </div>
+            </button>
           ))}
           <Button
             type="button"
@@ -102,21 +110,25 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
       {/* Mobile thumbnail strip */}
       <div className="lg:hidden flex gap-2 mt-2 overflow-x-auto pb-2">
         {images.map((image, index) => (
-          <div
+          <button
             key={index}
+            type="button"
             className={`relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-lg cursor-pointer ${
               index === currentIndex ? 'ring-2 ring-orange-500' : ''
             }`}
             onClick={() => setCurrentIndex(index)}
+            aria-label={`${title} - Miniatura ${index + 1}`}
+            aria-pressed={index === currentIndex}
           >
             <Image
               src={image}
               alt={`${title} - Miniatura ${index + 1}`}
               fill
               className="object-cover"
-              unoptimized
+              sizes="64px"
+              unoptimized={remoteImageShouldBypassOptimization(image)}
             />
-          </div>
+          </button>
         ))}
       </div>
 
@@ -132,6 +144,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               size="icon"
               className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
               onClick={() => setIsModalOpen(false)}
+              aria-label="Cerrar galería"
             >
               <X className="w-6 h-6" />
             </Button>
@@ -142,7 +155,8 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
                 alt={`${title} - Imagen ${modalIndex + 1}`}
                 fill
                 className="object-contain"
-                unoptimized
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                unoptimized={remoteImageShouldBypassOptimization(images[modalIndex])}
               />
             </div>
 

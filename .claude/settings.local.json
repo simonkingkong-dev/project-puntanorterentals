@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc *)",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(python3 \"C:\\\\Users\\\\Simon\\\\.claude\\\\skills\\\\nanobanana\\\\scripts\\\\batch_generate.py\" \"Minimalist real estate logo for 'Punta Norte Rentals', clean geometric house silhouette with two palm trees, flat design, orange #FF8C42 and white only, white background, professional, elegant, simple icon style, no text\" -n 6 --ratio 1:1 -d \".skill-archive/logo-creator/2026-05-05-punta-norte\" -p favicon)",
+      "Bash(pip install *)",
+      "PowerShell(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")"
+    ]
+  }
+}

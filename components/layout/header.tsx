@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, Home, Building, ShoppingCart, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
 import { useLocale } from '@/components/providers/locale-provider';
@@ -66,24 +67,12 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo con Título y Subtítulo */}
-          <Link href="/" className="flex items-center space-x-2">
-            {/* Ícono */}
-            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-              <Home className="w-4 h-4 text-white" />
-            </div>
-
-            {/* Texto del Logo (Título y Subtítulo) */}
-            {/* CLAVE: Usamos 'flex flex-col leading-none' y 'my-0' en los spans para eliminar márgenes */}
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2" aria-label="Punta Norte Rentals - Inicio">
+            <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} priority />
             <div className="flex flex-col leading-none">
-              {/* Título Principal */}
-              <span className="text-lg font-bold text-gray-900 leading-none">
-                Punta Norte
-              </span>
-              {/* Subtítulo (más pequeño) */}
-              <span className="text-sm font-medium text-gray-500 leading-none">
-                Rentals
-              </span>
+              <span className="text-lg font-bold text-gray-900 leading-none">Punta Norte</span>
+              <span className="text-sm font-medium text-gray-500 leading-none">Rentals</span>
             </div>
           </Link>
 
@@ -116,10 +105,10 @@ export default function Header() {
               value={locale}
               onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
               className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-              aria-label="Language"
+              aria-label={t('nav_select_language', 'Select language')}
             >
-              <option value="es">ES</option>
-              <option value="en">EN</option>
+              <option value="es">Español</option>
+              <option value="en">English</option>
             </select>
           </nav>
 
@@ -127,15 +116,14 @@ export default function Header() {
           {mounted ? (
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label={t('nav_open_menu', 'Open menu')}>
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-64">
+                <SheetTitle className="sr-only">{t('nav_mobile_menu_title', 'Navigation menu')}</SheetTitle>
                 <div className="flex items-center space-x-2 mb-8">
-                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                    <Home className="w-4 h-4 text-white" />
-                  </div>
+                  <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
                   <div className="flex flex-col leading-none">
                     <span className="text-xl font-bold text-gray-900 leading-none">Punta Norte</span>
                     <span className="text-xs font-medium text-gray-600 leading-none">Rentals</span>
