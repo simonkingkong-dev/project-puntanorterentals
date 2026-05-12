@@ -48,7 +48,7 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}`;
+    )}&loading=async&v=weekly`;
     script.async = true;
     script.defer = true;
     script.dataset.googleMaps = "true";
@@ -122,11 +122,12 @@ export function GoogleMap({
         if (isCancelled || !mapRef.current) return;
 
         const mapCenter = { lat: centerLat, lng: centerLng };
+        const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = new googleNs.maps.Map(mapRef.current, {
             center: mapCenter,
             zoom,
-            mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID",
+            ...(mapId ? { mapId } : {}),
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: true,
@@ -163,18 +164,21 @@ export function GoogleMap({
             glyphColor: "#ffffff",
             scale: markerScale,
           });
-          const content = pin.element ?? pin;
           const gMarker = new AdvancedMarkerElement({
             position: { lat: marker.lat, lng: marker.lng },
             map: mapInstanceRef.current!,
             title: marker.title,
-            content,
+            content: pin,
             gmpClickable: true,
             zIndex: isSelected ? 1000 : 1,
           });
 
           if (onMarkerClick) {
-            gMarker.addListener("click", () => onMarkerClick(marker));
+            if (typeof gMarker.addEventListener === "function") {
+              gMarker.addEventListener("gmp-click", () => onMarkerClick(marker));
+            } else {
+              gMarker.addListener("click", () => onMarkerClick(marker));
+            }
           }
 
           markersRef.current[marker.id] = gMarker;

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Property } from "@/lib/types";
 import { Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import PropertyGallery from "@/components/ui/property-gallery";
 import PropertyBody from "@/components/ui/property-body";
 import { roundForDisplay } from "@/lib/round-display-money";
@@ -51,10 +50,8 @@ export default function PropertyPageContent({ property, initialSearch }: Propert
       ? baseNightlyUsd
       : roundForDisplay(baseNightlyUsd * displayMult, currency);
 
-  const currencySymbol = currency === 'EUR' ? '€' : currency === 'MXN' ? 'MX$' : '$';
-
   return (
-    <div className="space-y-8 pb-20 lg:pb-0">
+    <div className="space-y-8">
       <PropertyGallery images={property.images} title={propertyTitle} />
 
       {/* Título y datos bajo la galería */}
@@ -107,23 +104,6 @@ export default function PropertyPageContent({ property, initialSearch }: Propert
         usdMxnRate={usdMxnRate}
         usdEurRate={usdEurRate}
       />
-
-      {/* Sticky mobile CTA */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white border-t border-gray-200 shadow-xl px-4 py-3 flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-500 leading-none mb-0.5">Desde</p>
-          <p className="text-base font-bold text-gray-900 leading-none">
-            {currencySymbol}{pricePerNight}
-            <span className="text-sm font-normal text-gray-500"> / noche</span>
-          </p>
-        </div>
-        <Button
-          className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
-          onClick={() => document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth' })}
-        >
-          Reservar
-        </Button>
-      </div>
     </div>
   );
 }
