@@ -1,12 +1,8 @@
 import Link from "next/link";
-<<<<<<< HEAD
 import Image from "next/image";
-import { ArrowRight, MapPin, Quote, Star, Users } from "lucide-react";
-=======
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
-import { ArrowRight, MapPin, Star, Users } from "lucide-react";
->>>>>>> d7021ad36ad1eba14d13b2386d1b43a5b90de9ab
+import { ArrowRight, MapPin, Quote, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
@@ -63,19 +59,10 @@ export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
 
-<<<<<<< HEAD
-  const [featuredProperties, featuredServices, homepageContent, testimonials] = await Promise.all([
-=======
-  const [featuredProperties, homepageContent] = await Promise.all([
-<<<<<<< HEAD
+  const [featuredProperties, homepageContent, testimonials] = await Promise.all([
     getCachedFeaturedProperties(),
     getCachedHomepageContent(),
-=======
->>>>>>> d7021ad36ad1eba14d13b2386d1b43a5b90de9ab
-    getFeaturedPropertiesAdmin(),
-    getSiteContentBySectionAdmin("homepage"),
     getAdminTestimonials(),
->>>>>>> ee424749b980bf23c228f854473b66541ed50d65
   ]);
 
   const c = contentMap(homepageContent);
