@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPropertyByIdAdmin } from "@/lib/firebase-admin-queries";
 import { getPropertyCalendar } from "@/lib/hostfully/client";
 
+const CALENDAR_CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=300",
+};
+
 function toDateStr(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -182,40 +186,49 @@ export async function GET(request: NextRequest) {
           throw new Error("Hostfully calendar response had no usable days");
         }
 
-        return NextResponse.json({
-          source: "hostfully",
-          availability,
-          dailyRates,
-          startDate: start,
-          endDate: end,
-        });
+        return NextResponse.json(
+          {
+            source: "hostfully",
+            availability,
+            dailyRates,
+            startDate: start,
+            endDate: end,
+          },
+          { headers: CALENDAR_CACHE_HEADERS }
+        );
       } catch (hostfullyErr) {
         console.error(
           "[api/properties/calendar] Hostfully falló, usando Firestore:",
           hostfullyErr
         );
-        return NextResponse.json({
-          source: "firestore_fallback",
-          availability: property.availability ?? {},
-          dailyRates: property.dailyRates ?? {},
-          startDate: start,
-          endDate: end,
-          warning:
-            hostfullyErr instanceof Error
-              ? hostfullyErr.message
-              : "Error al consultar Hostfully",
-        });
+        return NextResponse.json(
+          {
+            source: "firestore_fallback",
+            availability: property.availability ?? {},
+            dailyRates: property.dailyRates ?? {},
+            startDate: start,
+            endDate: end,
+            warning:
+              hostfullyErr instanceof Error
+                ? hostfullyErr.message
+                : "Error al consultar Hostfully",
+          },
+          { headers: CALENDAR_CACHE_HEADERS }
+        );
       }
     }
 
     // Fallback local para propiedades no vinculadas a Hostfully.
-    return NextResponse.json({
-      source: "firestore",
-      availability: property.availability ?? {},
-      dailyRates: property.dailyRates ?? {},
-      startDate: start,
-      endDate: end,
-    });
+    return NextResponse.json(
+      {
+        source: "firestore",
+        availability: property.availability ?? {},
+        dailyRates: property.dailyRates ?? {},
+        startDate: start,
+        endDate: end,
+      },
+      { headers: CALENDAR_CACHE_HEADERS }
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error al obtener calendario";
     return NextResponse.json({ error: msg }, { status: 500 });

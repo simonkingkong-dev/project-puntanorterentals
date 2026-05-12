@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Map as MapIcon, X } from "lucide-react";
@@ -15,7 +15,8 @@ interface PropertiesMapLayoutProps {
 }
 
 export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [openPropertyId, setOpenPropertyId] = useState<string | null>(null);
   const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,18 +42,22 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
     return { lat: 21.2579, lng: -86.7481 };
   }, [markers]);
 
-  const handleMarkerClick = (marker: GoogleMapMarker) => {
-    if (selectedId === marker.id && marker.url) {
-      router.push(marker.url);
-      return;
-    }
-    setSelectedId(marker.id);
-  };
+  const handleMarkerClick = useCallback(
+    (marker: GoogleMapMarker) => {
+      setHighlightedId(marker.id);
+      setOpenPropertyId(marker.id);
+      if (openPropertyId === marker.id && marker.url) {
+        router.push(marker.url);
+        return;
+      }
+    },
+    [openPropertyId, router]
+  );
 
   const selectedProperty = useMemo(() => {
-    if (!selectedId) return null;
-    return properties.find((p) => p.id === selectedId) ?? null;
-  }, [properties, selectedId]);
+    if (!openPropertyId) return null;
+    return properties.find((p) => p.id === openPropertyId) ?? null;
+  }, [properties, openPropertyId]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6">
@@ -72,7 +77,8 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
         {properties.map((property) => (
           <div
             key={property.id}
-            onMouseEnter={() => setSelectedId(property.id)}
+            onMouseEnter={() => setHighlightedId(property.id)}
+            onMouseLeave={() => setHighlightedId(null)}
             className="cursor-pointer"
           >
             <PropertyCard property={property} />
@@ -81,14 +87,32 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
       </div>
 
       {/* Mapa */}
-      <div className="hidden lg:block h-[70vh] rounded-lg overflow-hidden border bg-gray-100">
+      <div className="relative hidden lg:block h-[70vh] rounded-lg overflow-hidden border bg-gray-100">
         <GoogleMap
           center={initialCenter}
           markers={markers}
-          selectedId={selectedId}
+          selectedId={highlightedId}
           onMarkerClick={handleMarkerClick}
           className="h-full w-full"
         />
+        {selectedProperty && (
+          <div className="absolute bottom-4 left-4 z-10 w-[340px] max-w-[calc(100%-2rem)]">
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute right-2 top-2 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md"
+              onClick={() => {
+                setOpenPropertyId(null);
+                setHighlightedId(null);
+              }}
+              aria-label="Cerrar tarjeta de propiedad"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <PropertyCard property={selectedProperty} />
+          </div>
+        )}
       </div>
 
       {/* Mapa móvil: pantalla completa */}
@@ -110,7 +134,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
           <GoogleMap
             center={initialCenter}
             markers={markers}
-            selectedId={selectedId}
+            selectedId={highlightedId}
             onMarkerClick={handleMarkerClick}
             className="h-full w-full rounded-none"
           />

@@ -1,50 +1,171 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Property } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
-import { Wifi, Car, Utensils, Home, Waves, Shield, Star } from "lucide-react";
-import HostfullyBookingEmbed from "@/components/ui/hostfully-booking-embed";
-import HostfullyLeadWidgetEmbed from "@/components/ui/hostfully-lead-widget-embed";
-import HostfullyCalendarWidgetEmbed from "@/components/ui/hostfully-calendar-widget-embed";
+import {
+  AirVent,
+  Bath,
+  BriefcaseBusiness,
+  Car,
+  CircleCheck,
+  Cigarette,
+  Coffee,
+  CookingPot,
+  DoorOpen,
+  Dumbbell,
+  Fan,
+  FireExtinguisher,
+  Flame,
+  Flower2,
+  KeyRound,
+  Microwave,
+  PartyPopper,
+  PawPrint,
+  Shield,
+  ShowerHead,
+  Sparkles,
+  Star,
+  Trees,
+  Tv,
+  Utensils,
+  WashingMachine,
+  Waves,
+  Wifi,
+  Wind,
+} from "lucide-react";
 import AvailabilityCalendar from "@/components/ui/availability-calendar";
 import ReservationForm from "@/components/ui/reservation-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import GoogleMap from "@/components/ui/google-map";
 import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
 import { useLocale } from "@/components/providers/locale-provider";
+import { getLocalizedPropertyAmenities } from "@/lib/property-localization";
 import { getIncludedGuests } from "@/lib/pricing-guests";
-import ReviewForm from "@/components/ui/review-form";
+import type { ListingSearchSelection } from "@/lib/listing-search-params";
 
-const amenityIcons: Record<string, LucideIcon> = {
-  "WiFi de alta velocidad": Wifi,
-  WiFi: Wifi,
-  "Aire acondicionado": Home,
-  "Air Conditioning": Home,
-  "Cocina equipada": Utensils,
-  Kitchen: Utensils,
-  Estacionamiento: Car,
-  Parking: Car,
-  "Free Parking": Car,
-  "Piscina comunitaria": Waves,
-  Pool: Waves,
-  "Vista al mar": Waves,
-  "Acceso a playa": Waves,
-  "Beach Access": Waves,
-  "Terraza privada": Home,
-  "Servicio de limpieza": Home,
-  "Seguridad 24/7": Shield,
-  default: Home,
-};
+const GoogleMap = dynamic(() => import("@/components/ui/google-map"), {
+  ssr: false,
+  loading: () => <div className="h-full min-h-[300px] rounded-lg bg-gray-100" />,
+});
+
+const ReviewForm = dynamic(() => import("@/components/ui/review-form"), {
+  ssr: false,
+  loading: () => <div className="h-40 rounded-lg border bg-gray-50" />,
+});
+
+const HostfullyBookingEmbed = dynamic(
+  () => import("@/components/ui/hostfully-booking-embed"),
+  { ssr: false, loading: () => <div className="h-96 rounded-lg border bg-gray-50" /> }
+);
+
+const HostfullyLeadWidgetEmbed = dynamic(
+  () => import("@/components/ui/hostfully-lead-widget-embed"),
+  { ssr: false, loading: () => <div className="h-96 rounded-lg border bg-gray-50" /> }
+);
+
+const HostfullyCalendarWidgetEmbed = dynamic(
+  () => import("@/components/ui/hostfully-calendar-widget-embed"),
+  { ssr: false, loading: () => <div className="h-72 rounded-lg border bg-gray-50" /> }
+);
+
+const amenityIconRules: Array<{ keywords: string[]; icon: LucideIcon }> = [
+  { keywords: ["wifi", "internet"], icon: Wifi },
+  { keywords: ["aire acondicionado", "air conditioning", "ac ", " a/c", "clima"], icon: AirVent },
+  { keywords: ["calefaccion", "heating", "heater"], icon: Flame },
+  { keywords: ["ventilador", "fan"], icon: Fan },
+  { keywords: ["piscina", "pool", "alberca"], icon: Waves },
+  { keywords: ["vista al mar", "ocean view", "sea view", "beach", "playa", "mar"], icon: Waves },
+  { keywords: ["jacuzzi", "hot tub"], icon: Bath },
+  { keywords: ["spa"], icon: Sparkles },
+  { keywords: ["cocina", "kitchen", "kitchenette"], icon: Utensils },
+  { keywords: ["cooking", "utensilios", "ollas", "pans", "pots"], icon: CookingPot },
+  { keywords: ["cafetera", "coffee"], icon: Coffee },
+  { keywords: ["microondas", "microwave"], icon: Microwave },
+  { keywords: ["estacionamiento", "parking"], icon: Car },
+  { keywords: ["seguridad", "security"], icon: Shield },
+  { keywords: ["limpieza", "cleaning"], icon: Sparkles },
+  { keywords: ["terraza", "balcon", "balcony", "patio"], icon: Trees },
+  { keywords: ["jardin", "garden"], icon: Flower2 },
+  { keywords: ["gym", "gimnasio"], icon: Dumbbell },
+  { keywords: ["tv", "television", "cable"], icon: Tv },
+  { keywords: ["toallas", "towels", "ducha", "shower"], icon: ShowerHead },
+  { keywords: ["lavadora", "washer", "secadora", "dryer", "laundry"], icon: WashingMachine },
+  { keywords: ["secador", "hair dryer"], icon: Wind },
+  { keywords: ["entrada privada", "private entrance"], icon: DoorOpen },
+  { keywords: ["cerradura", "lock"], icon: KeyRound },
+  { keywords: ["detector", "smoke", "monoxido", "monoxide"], icon: Shield },
+  { keywords: ["extintor", "fire extinguisher"], icon: FireExtinguisher },
+  { keywords: ["botiquin", "first aid"], icon: CircleCheck },
+  { keywords: ["mascotas", "pets"], icon: PawPrint },
+  { keywords: ["fumar", "smoking"], icon: Cigarette },
+  { keywords: ["eventos", "events"], icon: PartyPopper },
+  { keywords: ["escritorio", "desk"], icon: BriefcaseBusiness },
+];
+
+function normalizeAmenity(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getAmenityIcon(amenity: string): LucideIcon {
+  const normalizedAmenity = normalizeAmenity(amenity);
+  return (
+    amenityIconRules.find(({ keywords }) =>
+      keywords.some((keyword) => normalizedAmenity.includes(normalizeAmenity(keyword)))
+    )?.icon ?? CircleCheck
+  );
+}
 
 interface PropertyBodyProps {
   property: Property;
+  initialSearch?: ListingSearchSelection;
   currency: Currency;
   onCurrencyChange: (c: Currency) => void;
   pricePerNightDisplay: number;
   usdMxnRate: number | null;
   usdEurRate: number | null;
+}
+
+function parseDateInput(value?: string): Date | undefined {
+  if (!value) return undefined;
+
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function getInitialSelectedDates(
+  initialSearch: ListingSearchSelection | undefined
+): { checkIn: Date; checkOut?: Date } | undefined {
+  const checkIn = parseDateInput(initialSearch?.checkIn);
+  if (!checkIn) return undefined;
+
+  const checkOut = parseDateInput(initialSearch?.checkOut);
+  if (!checkOut || checkOut.getTime() <= checkIn.getTime()) {
+    return { checkIn };
+  }
+
+  return { checkIn, checkOut };
+}
+
+function getInitialBookingGuests(
+  maxGuests: number,
+  includedGuests: number | undefined,
+  guests?: number
+): number {
+  const defaultGuests = Math.min(maxGuests, Math.max(1, getIncludedGuests({ includedGuests })));
+  if (!guests || !Number.isFinite(guests)) return defaultGuests;
+  return Math.min(maxGuests, Math.max(1, guests));
 }
 
 function Section({
@@ -64,24 +185,56 @@ function Section({
 }
 
 export default function PropertyBody(props: PropertyBodyProps) {
-  const { property, currency, onCurrencyChange, pricePerNightDisplay } = props;
+  const { property, initialSearch, currency, onCurrencyChange, pricePerNightDisplay } = props;
   const { locale, t } = useLocale();
+  const initialCheckIn = initialSearch?.checkIn;
+  const initialCheckOut = initialSearch?.checkOut;
+  const initialGuests = initialSearch?.guests;
   const [selectedDates, setSelectedDates] = useState<
     { checkIn: Date; checkOut?: Date } | undefined
-  >();
+  >(() => getInitialSelectedDates(initialSearch));
   const [bookingGuests, setBookingGuests] = useState(() =>
-    Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property)))
+    getInitialBookingGuests(property.maxGuests, property.includedGuests, initialGuests)
   );
   useEffect(() => {
-    setBookingGuests(Math.min(property.maxGuests, Math.max(1, getIncludedGuests(property))));
-  }, [property.id, property.maxGuests, property.includedGuests]);
+    setSelectedDates(
+      getInitialSelectedDates({
+        checkIn: initialCheckIn,
+        checkOut: initialCheckOut,
+        guests: initialGuests,
+      })
+    );
+    setBookingGuests(getInitialBookingGuests(property.maxGuests, property.includedGuests, initialGuests));
+  }, [
+    property.id,
+    property.maxGuests,
+    property.includedGuests,
+    initialCheckIn,
+    initialCheckOut,
+    initialGuests,
+  ]);
   const useHostfullyWidgets = isHostfullyBookingEngine();
 
   const hasMap = property.latitude != null && property.longitude != null;
   const hasReviews = property.reviews && property.reviews.length > 0;
 
-  const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) =>
-    (locale === "en" ? en : es)?.trim() || base?.trim() || "";
+  const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) => {
+    const localized = locale === "en" ? en : es;
+    if (typeof localized === "string") {
+      return localized.trim();
+    }
+    return base?.trim() || "";
+  };
+  const renderParagraphs = (text: string) =>
+    text
+      .split("\n")
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+      .map((paragraph, index) => (
+        <p key={index} className="leading-relaxed mb-4">
+          {paragraph}
+        </p>
+      ));
 
   const summaryText =
     pickLocalized(property.summary, property.summaryEs, property.summaryEn) ||
@@ -96,6 +249,9 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const houseManualOrNotes =
     pickLocalized(property.houseManual, property.houseManualEs, property.houseManualEn) ||
     pickLocalized(property.notes, property.notesEs, property.notesEn);
+  const cancellationPolicyText = property.cancellationPolicy?.trim() || "";
+  const houseRulesText = property.houseRules?.trim() || "";
+  const localizedAmenities = getLocalizedPropertyAmenities(property, locale);
 
   const propertyTabs = (
     <Tabs defaultValue="overview" className="w-full">
@@ -119,41 +275,39 @@ export default function PropertyBody(props: PropertyBodyProps) {
             </p>
           </Section>
         )}
-        <Section title={t("section_description", "Description")}>
-          {descriptionText.split("\n").map((paragraph, index) => (
-            <p key={index} className="leading-relaxed mb-4">
-              {paragraph}
-            </p>
-          ))}
-        </Section>
+        {descriptionText && (
+          <Section title={t("section_description", "Description")}>
+            {renderParagraphs(descriptionText)}
+          </Section>
+        )}
         {interactionText && (
           <Section title={t("section_interaction", "Interaction")}>
-            <p>{interactionText}</p>
+            {renderParagraphs(interactionText)}
           </Section>
         )}
         {neighborhoodText && (
           <Section title={t("section_neighborhood", "Neighborhood")}>
-            <p>{neighborhoodText}</p>
+            {renderParagraphs(neighborhoodText)}
           </Section>
         )}
         {accessText && (
           <Section title={t("section_access", "Access")}>
-            <p>{accessText}</p>
+            {renderParagraphs(accessText)}
           </Section>
         )}
         {spaceText && (
           <Section title={t("section_space", "Space")}>
-            <p>{spaceText}</p>
+            {renderParagraphs(spaceText)}
           </Section>
         )}
         {transitText && (
           <Section title={t("section_transit", "Getting around")}>
-            <p>{transitText}</p>
+            {renderParagraphs(transitText)}
           </Section>
         )}
         {houseManualOrNotes && (
           <Section title={t("section_house_manual", "House manual / notes")}>
-            <p>{houseManualOrNotes}</p>
+            {renderParagraphs(houseManualOrNotes)}
           </Section>
         )}
         {(property.checkInTime || property.checkOutTime) && (
@@ -169,22 +323,22 @@ export default function PropertyBody(props: PropertyBodyProps) {
             </p>
           </Section>
         )}
-        {property.cancellationPolicy && (
+        {cancellationPolicyText && (
           <Section title={t("section_cancellation", "Cancellation policy")}>
-            <p>{property.cancellationPolicy}</p>
+            <p>{cancellationPolicyText}</p>
           </Section>
         )}
-        {property.houseRules && (
+        {houseRulesText && (
           <Section title={t("section_house_rules", "House rules")}>
-            <p>{property.houseRules}</p>
+            <p>{houseRulesText}</p>
           </Section>
         )}
       </TabsContent>
 
       <TabsContent value="amenities" className="mt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(property.amenities ?? []).map((amenity, index) => {
-            const IconComponent = amenityIcons[amenity] || amenityIcons.default;
+          {localizedAmenities.map((amenity, index) => {
+            const IconComponent = getAmenityIcon(amenity);
             return (
               <div
                 key={index}
@@ -197,7 +351,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
           })}
         </div>
 
-        {(!property.amenities || property.amenities.length === 0) && (
+        {localizedAmenities.length === 0 && (
           <p className="text-gray-500">No hay amenidades listadas.</p>
         )}
       </TabsContent>

@@ -65,6 +65,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 1024px) 100vw, 50vw"
             priority
+            quality={75}
             unoptimized={remoteImageShouldBypassOptimization(images[currentIndex])}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
@@ -86,6 +87,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
                 sizes="25vw"
+                quality={60}
                 unoptimized={remoteImageShouldBypassOptimization(image)}
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
@@ -126,6 +128,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               fill
               className="object-cover"
               sizes="64px"
+              quality={40}
               unoptimized={remoteImageShouldBypassOptimization(image)}
             />
           </button>
@@ -156,6 +159,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
                 fill
                 className="object-contain"
                 sizes="(max-width: 1280px) 100vw, 1280px"
+                quality={85}
                 unoptimized={remoteImageShouldBypassOptimization(images[modalIndex])}
               />
             </div>

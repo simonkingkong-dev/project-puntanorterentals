@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { ArrowRight, MapPin, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
@@ -15,6 +16,18 @@ import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
 
 export const dynamic = "force-dynamic";
+
+const getCachedFeaturedProperties = unstable_cache(
+  async () => getFeaturedPropertiesAdmin(),
+  ["homepage-featured-properties"],
+  { revalidate: 300, tags: ["properties"] }
+);
+
+const getCachedHomepageContent = unstable_cache(
+  async () => getSiteContentBySectionAdmin("homepage"),
+  ["homepage-content"],
+  { revalidate: 300, tags: ["site-content"] }
+);
 
 export const metadata: Metadata = {
   title: 'Punta Norte Rentals - Propiedades Vacacionales en México',
@@ -45,8 +58,8 @@ export default async function HomePage() {
   const L = messages[locale];
 
   const [featuredProperties, homepageContent] = await Promise.all([
-    getFeaturedPropertiesAdmin(),
-    getSiteContentBySectionAdmin("homepage"),
+    getCachedFeaturedProperties(),
+    getCachedHomepageContent(),
   ]);
 
   const c = contentMap(homepageContent);

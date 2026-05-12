@@ -13,6 +13,13 @@ export default function HeroBackgroundRotator({
   intervalMs = 10000,
 }: HeroBackgroundRotatorProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeImage = images[activeIndex];
+
+  useEffect(() => {
+    if (activeIndex >= images.length) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, images.length]);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -24,24 +31,20 @@ export default function HeroBackgroundRotator({
     return () => clearInterval(timer);
   }, [images, intervalMs]);
 
+  if (!activeImage) return null;
+
   return (
     <div className="absolute inset-0">
-      {images.map((src, index) => (
-        <div
-          key={`${src}-${index}`}
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            index === activeIndex ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <Image
-            src={src}
-            alt=""
-            fill
-            className="object-cover brightness-[0.72]"
-            priority={index === 0}
-          />
-        </div>
-      ))}
+      <Image
+        key={activeImage}
+        src={activeImage}
+        alt=""
+        fill
+        className="object-cover brightness-[0.72]"
+        priority={activeIndex === 0}
+        sizes="100vw"
+        quality={75}
+      />
     </div>
   );
 }

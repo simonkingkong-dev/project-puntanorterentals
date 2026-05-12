@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,10 +8,23 @@ import PropertyPageContent from '@/components/property-page-content';
 import { getPropertyBySlugAdmin } from '@/lib/firebase-admin-queries';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
-import { getLocalizedPropertyTitle } from '@/lib/property-localization';
-import { listingSearchQueryFromServerSearchParams } from '@/lib/listing-search-params';
+import {
+  getLocalizedPropertyAmenities,
+  getLocalizedPropertyDescription,
+  getLocalizedPropertyTitle,
+} from '@/lib/property-localization';
+import {
+  listingSearchQueryFromServerSearchParams,
+  listingSearchSelectionFromServerSearchParams,
+} from '@/lib/listing-search-params';
 
 export const dynamic = "force-dynamic";
+
+const getCachedPropertyBySlug = unstable_cache(
+  async (slug: string) => getPropertyBySlugAdmin(slug),
+  ['public-property-by-slug'],
+  { revalidate: 300, tags: ['properties'] }
+);
 
 interface PropertyPageProps {
   params: Promise<{
@@ -21,7 +35,7 @@ interface PropertyPageProps {
 
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const property = await getPropertyBySlugAdmin(slug);
+  const property = await getCachedPropertyBySlug(slug);
   const locale = await getServerLocale();
   const m = messages[locale];
 
@@ -30,7 +44,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   }
 
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
-  const rawDesc = property.shortDescription || property.summary || property.description || '';
+  const rawDesc = getLocalizedPropertyDescription(property, locale);
   const description = rawDesc.length > 157 ? rawDesc.slice(0, 157) + '…' : rawDesc;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const canonicalUrl = `${siteUrl}/properties/${property.slug}`;
@@ -66,8 +80,9 @@ export default async function PropertyPage({
   const { slug } = await params;
   const sp = await searchParams;
   const listQs = listingSearchQueryFromServerSearchParams(sp);
+  const listingSearchSelection = listingSearchSelectionFromServerSearchParams(sp);
   const backHref = listQs ? `/properties?${listQs}` : '/properties';
-  const property = await getPropertyBySlugAdmin(slug);
+  const property = await getCachedPropertyBySlug(slug);
   const locale = await getServerLocale();
   const m = messages[locale];
 
@@ -77,16 +92,17 @@ export default async function PropertyPage({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
+  const amenities = getLocalizedPropertyAmenities(property, locale);
   const propertyJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'VacationRental',
     name: propertyTitle,
-    description: property.shortDescription || property.summary || property.description,
+    description: getLocalizedPropertyDescription(property, locale),
     url: `${siteUrl}/properties/${property.slug}`,
     image: property.images.slice(0, 5),
     numberOfRooms: property.bedrooms ?? undefined,
     occupancy: { '@type': 'QuantitativeValue', maxValue: property.maxGuests },
-    amenityFeature: (property.amenities ?? []).map((a) => ({
+    amenityFeature: amenities.map((a) => ({
       '@type': 'LocationFeatureSpecification',
       name: a,
       value: true,
@@ -115,7 +131,7 @@ export default async function PropertyPage({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PropertyPageContent property={property} />
+        <PropertyPageContent property={property} initialSearch={listingSearchSelection} />
       </div>
     </div>
   );

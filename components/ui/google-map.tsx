@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // Usamos any para evitar depender del tipo global `google` en build/TypeScript
@@ -70,11 +70,36 @@ export function GoogleMap({
 }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
+  const cameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
   const centerLat = center.lat;
   const centerLng = center.lng;
 
   useEffect(() => {
+    if (hasEnteredViewport || !mapRef.current) return;
+    if (!("IntersectionObserver" in window)) {
+      setHasEnteredViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEnteredViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, [hasEnteredViewport]);
+
+  useEffect(() => {
+    if (!hasEnteredViewport) return;
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       if (process.env.NODE_ENV === "development") {
@@ -89,32 +114,63 @@ export function GoogleMap({
     let isCancelled = false;
 
     loadGoogleMaps(apiKey)
-      .then((googleNs) => {
+      .then(async (googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
+        const { AdvancedMarkerElement, PinElement } = await googleNs.maps.importLibrary(
+          "marker"
+        );
+        if (isCancelled || !mapRef.current) return;
 
         const mapCenter = { lat: centerLat, lng: centerLng };
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = new googleNs.maps.Map(mapRef.current, {
             center: mapCenter,
             zoom,
+            mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID",
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: true,
           });
+          cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
         } else {
-          mapInstanceRef.current.setCenter(mapCenter);
-          mapInstanceRef.current.setZoom(zoom);
+          const lastCamera = cameraRef.current;
+          if (
+            !lastCamera ||
+            lastCamera.lat !== centerLat ||
+            lastCamera.lng !== centerLng ||
+            lastCamera.zoom !== zoom
+          ) {
+            mapInstanceRef.current.setCenter(mapCenter);
+            mapInstanceRef.current.setZoom(zoom);
+            cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
+          }
         }
 
         // Limpiar marcadores anteriores
-        Object.values(markersRef.current).forEach((m) => m.setMap(null));
+        Object.values(markersRef.current).forEach((m) => {
+          m.map = null;
+        });
         markersRef.current = {};
 
+        const hasSelectedMarker = Boolean(selectedId);
+
         markers.forEach((marker) => {
-          const gMarker = new googleNs.maps.Marker({
+          const isSelected = selectedId === marker.id;
+          const markerScale = isSelected ? 1.45 : hasSelectedMarker ? 0.8 : 1;
+          const pin = new PinElement({
+            background: "#dc2626",
+            borderColor: "#ffffff",
+            glyphColor: "#ffffff",
+            scale: markerScale,
+          });
+          const content = pin.element ?? pin;
+          const gMarker = new AdvancedMarkerElement({
             position: { lat: marker.lat, lng: marker.lng },
             map: mapInstanceRef.current!,
             title: marker.title,
+            content,
+            gmpClickable: true,
+            zIndex: isSelected ? 1000 : 1,
           });
 
           if (onMarkerClick) {
@@ -124,13 +180,6 @@ export function GoogleMap({
           markersRef.current[marker.id] = gMarker;
         });
 
-        if (selectedId && markersRef.current[selectedId]) {
-          const selectedMarker = markersRef.current[selectedId];
-          const selPos = selectedMarker.getPosition();
-          if (selPos) {
-            mapInstanceRef.current!.panTo(selPos);
-          }
-        }
       })
       .catch((err) => {
         if (process.env.NODE_ENV === "development") {
@@ -142,7 +191,7 @@ export function GoogleMap({
     return () => {
       isCancelled = true;
     };
-  }, [centerLat, centerLng, zoom, markers, selectedId, onMarkerClick]);
+  }, [hasEnteredViewport, centerLat, centerLng, zoom, markers, selectedId, onMarkerClick]);
 
   return (
     <div

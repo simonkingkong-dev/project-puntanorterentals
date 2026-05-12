@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,6 +17,18 @@ function contentMap(items: { key: string; value: string }[]) {
 }
 
 export const dynamic = "force-dynamic";
+
+const getCachedProperties = unstable_cache(
+  async () => getAdminProperties(),
+  ['public-properties'],
+  { revalidate: 300, tags: ['properties'] }
+);
+
+const getCachedPropertiesPageContent = unstable_cache(
+  async () => getSiteContentBySectionAdmin('properties_page'),
+  ['properties-page-content'],
+  { revalidate: 300, tags: ['site-content'] }
+);
 
 export const metadata: Metadata = {
   title: 'Propiedades Vacacionales',
@@ -58,7 +71,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
       };
       properties = await searchPropertiesAdmin(paramsForSearch);
     } else {
-      properties = await getAdminProperties();
+      properties = await getCachedProperties();
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -95,7 +108,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
   const params = (await searchParams) ?? {};
-  const pageContent = await getSiteContentBySectionAdmin('properties_page');
+  const pageContent = await getCachedPropertiesPageContent();
   const c = contentMap(pageContent);
   const hasFilters = Object.keys(params).length > 0;
   const numericSearchParams: SearchParams = {

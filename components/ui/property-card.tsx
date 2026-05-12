@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -10,11 +10,40 @@ import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
 import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { useLocale } from '@/components/providers/locale-provider';
-import { getLocalizedPropertyTitle } from '@/lib/property-localization';
+import {
+  getLocalizedPropertyAmenities,
+  getLocalizedPropertyTitle,
+} from '@/lib/property-localization';
 import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
 
 interface PropertyCardProps {
   property: Property;
+}
+
+function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getFirstAvailableNightlyRate(property: Property): number | null {
+  const baseRate =
+    typeof property.pricePerNight === 'number' && Number.isFinite(property.pricePerNight)
+      ? property.pricePerNight
+      : null;
+  const rates = property.dailyRates ?? {};
+  const todayKey = toDateKey(new Date());
+
+  const firstAvailableRate = Object.entries(rates)
+    .filter(([dateKey, rate]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || dateKey < todayKey) return false;
+      if (property.availability?.[dateKey] === false) return false;
+      return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
+    })
+    .sort(([a], [b]) => a.localeCompare(b))[0]?.[1];
+
+  return firstAvailableRate ?? baseRate;
 }
 
 /**
@@ -36,11 +65,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const detailHref = listingQs
     ? `/properties/${property.slug}?${listingQs}`
     : `/properties/${property.slug}`;
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const images = property.images && property.images.length > 0
     ? property.images
     : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
+  const amenities = getLocalizedPropertyAmenities(property, locale);
+  const nightlyRate = useMemo(() => getFirstAvailableNightlyRate(property), [property]);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -66,6 +97,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            quality={70}
             unoptimized={remoteImageShouldBypassOptimization(images[currentImageIndex])}
           />
           {images.length > 1 && (
@@ -112,16 +144,27 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               {property.description}
             </p>
             
-            <div className="flex items-center justify-end pt-2 border-t">
+            <div className="flex items-start justify-between gap-3 pt-2 border-t">
+              {nightlyRate != null && (
+                <div className="shrink-0">
+                  <p className="text-xs text-gray-500">
+                    {t('property_card_from', 'Desde')}
+                  </p>
+                  <p className="text-base font-bold text-gray-900 leading-tight">
+                    ${Math.round(nightlyRate).toLocaleString('en-US')}
+                    <span className="text-xs font-medium text-gray-500"> USD/noche</span>
+                  </p>
+                </div>
+              )}
               <div className="flex flex-wrap gap-1">
-                {(property.amenities ?? []).slice(0, 2).map((amenity, index) => (
+                {amenities.slice(0, 2).map((amenity, index) => (
                   <Badge key={index} variant="secondary" className="text-xs">
                     {amenity}
                   </Badge>
                 ))}
-                {(property.amenities?.length ?? 0) > 2 && (
+                {amenities.length > 2 && (
                   <Badge variant="outline" className="text-xs">
-                    +{(property.amenities?.length ?? 0) - 2}
+                    +{amenities.length - 2}
                   </Badge>
                 )}
               </div>

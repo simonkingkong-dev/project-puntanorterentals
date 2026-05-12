@@ -15,6 +15,9 @@ export interface Property {
   /** USD por cada huésped extra por noche (Hostfully). Si falta, el sitio usa 10. */
   extraGuestFeePerNight?: number;
   amenities: string[];
+  /** Amenidades localizadas para render público por idioma. */
+  amenitiesEs?: string[];
+  amenitiesEn?: string[];
   images: string[];
   pricePerNight: number;
   availability: {

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from "@/lib/types";
@@ -19,20 +20,31 @@ import { handleUpdateProperty, UpdatePropertyFormData } from "../../actions";
 import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
 
-// Lista de amenidades comunes
-const commonAmenities = [
-  'WiFi de alta velocidad', 'Aire acondicionado', 'Piscina', 'Vista al mar',
-  'Cocina equipada', 'Terraza privada', 'Estacionamiento', 'Servicio de limpieza',
-  'Seguridad 24/7', 'Acceso a playa', 'Gym', 'Spa', 'Jacuzzi', 'Barbacoa', 'Jardín',
-  'WiFi', 'TV', 'Smart TV', 'Cable TV', 'Heating', 'Kitchen', 'Kitchenette',
-  'Pool', 'Parking', 'Free Parking', 'Beach Access', 'Downtown',
-  'Hot Water', 'Towels', 'Cooking Basics', 'Pots and Pans', 'Desk',
-  'Lock on Bedroom Door', 'Washer', 'Dryer', 'Hair Dryer', 'Refrigerator',
-  'Microwave', 'Coffee Maker', 'BBQ Grill', 'Patio / Balcony',
-  'Private Entrance', 'Smoke Detector', 'Carbon Monoxide Detector',
-  'First Aid Kit', 'Fire Extinguisher', 'Pets Allowed', 'Smoking Allowed',
-  'Events Allowed',
-];
+const commonAmenitiesByLang = {
+  es: [
+    'WiFi de alta velocidad', 'Aire acondicionado', 'Piscina', 'Vista al mar',
+    'Cocina equipada', 'Terraza privada', 'Estacionamiento', 'Servicio de limpieza',
+    'Seguridad 24/7', 'Acceso a playa', 'Gimnasio', 'Spa', 'Jacuzzi', 'Barbacoa',
+    'Jardín', 'TV', 'Smart TV', 'TV por cable', 'Calefacción', 'Cocina', 'Kitchenette',
+    'Agua caliente', 'Toallas', 'Utensilios básicos de cocina', 'Ollas y sartenes',
+    'Escritorio', 'Cerradura en la habitación', 'Lavadora', 'Secadora', 'Secador de pelo',
+    'Refrigerador', 'Microondas', 'Cafetera', 'Parrilla BBQ', 'Patio / Balcón',
+    'Entrada privada', 'Detector de humo', 'Detector de monóxido de carbono',
+    'Botiquín de primeros auxilios', 'Extintor', 'Mascotas permitidas',
+    'Permitido fumar', 'Eventos permitidos',
+  ],
+  en: [
+    'High-speed WiFi', 'Air conditioning', 'Pool', 'Ocean view',
+    'Equipped kitchen', 'Private terrace', 'Parking', 'Cleaning service',
+    '24/7 security', 'Beach access', 'Gym', 'Spa', 'Jacuzzi', 'BBQ grill',
+    'Garden', 'TV', 'Smart TV', 'Cable TV', 'Heating', 'Kitchen', 'Kitchenette',
+    'Hot water', 'Towels', 'Cooking basics', 'Pots and pans', 'Desk',
+    'Lock on bedroom door', 'Washer', 'Dryer', 'Hair dryer', 'Refrigerator',
+    'Microwave', 'Coffee maker', 'Patio / Balcony', 'Private entrance',
+    'Smoke detector', 'Carbon monoxide detector', 'First aid kit', 'Fire extinguisher',
+    'Pets allowed', 'Smoking allowed', 'Events allowed',
+  ],
+};
 
 interface PropertyEditFormProps {
   initialData: Property;
@@ -60,6 +72,7 @@ type PropertyEditFormState = Omit<
 export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
   const [isPending, setIsPending] = useState(false);
   const [contentLang, setContentLang] = useState<'es' | 'en'>('es');
+  const [amenityLang, setAmenityLang] = useState<'es' | 'en'>('es');
   
   // 1. El estado del formulario principal
   const [formData, setFormData] = useState<PropertyEditFormState>({
@@ -76,6 +89,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
       initialData.extraGuestFeePerNight ?? DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
     featured: initialData.featured,
     amenities: initialData.amenities,
+    amenitiesEs: initialData.amenitiesEs ?? initialData.amenities ?? [],
+    amenitiesEn: initialData.amenitiesEn ?? [],
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
     hostfullyLeadWidgetUuid: initialData.hostfullyLeadWidgetUuid ?? '',
     hostfullyLeadWidgetOptionsJson: initialData.hostfullyLeadWidgetOptionsJson ?? '',
@@ -119,6 +134,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     houseManual: initialData.houseManual ?? '',
     houseManualEs: initialData.houseManualEs ?? '',
     houseManualEn: initialData.houseManualEn ?? '',
+    summary: initialData.summary ?? '',
     descriptionEs: initialData.descriptionEs ?? '',
     descriptionEn: initialData.descriptionEn ?? '',
     summaryEs: initialData.summaryEs ?? '',
@@ -135,6 +151,11 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
   // ---
   
   const [newAmenity, setNewAmenity] = useState('');
+  const activeAmenities =
+    amenityLang === 'es'
+      ? formData.amenitiesEs ?? formData.amenities ?? []
+      : formData.amenitiesEn ?? [];
+  const commonAmenities = commonAmenitiesByLang[amenityLang];
 
   const getLangValue = (
     baseKey: string,
@@ -243,22 +264,24 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     }
   };
 
-  // --- Lógica de Amenidades (sin cambios) ---
+  // --- Lógica de Amenidades ---
+  const setAmenitiesForActiveLang = (amenities: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: amenityLang === 'es' ? amenities : prev.amenities ?? [],
+      [amenityLang === 'es' ? 'amenitiesEs' : 'amenitiesEn']: amenities,
+    }));
+  };
+
   const addAmenity = (amenity: string) => {
-    if (amenity && !formData.amenities?.includes(amenity)) {
-      setFormData(prev => ({
-        ...prev,
-        amenities: [...(prev.amenities || []), amenity]
-      }));
+    const trimmedAmenity = amenity.trim();
+    if (trimmedAmenity && !activeAmenities.includes(trimmedAmenity)) {
+      setAmenitiesForActiveLang([...activeAmenities, trimmedAmenity]);
     }
   };
   const removeAmenity = (amenity: string) => {
-    setFormData(prev => ({
-      ...prev,
-      amenities: prev.amenities?.filter(a => a !== amenity)
-    }));
+    setAmenitiesForActiveLang(activeAmenities.filter(a => a !== amenity));
   };
-  // --- Fin Lógica de Amenidades ---
 
   // --- CORREGIDO: Nueva función para borrar imágenes existentes ---
   const handleRemoveExistingImage = (urlToRemove: string) => {
@@ -266,6 +289,20 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     // Nota: Esto no borra el archivo de Firebase Storage, solo de la propiedad.
     // Implementar la eliminación de Storage es un paso más avanzado.
   };
+
+  const contentFields = [
+    { base: 'description', es: 'descriptionEs', en: 'descriptionEn', labelEs: 'Descripción principal', labelEn: 'Main description', rows: 5, required: true },
+    { base: 'summary', es: 'summaryEs', en: 'summaryEn', labelEs: 'Resumen', labelEn: 'Summary', rows: 3, required: false },
+    { base: 'shortDescription', es: 'shortDescriptionEs', en: 'shortDescriptionEn', labelEs: 'Descripción corta', labelEn: 'Short description', rows: 3, required: false },
+    { base: 'longDescription', es: 'longDescriptionEs', en: 'longDescriptionEn', labelEs: 'Descripción larga', labelEn: 'Long description', rows: 4, required: false },
+    { base: 'notes', es: 'notesEs', en: 'notesEn', labelEs: 'Notas', labelEn: 'Notes', rows: 3, required: false },
+    { base: 'interaction', es: 'interactionEs', en: 'interactionEn', labelEs: 'Interacción con huéspedes', labelEn: 'Guest interaction', rows: 3, required: false },
+    { base: 'neighborhood', es: 'neighborhoodEs', en: 'neighborhoodEn', labelEs: 'Vecindario', labelEn: 'Neighborhood', rows: 3, required: false },
+    { base: 'access', es: 'accessEs', en: 'accessEn', labelEs: 'Acceso', labelEn: 'Access', rows: 3, required: false },
+    { base: 'space', es: 'spaceEs', en: 'spaceEn', labelEs: 'Espacio', labelEn: 'Space', rows: 3, required: false },
+    { base: 'transit', es: 'transitEs', en: 'transitEn', labelEs: 'Transporte', labelEn: 'Transit', rows: 3, required: false },
+    { base: 'houseManual', es: 'houseManualEs', en: 'houseManualEn', labelEs: 'Manual de la casa', labelEn: 'House manual', rows: 3, required: false },
+  ] as const;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -280,36 +317,17 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Idioma de contenido</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="inline-flex rounded-md border border-gray-200 p-1 gap-1 bg-gray-50">
-            <Button
-              type="button"
-              variant={contentLang === 'es' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setContentLang('es')}
-            >
-              Español
-            </Button>
-            <Button
-              type="button"
-              variant={contentLang === 'en' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setContentLang('en')}
-            >
-              English
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
-          </p>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="basic" className="space-y-6">
+        <TabsList className="flex h-auto flex-wrap justify-start gap-2 bg-transparent p-0">
+          <TabsTrigger value="basic" className="border data-[state=active]:border-primary">Información básica</TabsTrigger>
+          <TabsTrigger value="amenities" className="border data-[state=active]:border-primary">Amenidades</TabsTrigger>
+          <TabsTrigger value="content" className="border data-[state=active]:border-primary">Contenido</TabsTrigger>
+          <TabsTrigger value="images" className="border data-[state=active]:border-primary">Galería de imágenes</TabsTrigger>
+          <TabsTrigger value="hostfully" className="border data-[state=active]:border-primary">Integración Hostfully</TabsTrigger>
+        </TabsList>
 
       {/* Card de Información Básica (sin cambios) */}
+        <TabsContent value="basic" className="mt-0">
       <Card>
         <CardHeader><CardTitle>Información Básica</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -393,18 +411,6 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              {contentLang === 'es' ? 'Descripción *' : 'Description *'}
-            </Label>
-            <Textarea
-              id="description"
-              value={getLangValue('description', 'descriptionEs', 'descriptionEn')}
-              onChange={(e) => setLangValue('description', 'descriptionEs', 'descriptionEn', e.target.value)}
-              rows={4}
-              required
-            />
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="maxGuests">Máximo de Huéspedes</Label>
@@ -457,16 +463,47 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Card de Amenidades (sin cambios) */}
+      {/* Card de Amenidades */}
+        <TabsContent value="amenities" className="mt-0">
       <Card>
-        <CardHeader><CardTitle>Amenidades</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Amenidades</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Mostrando amenidades para: <strong>{amenityLang === 'es' ? 'Español' : 'English'}</strong>
+          </p>
+        </CardHeader>
         <CardContent className="space-y-4">
-          {formData.amenities && formData.amenities.length > 0 && (
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 gap-1">
+              <Button
+                type="button"
+                variant={amenityLang === 'es' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setAmenityLang('es')}
+              >
+                Español
+              </Button>
+              <Button
+                type="button"
+                variant={amenityLang === 'en' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setAmenityLang('en')}
+              >
+                English
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Editas la lista de amenidades en {amenityLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
+            </p>
+          </div>
+
+          {activeAmenities.length > 0 && (
             <div className="space-y-2">
               <Label>Amenidades Seleccionadas</Label>
               <div className="flex flex-wrap gap-2">
-                {formData.amenities.map((amenity) => (
+                {activeAmenities.map((amenity) => (
                   <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
                     {amenity}
                     <button type="button" onClick={() => removeAmenity(amenity)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
@@ -479,7 +516,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             <Label>Amenidades Comunes</Label>
             <div className="flex flex-wrap gap-2">
               {commonAmenities
-                .filter(amenity => !formData.amenities?.includes(amenity))
+                .filter(amenity => !activeAmenities.includes(amenity))
                 .map((amenity) => (
                   <Button key={amenity} type="button" variant="outline" size="sm" onClick={() => addAmenity(amenity)}>
                     <Plus className="w-3 h-3 mr-1" />
@@ -491,7 +528,11 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           <div className="space-y-2">
             <Label>Agregar Amenidad Personalizada</Label>
             <div className="flex gap-2">
-              <Input value={newAmenity} onChange={(e) => setNewAmenity(e.target.value)} placeholder="Nombre de la amenidad" />
+              <Input
+                value={newAmenity}
+                onChange={(e) => setNewAmenity(e.target.value)}
+                placeholder={amenityLang === 'es' ? 'Nombre de la amenidad' : 'Amenity name'}
+              />
               <Button type="button" onClick={() => { addAmenity(newAmenity); setNewAmenity(''); }} disabled={!newAmenity}>
                 <Plus className="w-4 h-4" />
               </Button>
@@ -499,8 +540,10 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       {/* Integración Hostfully (PMS) */}
+        <TabsContent value="hostfully" className="mt-0">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -620,8 +663,10 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       {/* Contenido Hostfully (secciones de texto avanzadas) */}
+        <TabsContent value="content" className="mt-0">
       <Card>
         <CardHeader>
           <CardTitle>Contenido Hostfully</CardTitle>
@@ -629,102 +674,54 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             Mostrando campos para: <strong>{contentLang === 'es' ? 'Español' : 'English'}</strong>
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="shortDescription">Short Description</Label>
-              <Textarea
-                id="shortDescription"
-                rows={3}
-                value={getLangValue('shortDescription', 'shortDescriptionEs', 'shortDescriptionEn')}
-                onChange={(e) => setLangValue('shortDescription', 'shortDescriptionEs', 'shortDescriptionEn', e.target.value)}
-              />
+        <CardContent className="space-y-6">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 gap-1">
+              <Button
+                type="button"
+                variant={contentLang === 'es' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setContentLang('es')}
+              >
+                Español
+              </Button>
+              <Button
+                type="button"
+                variant={contentLang === 'en' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setContentLang('en')}
+              >
+                English
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="longDescription">Long Description</Label>
-              <Textarea
-                id="longDescription"
-                rows={3}
-                value={getLangValue('longDescription', 'longDescriptionEs', 'longDescriptionEn')}
-                onChange={(e) => setLangValue('longDescription', 'longDescriptionEs', 'longDescriptionEn', e.target.value)}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              rows={3}
-              value={getLangValue('notes', 'notesEs', 'notesEn')}
-              onChange={(e) => setLangValue('notes', 'notesEs', 'notesEn', e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="interaction">Interaction</Label>
-              <Textarea
-                id="interaction"
-                rows={3}
-                value={getLangValue('interaction', 'interactionEs', 'interactionEn')}
-                onChange={(e) => setLangValue('interaction', 'interactionEs', 'interactionEn', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="neighborhood">Neighborhood</Label>
-              <Textarea
-                id="neighborhood"
-                rows={3}
-                value={getLangValue('neighborhood', 'neighborhoodEs', 'neighborhoodEn')}
-                onChange={(e) => setLangValue('neighborhood', 'neighborhoodEs', 'neighborhoodEn', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="access">Access</Label>
-              <Textarea
-                id="access"
-                rows={3}
-                value={getLangValue('access', 'accessEs', 'accessEn')}
-                onChange={(e) => setLangValue('access', 'accessEs', 'accessEn', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="space">Space</Label>
-              <Textarea
-                id="space"
-                rows={3}
-                value={getLangValue('space', 'spaceEs', 'spaceEn')}
-                onChange={(e) => setLangValue('space', 'spaceEs', 'spaceEn', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="transit">Transit</Label>
-              <Textarea
-                id="transit"
-                rows={3}
-                value={getLangValue('transit', 'transitEs', 'transitEn')}
-                onChange={(e) => setLangValue('transit', 'transitEs', 'transitEn', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="houseManual">House Manual</Label>
-            <Textarea
-              id="houseManual"
-              rows={3}
-              value={getLangValue('houseManual', 'houseManualEs', 'houseManualEn')}
-              onChange={(e) => setLangValue('houseManual', 'houseManualEs', 'houseManualEn', e.target.value)}
-            />
+          <div className="grid grid-cols-1 gap-4">
+            {contentFields.map((field) => (
+              <div key={field.base} className="space-y-2">
+                <Label htmlFor={`${field.base}-${contentLang}`}>
+                  {contentLang === 'es' ? field.labelEs : field.labelEn}
+                  {field.required ? ' *' : ''}
+                </Label>
+                <Textarea
+                  id={`${field.base}-${contentLang}`}
+                  rows={field.rows}
+                  value={getLangValue(field.base, field.es, field.en)}
+                  onChange={(e) => setLangValue(field.base, field.es, field.en, e.target.value)}
+                  required={field.required}
+                />
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       {/* Card de Imágenes */}
+        <TabsContent value="images" className="mt-0">
       <Card>
          <CardHeader>
           <CardTitle>Galería de Imágenes</CardTitle>
@@ -739,6 +736,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           />
         </CardContent>
        </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Submit (sin cambios) */}
       <div className="flex gap-4">
