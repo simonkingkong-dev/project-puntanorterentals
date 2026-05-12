@@ -4,10 +4,7 @@ import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
 import { getAdminServices, getSiteContentBySectionAdmin } from '@/lib/firebase-admin-queries';
 import ServiceCard from '@/components/ui/service-card';
-
-function contentMap(items: { key: string; value: string }[]) {
-  return Object.fromEntries(items.map((i) => [i.key, i.value]));
-}
+import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const m = messages[locale];
   const content = await getSiteContentBySectionAdmin('services_page');
   const c = contentMap(content);
-  const title = c.page_services_title?.trim() || m.page_services_title;
-  const description = c.page_services_meta?.trim() || m.page_services_meta;
+  const title = pickSiteContent(c, 'page_services_title', locale, m.page_services_title);
+  const description = pickSiteContent(c, 'page_services_meta', locale, m.page_services_meta);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   return {
     title,
@@ -45,7 +42,7 @@ export default async function ServicesPage() {
   const m = messages[locale];
   const content = await getSiteContentBySectionAdmin('services_page');
   const c = contentMap(content);
-  const tx = (cmsKey: string, fallback: string) => c[cmsKey]?.trim() || fallback;
+  const tx = (cmsKey: string, fallback: string) => pickSiteContent(c, cmsKey, locale, fallback);
 
   const allServices = await getAdminServices();
   const featured = allServices.filter(s => s.featured);

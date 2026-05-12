@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 // Usamos any para evitar depender del tipo global `google` en build/TypeScript
@@ -21,6 +22,7 @@ interface GoogleMapProps {
   selectedId?: string | null;
   onMarkerClick?: (marker: GoogleMapMarker) => void;
   className?: string;
+  children?: ReactNode;
 }
 
 let googleMapsPromise: Promise<GoogleNamespace> | null = null;
@@ -88,14 +90,33 @@ export function GoogleMap({
   selectedId,
   onMarkerClick,
   className,
+  children,
 }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const cameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const markersRef = useRef<Record<string, any>>({});
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
+  const [fullscreenElement, setFullscreenElement] = useState<Element | null>(null);
   const centerLat = center.lat;
   const centerLng = center.lng;
+
+  const isMapFullscreen = Boolean(
+    fullscreenElement &&
+      mapRef.current &&
+      (fullscreenElement === mapRef.current ||
+        fullscreenElement.contains(mapRef.current) ||
+        mapRef.current.contains(fullscreenElement))
+  );
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setFullscreenElement(document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     if (hasEnteredViewport || !mapRef.current) return;
@@ -138,9 +159,15 @@ export function GoogleMap({
       .then(async (googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
         const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
-        const { AdvancedMarkerElement, PinElement } = await googleNs.maps.importLibrary(
-          "marker"
-        );
+        let AdvancedMarkerElement: any = null;
+        let PinElement: any = null;
+
+        if (mapId && typeof googleNs.maps.importLibrary === "function") {
+          const markerLibrary = await googleNs.maps.importLibrary("marker");
+          AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
+          PinElement = markerLibrary.PinElement;
+        }
+
         if (isCancelled || !mapRef.current) return;
 
         const mapCenter = { lat: centerLat, lng: centerLng };
@@ -239,10 +266,20 @@ export function GoogleMap({
     <div
       ref={mapRef}
       className={cn(
-        "w-full h-full min-h-[320px] bg-gray-100 rounded-lg overflow-hidden",
+        "relative w-full h-full min-h-[320px] bg-gray-100 rounded-lg overflow-hidden",
         className
       )}
-    />
+    >
+      {!isMapFullscreen && children}
+      {isMapFullscreen && fullscreenElement
+        ? createPortal(
+            <div className="pointer-events-none fixed inset-0 z-[2147483647]">
+              {children}
+            </div>,
+            fullscreenElement
+          )
+        : null}
+    </div>
   );
 }
 

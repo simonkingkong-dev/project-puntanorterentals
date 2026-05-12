@@ -403,7 +403,7 @@ export default function AvailabilityCalendar({
   ]);
   const extraGuestFeesUsd = useMemo(
     () => computeExtraGuestFeesUsd(guestCount, nightsCount, property),
-    [guestCount, nightsCount, property.includedGuests, property.extraGuestFeePerNight, property]
+    [guestCount, nightsCount, property]
   );
   const accommodationDisplay = useMemo(
     () => roundForDisplay(nightlySumUsd * displayRate, currency),

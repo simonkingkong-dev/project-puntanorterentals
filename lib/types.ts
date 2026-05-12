@@ -196,7 +196,7 @@ export interface SiteContent {
   section: string;
   key: string;
   value: string;
-  type: 'text' | 'textarea' | 'image' | 'url';
+  type: 'text' | 'textarea' | 'image' | 'url' | 'imageGallery';
   updatedAt: Date;
 }
 

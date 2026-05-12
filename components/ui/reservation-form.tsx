@@ -187,7 +187,7 @@ export default function ReservationForm({
   const nightlySubtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
   const extraGuestFeesUsd = useMemo(
     () => computeExtraGuestFeesUsd(bookingGuests, nights, property),
-    [bookingGuests, nights, property.includedGuests, property.extraGuestFeePerNight, property]
+    [bookingGuests, nights, property]
   );
   const subtotalUsd = nightlySubtotalUsd + extraGuestFeesUsd;
   const { ivaUsd, ishUsd, taxesUsd } = useMemo(

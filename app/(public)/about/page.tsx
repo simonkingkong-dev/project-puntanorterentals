@@ -4,18 +4,15 @@ import { Button } from '@/components/ui/button';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
 import { getSiteContentBySectionAdmin } from '@/lib/firebase-admin-queries';
-
-function contentMap(items: { key: string; value: string }[]) {
-  return Object.fromEntries(items.map((i) => [i.key, i.value]));
-}
+import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
   const m = messages[locale];
   const content = await getSiteContentBySectionAdmin('about');
   const c = contentMap(content);
-  const title = c.page_about_title?.trim() || m.page_about_title;
-  const description = c.page_about_meta?.trim() || m.page_about_meta;
+  const title = pickSiteContent(c, 'page_about_title', locale, m.page_about_title);
+  const description = pickSiteContent(c, 'page_about_meta', locale, m.page_about_meta);
   return {
     title,
     description,
@@ -31,7 +28,7 @@ export default async function AboutPage() {
   const m = messages[locale];
   const content = await getSiteContentBySectionAdmin('about');
   const c = contentMap(content);
-  const tx = (cmsKey: string, fallback: string) => c[cmsKey]?.trim() || fallback;
+  const tx = (cmsKey: string, fallback: string) => pickSiteContent(c, cmsKey, locale, fallback);
 
   return (
     <div className="min-h-[70vh] bg-gradient-to-b from-muted/50 to-background">

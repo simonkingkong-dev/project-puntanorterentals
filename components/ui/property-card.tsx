@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,15 +50,14 @@ function getFirstAvailableNightlyRate(property: Property): number | null {
  * price per night, and amenities.
  * @example
  * PropertyCard({ property: sampleProperty })
- * <Link href="/properties/sample-slug">
- *   ...card content...
- * </Link>
+ * <PropertyCard property={sampleProperty} />
  * @param {Object} {property} - Object containing property details such as title, location, maxGuests, description,
  * pricePerNight, amenities, images, and slug. The property title is displayed, the first image is shown (or a default
  * image if not available), and a redirect link is generated using the property slug.
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
   const detailHref = listingQs
@@ -75,6 +73,18 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const openPropertyDetail = () => {
+    router.push(detailHref);
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent) => {
+    if (e.currentTarget !== e.target) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPropertyDetail();
+    }
+  };
+
   const showPrevImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -88,8 +98,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   };
 
   return (
-    <Link href={detailHref}>
-      <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white">
+    <Card
+      role="link"
+      tabIndex={0}
+      onClick={openPropertyDetail}
+      onKeyDown={handleCardKeyDown}
+      className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+    >
         <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
           <Image
             src={images[currentImageIndex]}
@@ -105,7 +120,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               <button
                 type="button"
                 onClick={showPrevImage}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
                 aria-label="Imagen anterior"
               >
                 ‹
@@ -113,7 +128,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               <button
                 type="button"
                 onClick={showNextImage}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
                 aria-label="Imagen siguiente"
               >
                 ›
@@ -121,12 +136,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             </>
           )}
           {property.featured && (
-            <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600 text-white border-0">
+            <Badge className="absolute top-4 left-4 z-10 bg-orange-500 hover:bg-orange-600 text-white border-0">
               <Star className="w-3 h-3 mr-1" />
               Destacado
             </Badge>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         
         <CardContent className="p-4 sm:p-6">
@@ -171,7 +186,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </Link>
+    </Card>
   );
 }

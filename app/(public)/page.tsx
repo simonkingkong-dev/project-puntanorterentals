@@ -16,6 +16,7 @@ import { getServerLocale } from "@/lib/i18n/server";
 import { messages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
+import { contentMap, pickSiteContent } from "@/lib/site-content-localization";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +52,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-function contentMap(items: { key: string; value: string }[]) {
-  return Object.fromEntries(items.map((i) => [i.key, i.value]));
-}
-
 export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
@@ -67,7 +64,7 @@ export default async function HomePage() {
 
   const c = contentMap(homepageContent);
   const tx = (cmsKey: string, i18nKey: keyof (typeof messages)[Locale]) =>
-    c[cmsKey]?.trim() || L[i18nKey];
+    pickSiteContent(c, cmsKey, locale, L[i18nKey]);
   const heroCoverImageFallback =
     c.hero_cover_image?.trim() ||
     "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=2070&auto=format&fit=crop";

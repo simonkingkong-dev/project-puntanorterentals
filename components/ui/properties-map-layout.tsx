@@ -94,25 +94,26 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
           selectedId={highlightedId}
           onMarkerClick={handleMarkerClick}
           className="h-full w-full"
-        />
-        {selectedProperty && (
-          <div className="absolute bottom-4 left-4 z-10 w-[340px] max-w-[calc(100%-2rem)]">
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon"
-              className="absolute right-2 top-2 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md"
-              onClick={() => {
-                setOpenPropertyId(null);
-                setHighlightedId(null);
-              }}
-              aria-label="Cerrar tarjeta de propiedad"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <PropertyCard property={selectedProperty} />
-          </div>
-        )}
+        >
+          {selectedProperty && (
+            <div className="pointer-events-auto absolute bottom-4 left-4 z-10 w-[340px] max-w-[calc(100%-2rem)]">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="absolute right-2 top-2 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md"
+                onClick={() => {
+                  setOpenPropertyId(null);
+                  setHighlightedId(null);
+                }}
+                aria-label="Cerrar tarjeta de propiedad"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <PropertyCard property={selectedProperty} />
+            </div>
+          )}
+        </GoogleMap>
       </div>
 
       {/* Mapa móvil: pantalla completa */}
@@ -137,15 +138,15 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
             selectedId={highlightedId}
             onMarkerClick={handleMarkerClick}
             className="h-full w-full rounded-none"
-          />
-
-          {selectedProperty && (
-            <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/55 via-black/25 to-transparent">
-              <div className="max-h-[42vh] overflow-y-auto rounded-xl">
-                <PropertyCard property={selectedProperty} />
+          >
+            {selectedProperty && (
+              <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/55 via-black/25 to-transparent">
+                <div className="max-h-[42vh] overflow-y-auto rounded-xl">
+                  <PropertyCard property={selectedProperty} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </GoogleMap>
         </div>
       )}
     </div>

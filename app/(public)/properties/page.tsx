@@ -10,11 +10,8 @@ import {
 } from '@/lib/firebase-admin-queries';
 import { Property, SearchParams } from '@/lib/types';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
-import { tServer } from '@/lib/i18n/server';
-
-function contentMap(items: { key: string; value: string }[]) {
-  return Object.fromEntries(items.map((i) => [i.key, i.value]));
-}
+import { getServerLocale, tServer } from '@/lib/i18n/server';
+import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +104,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
 }
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
+  const locale = await getServerLocale();
   const params = (await searchParams) ?? {};
   const pageContent = await getCachedPropertiesPageContent();
   const c = contentMap(pageContent);
@@ -124,12 +122,10 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
     hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all',
     hasFilters ? 'Properties matching your search' : 'Browse our curated collection of premium vacation stays.'
   );
-  const finalTitle = hasFilters
-    ? c.properties_title_results?.trim() || pageTitle
-    : c.properties_title_all?.trim() || pageTitle;
-  const finalSubtitle = hasFilters
-    ? c.properties_subtitle_results?.trim() || pageSubtitle
-    : c.properties_subtitle_all?.trim() || pageSubtitle;
+  const titleKey = hasFilters ? 'properties_title_results' : 'properties_title_all';
+  const subtitleKey = hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all';
+  const finalTitle = pickSiteContent(c, titleKey, locale, pageTitle);
+  const finalSubtitle = pickSiteContent(c, subtitleKey, locale, pageSubtitle);
 
   return (
     <div className="min-h-screen bg-gray-50">

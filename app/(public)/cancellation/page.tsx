@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
 import { getSiteContentBySectionAdmin } from '@/lib/firebase-admin-queries';
-
-function contentMap(items: { key: string; value: string }[]) {
-  return Object.fromEntries(items.map((i) => [i.key, i.value]));
-}
+import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
@@ -15,8 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const content = await getSiteContentBySectionAdmin('cancellation');
   const c = contentMap(content);
   return {
-    title: c.page_cancellation_title?.trim() || m.page_cancellation_title,
-    description: c.page_cancellation_meta?.trim() || m.page_cancellation_meta,
+    title: pickSiteContent(c, 'page_cancellation_title', locale, m.page_cancellation_title),
+    description: pickSiteContent(c, 'page_cancellation_meta', locale, m.page_cancellation_meta),
   };
 }
 
@@ -25,7 +22,7 @@ export default async function CancellationPage() {
   const m = messages[locale];
   const content = await getSiteContentBySectionAdmin('cancellation');
   const c = contentMap(content);
-  const tx = (cmsKey: string, fallback: string) => c[cmsKey]?.trim() || fallback;
+  const tx = (cmsKey: string, fallback: string) => pickSiteContent(c, cmsKey, locale, fallback);
 
   return (
     <div className="min-h-[70vh] bg-gradient-to-b from-muted/50 to-background">

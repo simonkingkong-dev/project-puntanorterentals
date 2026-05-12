@@ -30,10 +30,11 @@ export default function SearchForm() {
 
   const urlKey = urlSearchParams.toString();
   useEffect(() => {
+    const params = new URLSearchParams(urlKey);
     setSearchParams({
-      checkIn: urlSearchParams.get('checkIn') ?? '',
-      checkOut: urlSearchParams.get('checkOut') ?? '',
-      guests: urlSearchParams.get('guests') ?? '',
+      checkIn: params.get('checkIn') ?? '',
+      checkOut: params.get('checkOut') ?? '',
+      guests: params.get('guests') ?? '',
     });
   }, [urlKey]);
 

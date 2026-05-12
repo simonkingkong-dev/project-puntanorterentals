@@ -257,6 +257,7 @@ export default function AdminContentPage() {
   const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(null);
   const [draggingImageIndex, setDraggingImageIndex] = useState<number | null>(null);
   const [contentData, setContentData] = useState<{ [key: string]: string }>({});
+  const [contentLang, setContentLang] = useState<'es' | 'en'>('es');
 
   useEffect(() => {
     loadContent();
@@ -291,6 +292,32 @@ export default function AdminContentPage() {
     setContentData(prev => ({
       ...prev,
       [fullKey]: value
+    }));
+  };
+
+  const isLocalizedField = (field: ContentSection["fields"][number]) =>
+    field.type === "text" || field.type === "textarea";
+
+  const getFieldStateKey = (section: string, field: ContentSection["fields"][number]) =>
+    isLocalizedField(field) ? `${section}_${field.key}_${contentLang}` : `${section}_${field.key}`;
+
+  const getFieldValue = (section: string, field: ContentSection["fields"][number]) => {
+    const stateKey = getFieldStateKey(section, field);
+    if (contentLang === "es" && isLocalizedField(field)) {
+      return contentData[stateKey] ?? contentData[`${section}_${field.key}`] ?? "";
+    }
+    return contentData[stateKey] ?? "";
+  };
+
+  const handleFieldChange = (
+    section: string,
+    field: ContentSection["fields"][number],
+    value: string
+  ) => {
+    const stateKey = getFieldStateKey(section, field);
+    setContentData(prev => ({
+      ...prev,
+      [stateKey]: value,
     }));
   };
 
@@ -378,10 +405,22 @@ export default function AdminContentPage() {
       if (!sectionConfig) return;
 
       const results = await Promise.all(
-        sectionConfig.fields.map(field => {
-          const fullKey = `${section}_${field.key}`;
-          const value = contentData[fullKey] || '';
-          return updateSiteContentAdmin(section, field.key, value, field.type);
+        sectionConfig.fields.flatMap(field => {
+          if (!isLocalizedField(field)) {
+            const fullKey = `${section}_${field.key}`;
+            const value = contentData[fullKey] || '';
+            return [updateSiteContentAdmin(section, field.key, value, field.type)];
+          }
+
+          const baseKey = `${section}_${field.key}`;
+          const esValue = contentData[`${baseKey}_es`] ?? contentData[baseKey] ?? '';
+          const enValue = contentData[`${baseKey}_en`] ?? '';
+
+          return [
+            updateSiteContentAdmin(section, `${field.key}_es`, esValue, field.type),
+            updateSiteContentAdmin(section, `${field.key}_en`, enValue, field.type),
+            updateSiteContentAdmin(section, field.key, esValue, field.type),
+          ];
         })
       );
 
@@ -431,19 +470,45 @@ export default function AdminContentPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  <div>
+                    <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 gap-1">
+                      <Button
+                        type="button"
+                        variant={contentLang === 'es' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setContentLang('es')}
+                      >
+                        Español
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={contentLang === 'en' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setContentLang('en')}
+                      >
+                        English
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. Las imágenes y galerías se comparten entre idiomas.
+                    </p>
+                  </div>
                   <div className="grid gap-6">
                     {section.fields.map((field) => {
-                      const fullKey = `${section.section}_${field.key}`;
-                      const value = contentData[fullKey] || '';
+                      const fullKey = getFieldStateKey(section.section, field);
+                      const value = getFieldValue(section.section, field);
 
                       return (
                         <div key={field.key} className="space-y-2">
-                          <Label htmlFor={fullKey}>{field.label}</Label>
+                          <Label htmlFor={fullKey}>
+                            {field.label}
+                            {isLocalizedField(field) ? ` (${contentLang.toUpperCase()})` : ''}
+                          </Label>
                           {field.type === 'textarea' ? (
                             <Textarea
                               id={fullKey}
                               value={value}
-                              onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                              onChange={(e) => handleFieldChange(section.section, field, e.target.value)}
                               placeholder={field.placeholder}
                               rows={4}
                             />
@@ -463,7 +528,7 @@ export default function AdminContentPage() {
                                 id={fullKey}
                                 type="url"
                                 value={value}
-                                onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                                onChange={(e) => handleFieldChange(section.section, field, e.target.value)}
                                 placeholder={field.placeholder}
                               />
                               <Input
@@ -532,7 +597,7 @@ export default function AdminContentPage() {
                               <Textarea
                                 id={fullKey}
                                 value={value}
-                                onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                                onChange={(e) => handleFieldChange(section.section, field, e.target.value)}
                                 placeholder={field.placeholder}
                                 rows={4}
                               />
@@ -554,7 +619,7 @@ export default function AdminContentPage() {
                               id={fullKey}
                               type={field.type === 'url' ? 'url' : 'text'}
                               value={value}
-                              onChange={(e) => handleInputChange(section.section, field.key, e.target.value)}
+                              onChange={(e) => handleFieldChange(section.section, field, e.target.value)}
                               placeholder={field.placeholder}
                             />
                           )}
