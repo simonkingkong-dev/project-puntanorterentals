@@ -116,13 +116,13 @@ export function GoogleMap({
     loadGoogleMaps(apiKey)
       .then(async (googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
+        const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
         const { AdvancedMarkerElement, PinElement } = await googleNs.maps.importLibrary(
           "marker"
         );
         if (isCancelled || !mapRef.current) return;
 
         const mapCenter = { lat: centerLat, lng: centerLng };
-        const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = new googleNs.maps.Map(mapRef.current, {
             center: mapCenter,
@@ -149,29 +149,45 @@ export function GoogleMap({
 
         // Limpiar marcadores anteriores
         Object.values(markersRef.current).forEach((m) => {
-          m.map = null;
+          if (typeof m.setMap === "function") {
+            m.setMap(null);
+          } else {
+            m.map = null;
+          }
         });
         markersRef.current = {};
 
         const hasSelectedMarker = Boolean(selectedId);
+        const useAdvancedMarkers = Boolean(mapId && AdvancedMarkerElement && PinElement);
 
         markers.forEach((marker) => {
           const isSelected = selectedId === marker.id;
-          const markerScale = isSelected ? 1.45 : hasSelectedMarker ? 0.8 : 1;
-          const pin = new PinElement({
-            background: "#dc2626",
-            borderColor: "#ffffff",
-            glyphColor: "#ffffff",
-            scale: markerScale,
-          });
-          const gMarker = new AdvancedMarkerElement({
-            position: { lat: marker.lat, lng: marker.lng },
-            map: mapInstanceRef.current!,
-            title: marker.title,
-            content: pin,
-            gmpClickable: true,
-            zIndex: isSelected ? 1000 : 1,
-          });
+          let gMarker: any;
+
+          if (useAdvancedMarkers) {
+            const markerScale = isSelected ? 1.45 : hasSelectedMarker ? 0.8 : 1;
+            const pin = new PinElement({
+              background: "#dc2626",
+              borderColor: "#ffffff",
+              glyphColor: "#ffffff",
+              scale: markerScale,
+            });
+            gMarker = new AdvancedMarkerElement({
+              position: { lat: marker.lat, lng: marker.lng },
+              map: mapInstanceRef.current!,
+              title: marker.title,
+              content: pin,
+              gmpClickable: true,
+              zIndex: isSelected ? 1000 : 1,
+            });
+          } else {
+            gMarker = new googleNs.maps.Marker({
+              position: { lat: marker.lat, lng: marker.lng },
+              map: mapInstanceRef.current!,
+              title: marker.title,
+              zIndex: isSelected ? 1000 : 1,
+            });
+          }
 
           if (onMarkerClick) {
             if (typeof gMarker.addEventListener === "function") {
