@@ -60,6 +60,27 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
   return googleMapsPromise;
 }
 
+function createClassicMarkerIcon(
+  googleNs: GoogleNamespace,
+  isSelected: boolean,
+  hasSelectedMarker: boolean
+) {
+  const width = isSelected ? 34 : hasSelectedMarker ? 22 : 26;
+  const height = Math.round(width * 1.35);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 32 44">
+      <path d="M16 42s14-16.1 14-27A14 14 0 1 0 2 15c0 10.9 14 27 14 27Z" fill="#dc2626" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="16" cy="15" r="5" fill="#ffffff"/>
+    </svg>
+  `;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new googleNs.maps.Size(width, height),
+    anchor: new googleNs.maps.Point(width / 2, height),
+  };
+}
+
 export function GoogleMap({
   center,
   zoom = 14,
@@ -185,6 +206,7 @@ export function GoogleMap({
               position: { lat: marker.lat, lng: marker.lng },
               map: mapInstanceRef.current!,
               title: marker.title,
+              icon: createClassicMarkerIcon(googleNs, isSelected, hasSelectedMarker),
               zIndex: isSelected ? 1000 : 1,
             });
           }
