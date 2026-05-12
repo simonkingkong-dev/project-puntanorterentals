@@ -1,7 +1,12 @@
 import Link from "next/link";
+<<<<<<< HEAD
+import Image from "next/image";
+import { ArrowRight, MapPin, Quote, Star, Users } from "lucide-react";
+=======
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { ArrowRight, MapPin, Star, Users } from "lucide-react";
+>>>>>>> d7021ad36ad1eba14d13b2386d1b43a5b90de9ab
 import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
@@ -9,6 +14,7 @@ import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
 import {
   getFeaturedPropertiesAdmin,
   getSiteContentBySectionAdmin,
+  getAdminTestimonials,
 } from "@/lib/firebase-admin-queries";
 import { getServerLocale } from "@/lib/i18n/server";
 import { messages } from "@/lib/i18n/messages";
@@ -57,9 +63,19 @@ export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
 
+<<<<<<< HEAD
+  const [featuredProperties, featuredServices, homepageContent, testimonials] = await Promise.all([
+=======
   const [featuredProperties, homepageContent] = await Promise.all([
+<<<<<<< HEAD
     getCachedFeaturedProperties(),
     getCachedHomepageContent(),
+=======
+>>>>>>> d7021ad36ad1eba14d13b2386d1b43a5b90de9ab
+    getFeaturedPropertiesAdmin(),
+    getSiteContentBySectionAdmin("homepage"),
+    getAdminTestimonials(),
+>>>>>>> ee424749b980bf23c228f854473b66541ed50d65
   ]);
 
   const c = contentMap(homepageContent);
@@ -198,6 +214,66 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12 max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-gray-900">
+              {L.home_testimonials_title}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              {L.home_testimonials_subtitle}
+            </p>
+          </div>
+
+          {testimonials.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {testimonials.slice(0, 6).map((t) => (
+                <div
+                  key={t.id}
+                  className="bg-background rounded-xl p-6 shadow-sm border flex flex-col gap-4"
+                >
+                  <Quote className="h-6 w-6 text-primary/40 shrink-0" />
+                  <p className="text-muted-foreground leading-relaxed flex-1 text-sm">{t.text}</p>
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    {t.image ? (
+                      <Image
+                        src={t.image}
+                        alt={t.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                        {t.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 truncate">{t.name}</p>
+                      {t.location && (
+                        <p className="text-xs text-muted-foreground truncate">{t.location}</p>
+                      )}
+                    </div>
+                    <div className="ml-auto flex gap-0.5 shrink-0">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-3.5 w-3.5 ${i < t.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 rounded-xl border border-dashed bg-background/80">
+              <p className="text-muted-foreground">{L.home_testimonials_empty}</p>
+            </div>
+          )}
         </div>
       </section>
 

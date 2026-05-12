@@ -237,6 +237,10 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Reserva en minutos o escríbenos para diseñar tu viaje a medida.",
     home_cta_properties: "Explorar propiedades",
     home_cta_contact: "Contacto",
+    home_testimonials_title: "Lo que dicen nuestros huéspedes",
+    home_testimonials_subtitle:
+      "Experiencias reales de quienes ya disfrutaron sus vacaciones con nosotros.",
+    home_testimonials_empty: "Pronto compartiremos reseñas de nuestros huéspedes.",
     page_about_title: "Sobre nosotros",
     page_about_meta: "Conoce Punta Norte Rentals y nuestra misión.",
     page_about_lead:
@@ -286,6 +290,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     page_services_meta: "Servicios y experiencias Punta Norte Rentals.",
     page_services_intro:
       "Pronto podrás reservar experiencias y servicios de conserjería desde aquí.",
+    page_services_empty: "Estamos preparando nuestras experiencias. Vuelve pronto.",
+    page_services_book: "Reservar experiencia",
+    page_services_featured: "Destacado",
     not_found_title: "Página no encontrada",
     not_found_body:
       "No encontramos lo que buscas. La página pudo moverse o el enlace no es válido.",
@@ -575,6 +582,10 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Book in minutes or message us to plan a tailored trip.",
     home_cta_properties: "Browse properties",
     home_cta_contact: "Contact",
+    home_testimonials_title: "What our guests say",
+    home_testimonials_subtitle:
+      "Real experiences from guests who have already enjoyed their stay with us.",
+    home_testimonials_empty: "Guest reviews coming soon.",
     page_about_title: "About us",
     page_about_meta: "Learn about Punta Norte Rentals and our mission.",
     page_about_lead:
@@ -624,6 +635,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     page_services_meta: "Services and experiences — Punta Norte Rentals.",
     page_services_intro:
       "Soon you will be able to book experiences and concierge services here.",
+    page_services_empty: "We are preparing our experiences. Check back soon.",
+    page_services_book: "Book experience",
+    page_services_featured: "Featured",
     not_found_title: "Page not found",
     not_found_body:
       "We could not find what you are looking for. The page may have moved or the link is incorrect.",
