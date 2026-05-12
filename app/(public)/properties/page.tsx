@@ -27,14 +27,19 @@ const getCachedPropertiesPageContent = unstable_cache(
   { revalidate: 300, tags: ['site-content'] }
 );
 
-export const metadata: Metadata = {
-  title: 'Propiedades Vacacionales',
-  description: 'Explora nuestra colección completa de propiedades vacacionales excepcionales en destinos únicos.',
-  openGraph: {
-    title: 'Propiedades Vacacionales | Punta Norte Rentals',
-    description: 'Explora nuestra colección completa de propiedades vacacionales excepcionales en destinos únicos.',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const title = await tServer('nav_properties');
+  const description = await tServer('properties_subtitle_all');
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Punta Norte Rentals`,
+      description,
+    },
+  };
+}
 
 interface PropertiesPageProps {
   searchParams: Promise<SearchParams>;

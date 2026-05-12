@@ -32,25 +32,41 @@ const getCachedHomepageContent = unstable_cache(
   { revalidate: 300, tags: ["site-content"] }
 );
 
-export const metadata: Metadata = {
-  title: 'Punta Norte Rentals - Propiedades Vacacionales en México',
-  description: 'Casas y departamentos vacacionales en Punta Norte, México. Reserva directa con disponibilidad en tiempo real, pagos seguros con Stripe y atención personalizada. Desde $X USD/noche.',
-  keywords: ['renta vacacional Punta Norte', 'casa playa México', 'vacation rental Mexico', 'propiedades vacacionales', 'departamento vacacional México'],
-  openGraph: {
-    title: 'Punta Norte Rentals - Propiedades Vacacionales en México',
-    description: 'Casas y departamentos vacacionales en Punta Norte, México. Reserva directa con disponibilidad en tiempo real y pagos seguros.',
-    url: '/',
-    type: 'website',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Punta Norte Rentals - Propiedades vacacionales en México' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Punta Norte Rentals - Propiedades Vacacionales en México',
-    description: 'Casas y departamentos vacacionales en Punta Norte, México. Reserva directa con pagos seguros.',
-    images: ['/og-image.png'],
-  },
-  alternates: { canonical: '/' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const title =
+    locale === "en"
+      ? "Punta Norte Rentals - Vacation Rentals in Mexico"
+      : "Punta Norte Rentals - Propiedades Vacacionales en México";
+  const description =
+    locale === "en"
+      ? "Vacation homes and apartments in Punta Norte, Mexico. Direct booking with live availability, secure Stripe payments, and personalized support."
+      : "Casas y departamentos vacacionales en Punta Norte, México. Reserva directa con disponibilidad en tiempo real, pagos seguros con Stripe y atención personalizada.";
+  const keywords =
+    locale === "en"
+      ? ["Punta Norte vacation rental", "Mexico beach house", "vacation rental Mexico", "vacation homes", "Mexico vacation apartment"]
+      : ["renta vacacional Punta Norte", "casa playa México", "vacation rental Mexico", "propiedades vacacionales", "departamento vacacional México"];
+
+  return {
+    title,
+    description,
+    keywords,
+    openGraph: {
+      title,
+      description,
+      url: "/",
+      type: "website",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/og-image.png"],
+    },
+    alternates: { canonical: "/" },
+  };
+}
 
 export default async function HomePage() {
   const locale = await getServerLocale();
@@ -74,6 +90,60 @@ export default async function HomePage() {
         .map((item) => item.trim())
         .filter(Boolean)
     : [heroCoverImageFallback];
+  const businessDescription =
+    locale === "en"
+      ? "Vacation rental platform with beachfront homes and apartments in Punta Norte, Mexico. Direct booking with live availability and secure payments."
+      : "Plataforma de renta vacacional con casas y departamentos frente al mar en Punta Norte, México. Reserva directa con disponibilidad en tiempo real y pagos seguros.";
+  const businessFeatures =
+    locale === "en"
+      ? ["Direct booking", "Secure Stripe payments", "Live availability", "Personalized support"]
+      : ["Reserva directa", "Pagos seguros con Stripe", "Disponibilidad en tiempo real", "Atención personalizada"];
+  const faqItems =
+    locale === "en"
+      ? [
+          {
+            question: "How do I book a property with Punta Norte Rentals?",
+            answer:
+              "Select your property, choose dates on the live availability calendar, enter your details, and pay securely with Stripe. You will receive email confirmation.",
+          },
+          {
+            question: "What is the cancellation policy?",
+            answer:
+              "Each property has its own cancellation policy on the detail page. You can modify your booking from the reservations page with your access token.",
+          },
+          {
+            question: "Where are Punta Norte Rentals properties located?",
+            answer:
+              "Our properties are located in Punta Norte, Mexico. We offer vacation homes and apartments with beach access, ocean views, and complete amenities.",
+          },
+          {
+            question: "What payment methods do you accept?",
+            answer:
+              "We accept secure credit and debit card payments through Stripe. Payments are encrypted and processed securely.",
+          },
+        ]
+      : [
+          {
+            question: "¿Cómo reservar una propiedad en Punta Norte Rentals?",
+            answer:
+              "Selecciona tu propiedad, elige las fechas en el calendario de disponibilidad en tiempo real, completa tus datos y realiza el pago seguro con Stripe. Recibirás confirmación por email.",
+          },
+          {
+            question: "¿Cuál es la política de cancelación?",
+            answer:
+              "Cada propiedad tiene su propia política de cancelación especificada en la página de detalle. Puedes modificar tu reserva desde el panel de reservas con tu token de acceso.",
+          },
+          {
+            question: "¿Dónde están ubicadas las propiedades de Punta Norte Rentals?",
+            answer:
+              "Todas nuestras propiedades están ubicadas en Punta Norte, México. Ofrecemos casas y departamentos vacacionales con acceso a playa, vistas al mar y amenidades completas.",
+          },
+          {
+            question: "¿Qué métodos de pago aceptan?",
+            answer:
+              "Aceptamos pagos seguros con tarjeta de crédito y débito a través de Stripe. Los pagos se procesan de forma encriptada y segura.",
+          },
+        ];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -286,17 +356,12 @@ export default async function HomePage() {
             '@context': 'https://schema.org',
             '@type': 'LodgingBusiness',
             name: 'Punta Norte Rentals',
-            description: 'Plataforma de renta vacacional con casas y departamentos frente al mar en Punta Norte, México. Reserva directa con disponibilidad en tiempo real y pagos seguros.',
+            description: businessDescription,
             url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
             image: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/og-image.png`,
             address: { '@type': 'PostalAddress', addressCountry: 'MX', addressRegion: 'Punta Norte' },
             priceRange: '$$',
-            amenityFeature: [
-              { '@type': 'LocationFeatureSpecification', name: 'Reserva directa', value: true },
-              { '@type': 'LocationFeatureSpecification', name: 'Pagos seguros con Stripe', value: true },
-              { '@type': 'LocationFeatureSpecification', name: 'Disponibilidad en tiempo real', value: true },
-              { '@type': 'LocationFeatureSpecification', name: 'Atención personalizada', value: true },
-            ],
+            amenityFeature: businessFeatures.map((name) => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
             mainEntityOfPage: { '@type': 'WebPage', '@id': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
           }),
         }}
@@ -307,28 +372,11 @@ export default async function HomePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
-            mainEntity: [
-              {
-                '@type': 'Question',
-                name: '¿Cómo reservar una propiedad en Punta Norte Rentals?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Selecciona tu propiedad, elige las fechas en el calendario de disponibilidad en tiempo real, completa tus datos y realiza el pago seguro con Stripe. Recibirás confirmación inmediata por email.' },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Cuál es la política de cancelación?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Cada propiedad tiene su propia política de cancelación especificada en la página de detalle. Puedes modificar tu reserva desde el panel de reservas con tu token de acceso.' },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Dónde están ubicadas las propiedades de Punta Norte Rentals?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Todas nuestras propiedades están ubicadas en Punta Norte, México. Ofrecemos casas y departamentos vacacionales con acceso a playa, vistas al mar y amenidades completas.' },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Qué métodos de pago aceptan?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Aceptamos pagos seguros con tarjeta de crédito y débito a través de Stripe. Los pagos se procesan de forma encriptada y segura.' },
-              },
-            ],
+            mainEntity: faqItems.map((item) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: { '@type': 'Answer', text: item.answer },
+            })),
           }),
         }}
       />

@@ -25,7 +25,7 @@ import {
 import { ShoppingCart, Calendar, Loader2, Trash2, Pencil, Clock, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { enUS, es } from 'date-fns/locale';
 import { useLocale } from '@/components/providers/locale-provider';
 import { getLocalizedPropertyTitle } from '@/lib/property-localization';
 
@@ -49,7 +49,7 @@ function CartItemCard({
   item: CartItem;
   onRemove: (key: string) => void;
 }) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const router = useRouter();
   const key = getCartItemKey(item);
   const [property, setProperty] = useState<Property | null>(null);
@@ -57,7 +57,7 @@ function CartItemCard({
   const [statusLoading, setStatusLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const propertyTitle = property ? getLocalizedPropertyTitle(property, locale) : 'Cargando...';
+  const propertyTitle = property ? getLocalizedPropertyTitle(property, locale) : t('cart_loading', 'Loading...');
 
   useEffect(() => {
     if (!item.slug) return;
@@ -197,22 +197,22 @@ function CartItemCard({
             size="icon"
             className="absolute top-3 right-3 h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
             onClick={() => setDeleteDialogOpen(true)}
-            aria-label="Eliminar del carrito"
+            aria-label={t('cart_remove_aria', 'Remove from cart')}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar esta reserva del carrito?</AlertDialogTitle>
+                <AlertDialogTitle>{t('cart_remove_title', 'Remove this booking from your cart?')}</AlertDialogTitle>
                 <AlertDialogDescription>
                   {item.reservationId
-                    ? 'Se cancelará la reserva pendiente y se liberarán las fechas.'
-                    : 'Se quitará el resumen de tu reserva del carrito.'}
+                    ? t('cart_remove_pending_body', 'The pending booking will be cancelled and the dates will be released.')
+                    : t('cart_remove_draft_body', 'The booking summary will be removed from your cart.')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel>{t('cart_remove_cancel', 'Cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={(e) => {
                     e.preventDefault();
@@ -220,7 +220,7 @@ function CartItemCard({
                   }}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  Eliminar
+                  {t('cart_remove_confirm', 'Remove')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -228,7 +228,7 @@ function CartItemCard({
         </>
       )}
       <CardHeader>
-        <CardTitle className="text-lg">Resumen de reserva</CardTitle>
+        <CardTitle className="text-lg">{t('payment_reservation_summary', 'Booking summary')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-4 items-start">
@@ -256,14 +256,14 @@ function CartItemCard({
               <div className="mt-2 space-y-1 text-sm text-gray-600">
                 <p>
                   <span className="text-gray-500">Check-in:</span>{' '}
-                  {format(checkInDate, 'dd MMM yyyy', { locale: es })}
+                  {format(checkInDate, 'dd MMM yyyy', { locale: locale === 'en' ? enUS : es })}
                 </p>
                 <p>
                   <span className="text-gray-500">Check-out:</span>{' '}
-                  {format(checkOutDate, 'dd MMM yyyy', { locale: es })}
+                  {format(checkOutDate, 'dd MMM yyyy', { locale: locale === 'en' ? enUS : es })}
                 </p>
                 <p>
-                  <span className="text-gray-500">Noches:</span> {nights}
+                  <span className="text-gray-500">{t('night_plural', 'nights')}:</span> {nights}
                 </p>
               </div>
             </div>
@@ -277,11 +277,11 @@ function CartItemCard({
               )}
             >
               <Pencil className="w-4 h-4" />
-              <span>Modificar</span>
+              <span>{t('my_reservations_modify', 'Modify booking')}</span>
             </Link>
             {isConfirmed && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-800">
-                Confirmada
+                {t('my_reservations_status_confirmed', 'Confirmed')}
               </div>
             )}
             {item.reservationId && reservationStatus?.status === 'pending' && (
@@ -292,18 +292,18 @@ function CartItemCard({
                     {formatTimeLeft(secondsLeft)}
                   </span>
                 ) : (
-                  <span className="text-red-600 font-medium">Expirada</span>
+                  <span className="text-red-600 font-medium">{t('cart_expired', 'Expired')}</span>
                 )}
               </div>
             )}
             {item.reservationId && reservationStatus?.status === 'cancelled' && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-red-100 text-red-800">
-                Cancelada
+                {t('cart_cancelled', 'Cancelled')}
               </div>
             )}
             {isDraftItem && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-amber-100 text-amber-800">
-                Incompleta
+                {t('cart_incomplete', 'Incomplete')}
               </div>
             )}
           </div>
@@ -311,18 +311,18 @@ function CartItemCard({
         {!isConfirmed && (
           isDraftItem ? (
             <Button asChild className="w-full mt-4 bg-orange-500 hover:bg-orange-600">
-              <Link href="/payment">Completar pago</Link>
+              <Link href="/payment">{t('cart_complete_payment', 'Complete payment')}</Link>
             </Button>
           ) : canContinueToPayment ? (
             <Button
               className="w-full mt-4 bg-orange-500 hover:bg-orange-600"
               onClick={handleReservarClick}
             >
-              Continuar al pago
+              {t('cart_continue_payment', 'Continue to payment')}
             </Button>
           ) : (
             <Button asChild className="w-full mt-4 bg-orange-500 hover:bg-orange-600">
-              <Link href={reservarHref}>Reservar</Link>
+              <Link href={reservarHref}>{t('cart_book', 'Book')}</Link>
             </Button>
           )
         )}
@@ -366,16 +366,19 @@ export default function CartPage() {
         <div className="w-full space-y-4 mb-6">
           <Label htmlFor="recovery-email" className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Mail className="w-4 h-4" />
-            Recuperar reservas con tu email
+            {t('cart_recovery_label', 'Recover bookings with your email')}
           </Label>
           <p className="text-xs text-gray-500">
-            Si limpiaste cookies, ingresa el email que usaste al reservar para recuperar tus reservas en hold o expiradas.
+            {t(
+              'cart_recovery_help',
+              'If you cleared cookies, enter the email you used to book and recover bookings on hold or expired.'
+            )}
           </p>
           <div className="flex gap-2">
             <Input
               id="recovery-email"
               type="email"
-              placeholder="tu@email.com"
+              placeholder={t('placeholder_email', 'you@email.com')}
               value={recoveryEmail}
               onChange={(e) => {
                 setRecoveryEmail(e.target.value);
@@ -395,10 +398,10 @@ export default function CartPage() {
                 try {
                   const res = await fetch(`/api/reservations/by-email?email=${encodeURIComponent(email)}&for=cart`);
                   const data = await res.json();
-                  if (!res.ok) throw new Error(data.error ?? 'Error al buscar');
+                  if (!res.ok) throw new Error(data.error ?? t('my_reservations_error_search', 'Search failed'));
                   const reservations = data.reservations ?? [];
                   if (reservations.length === 0) {
-                    setRecoveryError('No se encontraron reservas con ese email.');
+                    setRecoveryError(t('cart_recovery_not_found', 'No bookings were found for that email.'));
                   } else {
                     const cartItems = (reservations as Array<{ id: string; propertyId: string; propertySlug?: string; checkIn: string; checkOut: string }>).map((r) => ({
                       propertyId: r.propertyId,
@@ -410,13 +413,13 @@ export default function CartPage() {
                     setCart(cartItems);
                   }
                 } catch (err) {
-                  setRecoveryError(err instanceof Error ? err.message : 'Error al buscar reservas');
+                  setRecoveryError(err instanceof Error ? err.message : t('my_reservations_error_fetch', 'Could not load reservations.'));
                 } finally {
                   setRecoveryLoading(false);
                 }
               }}
             >
-              {recoveryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+              {recoveryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cart_recovery_search', 'Search')}
             </Button>
           </div>
           {recoveryError && <p className="text-sm text-red-600">{recoveryError}</p>}

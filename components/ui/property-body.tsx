@@ -352,7 +352,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
         </div>
 
         {localizedAmenities.length === 0 && (
-          <p className="text-gray-500">No hay amenidades listadas.</p>
+          <p className="text-gray-500">{t("amenities_empty", "No amenities listed.")}</p>
         )}
       </TabsContent>
 
@@ -408,7 +408,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
           </div>
         ) : (
           <p className="text-gray-500 text-sm">
-            {t("reviews_empty", "Aún no hay reseñas aprobadas para esta propiedad.")}
+            {t("reviews_empty", "There are no approved reviews for this property yet.")}
           </p>
         )}
         <ReviewForm propertyId={property.id} />
@@ -439,8 +439,15 @@ export default function PropertyBody(props: PropertyBodyProps) {
           {/* Mobile: formulario de reserva inmediatamente después del calendario */}
           <div id="booking-section" className="lg:hidden mt-6 space-y-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-              <p className="font-medium text-gray-900 mb-2">Reserva en 2 pasos</p>
-              <p>Elige fechas en el calendario y completa tus datos para pagar de forma segura (Stripe).</p>
+              <p className="font-medium text-gray-900 mb-2">
+                {t("property_book_steps_title", "Book in 2 steps")}
+              </p>
+              <p>
+                {t(
+                  "property_book_steps_body",
+                  "Choose dates on the calendar and enter your details to pay securely (Stripe)."
+                )}
+              </p>
               <div className="mt-4">
                 <CurrencySelect value={currency} onValueChange={onCurrencyChange} />
               </div>
@@ -462,10 +469,14 @@ export default function PropertyBody(props: PropertyBodyProps) {
         <div className="hidden lg:block lg:col-span-1 lg:mt-12 lg:self-start lg:sticky lg:top-24 lg:z-20">
           <div className="max-h-[calc(100vh-6rem)] space-y-4 overflow-y-auto [scrollbar-gutter:stable] pr-1">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-              <p className="font-medium text-gray-900 mb-2">Reserva directa</p>
+              <p className="font-medium text-gray-900 mb-2">
+                {t("property_book_direct_title", "Direct booking")}
+              </p>
               <p>
-                Selecciona fechas en el calendario y completa tus datos para continuar al pago
-                seguro (Stripe).
+                {t(
+                  "property_book_direct_body",
+                  "Select dates on the calendar and enter your details to continue to secure payment (Stripe)."
+                )}
               </p>
               <div className="mt-4">
                 <CurrencySelect value={currency} onValueChange={onCurrencyChange} />
@@ -524,10 +535,14 @@ export default function PropertyBody(props: PropertyBodyProps) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
       <div className="lg:col-span-2 space-y-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Reservar</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            {t("property_book_heading", "Book")}
+          </h2>
           {showCalendarWidget && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Calendario</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                {t("property_calendar_widget_heading", "Calendar")}
+              </h3>
               <HostfullyCalendarWidgetEmbed
                 propertyFirestoreId={property.id}
                 widgetId={Number(property.hostfullyCalendarWidgetId)}

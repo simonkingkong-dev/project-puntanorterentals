@@ -68,7 +68,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2" aria-label="Punta Norte Rentals - Inicio">
+          <Link href="/" className="flex items-center space-x-2" aria-label={`Punta Norte Rentals - ${t('nav_home', 'Home')}`}>
             <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} priority />
             <div className="flex flex-col leading-none">
               <span className="text-lg font-bold text-gray-900 leading-none">Punta Norte</span>

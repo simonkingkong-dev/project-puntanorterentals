@@ -9,6 +9,7 @@ import PropertyCard from "@/components/ui/property-card";
 import GoogleMap, { GoogleMapMarker } from "@/components/ui/google-map";
 import { listingSearchQueryFromURLSearchParams } from "@/lib/listing-search-params";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/components/providers/locale-provider";
 
 interface PropertiesMapLayoutProps {
   properties: Property[];
@@ -20,6 +21,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
   const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLocale();
   const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
 
   const markers = useMemo<GoogleMapMarker[]>(() => {
@@ -71,7 +73,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
             onClick={() => setIsMobileMapOpen(true)}
           >
             <MapIcon className="h-4 w-4 mr-2" />
-            Ver mapa
+            {t("map_view", "View map")}
           </Button>
         </div>
         {properties.map((property) => (
@@ -106,7 +108,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
                   setOpenPropertyId(null);
                   setHighlightedId(null);
                 }}
-                aria-label="Cerrar tarjeta de propiedad"
+                aria-label={t("map_close_property_card", "Close property card")}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -126,7 +128,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
               size="icon"
               className="rounded-full shadow-md"
               onClick={() => setIsMobileMapOpen(false)}
-              aria-label="Cerrar mapa"
+              aria-label={t("map_close", "Close map")}
             >
               <X className="h-5 w-5" />
             </Button>

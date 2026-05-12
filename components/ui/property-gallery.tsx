@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useLocale } from '@/components/providers/locale-provider';
 
 interface PropertyGalleryProps {
   images: string[];
@@ -23,6 +24,7 @@ interface PropertyGalleryProps {
  * @returns {JSX.Element} A JSX element representing the property image gallery.
  **/
 export default function PropertyGallery({ images, title }: PropertyGalleryProps) {
+  const { t } = useLocale();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalIndex, setModalIndex] = useState(0);
@@ -43,7 +45,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
   if (!images || images.length === 0) {
     return (
       <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-        <span className="text-gray-500">Sin imágenes disponibles</span>
+        <span className="text-gray-500">{t('gallery_no_images', 'No images available')}</span>
       </div>
     );
   }
@@ -56,11 +58,11 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
           type="button"
           className="relative overflow-hidden rounded-lg cursor-pointer group h-full"
           onClick={() => openModal(currentIndex)}
-          aria-label={`${title} - Ver galería completa`}
+          aria-label={t('gallery_open_full', '{title} - View full gallery').replace('{title}', title)}
         >
           <Image
             src={images[currentIndex]}
-            alt={`${title} - Imagen principal`}
+            alt={t('gallery_main_image', '{title} - Main image').replace('{title}', title)}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 1024px) 100vw, 50vw"
@@ -79,11 +81,15 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               type="button"
               className="relative overflow-hidden rounded-lg cursor-pointer group bg-gray-200 h-full min-h-0"
               onClick={() => openModal(index + 1)}
-              aria-label={`${title} - Ver imagen ${index + 2}`}
+              aria-label={t('gallery_view_image', '{title} - View image {n}')
+                .replace('{title}', title)
+                .replace('{n}', String(index + 2))}
             >
               <Image
                 src={image}
-                alt={`${title} - Imagen ${index + 2}`}
+                alt={t('gallery_image', '{title} - Image {n}')
+                  .replace('{title}', title)
+                  .replace('{n}', String(index + 2))}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
                 sizes="25vw"
@@ -103,8 +109,8 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
             }}
           >
             {images.length > 5
-              ? `Mostrar todas las fotos (+${images.length - 5})`
-              : 'Mostrar todas las fotos'}
+              ? t('gallery_show_all_more', 'Show all photos (+{n})').replace('{n}', String(images.length - 5))
+              : t('gallery_show_all', 'Show all photos')}
           </Button>
         </div>
       </div>
@@ -119,12 +125,16 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               index === currentIndex ? 'ring-2 ring-orange-500' : ''
             }`}
             onClick={() => setCurrentIndex(index)}
-            aria-label={`${title} - Miniatura ${index + 1}`}
+            aria-label={t('gallery_thumbnail', '{title} - Thumbnail {n}')
+              .replace('{title}', title)
+              .replace('{n}', String(index + 1))}
             aria-pressed={index === currentIndex}
           >
             <Image
               src={image}
-              alt={`${title} - Miniatura ${index + 1}`}
+              alt={t('gallery_thumbnail', '{title} - Thumbnail {n}')
+                .replace('{title}', title)
+                .replace('{n}', String(index + 1))}
               fill
               className="object-cover"
               sizes="64px"
@@ -139,7 +149,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-7xl w-full h-full p-0 bg-black">
           <DialogTitle className="sr-only">
-            Galería de imágenes - {title}
+            {t('gallery_title', 'Image gallery - {title}').replace('{title}', title)}
           </DialogTitle>
           <div className="relative w-full h-full flex items-center justify-center">
             <Button
@@ -147,7 +157,7 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
               size="icon"
               className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
               onClick={() => setIsModalOpen(false)}
-              aria-label="Cerrar galería"
+              aria-label={t('gallery_close', 'Close gallery')}
             >
               <X className="w-6 h-6" />
             </Button>
@@ -155,7 +165,9 @@ export default function PropertyGallery({ images, title }: PropertyGalleryProps)
             <div className="relative w-full h-full max-w-5xl max-h-[90vh]">
               <Image
                 src={images[modalIndex]}
-                alt={`${title} - Imagen ${modalIndex + 1}`}
+                alt={t('gallery_image', '{title} - Image {n}')
+                  .replace('{title}', title)
+                  .replace('{n}', String(modalIndex + 1))}
                 fill
                 className="object-contain"
                 sizes="(max-width: 1280px) 100vw, 1280px"

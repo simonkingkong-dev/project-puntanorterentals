@@ -52,7 +52,13 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   return {
     title: `${propertyTitle} — Punta Norte Rentals`,
     description,
-    keywords: [propertyTitle, 'renta vacacional', 'Punta Norte', 'México', `hasta ${property.maxGuests} huéspedes`],
+    keywords: [
+      propertyTitle,
+      locale === 'en' ? 'vacation rental' : 'renta vacacional',
+      'Punta Norte',
+      'México',
+      m.property_card_up_to_guests.replace('{n}', String(property.maxGuests)),
+    ],
     robots: { index: true, follow: true },
     openGraph: {
       title: `${propertyTitle} | Punta Norte Rentals`,
@@ -107,7 +113,9 @@ export default async function PropertyPage({
       name: a,
       value: true,
     })),
-    priceRange: property.pricePerNight ? `Desde $${property.pricePerNight} USD/noche` : undefined,
+    priceRange: property.pricePerNight
+      ? `${locale === 'en' ? 'From' : 'Desde'} $${property.pricePerNight} ${m.property_card_per_night}`
+      : undefined,
     address: { '@type': 'PostalAddress', addressCountry: 'MX', addressRegion: 'Punta Norte' },
     containedInPlace: { '@type': 'LodgingBusiness', name: 'Punta Norte Rentals', url: siteUrl },
   };

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Service } from '@/lib/types';
+import { useLocale } from '@/components/providers/locale-provider';
 
 interface ServiceCardProps {
   service: Service;
@@ -25,6 +26,8 @@ interface ServiceCardProps {
  * @returns {JSX.Element} A JSX element representing a stylized service card.
  */
 export default function ServiceCard({ service }: ServiceCardProps) {
+  const { t } = useLocale();
+
   return (
     <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <div className="relative h-48 overflow-hidden">
@@ -36,7 +39,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
         />
         {service.featured && (
           <Badge className="absolute top-4 left-4 bg-teal-500 hover:bg-teal-600 text-white">
-            Destacado
+            {t('page_services_featured', 'Featured')}
           </Badge>
         )}
       </div>
@@ -57,7 +60,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           >
             <Link href={service.externalLink} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
-              Reservar Experiencia
+              {t('service_book_experience', 'Book experience')}
             </Link>
           </Button>
         </div>

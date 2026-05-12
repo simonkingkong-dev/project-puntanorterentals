@@ -11,6 +11,7 @@ import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { useLocale } from '@/components/providers/locale-provider';
 import {
   getLocalizedPropertyAmenities,
+  getLocalizedPropertyDescription,
   getLocalizedPropertyTitle,
 } from '@/lib/property-localization';
 import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
@@ -68,6 +69,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     ? property.images
     : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
+  const propertyDescription = getLocalizedPropertyDescription(property, locale);
   const amenities = getLocalizedPropertyAmenities(property, locale);
   const nightlyRate = useMemo(() => getFirstAvailableNightlyRate(property), [property]);
 
@@ -121,7 +123,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 type="button"
                 onClick={showPrevImage}
                 className="absolute left-3 top-1/2 z-10 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
-                aria-label="Imagen anterior"
+                aria-label={t('property_card_prev_image', 'Previous image')}
               >
                 ‹
               </button>
@@ -129,7 +131,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 type="button"
                 onClick={showNextImage}
                 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors"
-                aria-label="Imagen siguiente"
+                aria-label={t('property_card_next_image', 'Next image')}
               >
                 ›
               </button>
@@ -138,7 +140,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           {property.featured && (
             <Badge className="absolute top-4 left-4 z-10 bg-orange-500 hover:bg-orange-600 text-white border-0">
               <Star className="w-3 h-3 mr-1" />
-              Destacado
+              {t('property_featured', 'Featured')}
             </Badge>
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -152,11 +154,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             
             <div className="flex items-center gap-2 text-gray-600">
               <Users className="w-4 h-4" />
-              <span className="text-sm">Hasta {property.maxGuests} huéspedes</span>
+              <span className="text-sm">
+                {t('property_card_up_to_guests', 'Up to {n} guests').replace('{n}', String(property.maxGuests))}
+              </span>
             </div>
             
             <p className="text-gray-600 text-sm line-clamp-2">
-              {property.description}
+              {propertyDescription}
             </p>
             
             <div className="flex items-start justify-between gap-3 pt-2 border-t">
@@ -167,7 +171,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                   </p>
                   <p className="text-base font-bold text-gray-900 leading-tight">
                     ${Math.round(nightlyRate).toLocaleString('en-US')}
-                    <span className="text-xs font-medium text-gray-500"> USD/noche</span>
+                    <span className="text-xs font-medium text-gray-500"> {t('property_card_per_night', 'USD/night')}</span>
                   </p>
                 </div>
               )}

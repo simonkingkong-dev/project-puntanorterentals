@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getHostfullyOrbiCalendarScriptSrc } from "@/lib/hostfully-widget-scripts";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/components/providers/locale-provider";
 
 function loadScriptOnce(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -42,6 +43,7 @@ export default function HostfullyCalendarWidgetEmbed({
   monthsToDisplay = 2,
   className,
 }: HostfullyCalendarWidgetEmbedProps) {
+  const { t } = useLocale();
   const containerId = `hostfully-cal-${propertyFirestoreId.replace(/[^a-zA-Z0-9_-]/g, "")}-${widgetId}`;
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +59,7 @@ export default function HostfullyCalendarWidgetEmbed({
         if (cancelled) return;
         const Orbi = window.orbiwidget;
         if (typeof Orbi !== "function") {
-          setError("Hostfully: `orbiwidget` no está disponible tras cargar el script.");
+          setError(t("hostfully_calendar_unavailable", "Hostfully: the calendar is not available after loading the script."));
           return;
         }
         new Orbi(containerId, {
@@ -68,7 +70,7 @@ export default function HostfullyCalendarWidgetEmbed({
         });
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Error cargando calendario Hostfully");
+          setError(e instanceof Error ? e.message : t("hostfully_calendar_load_error", "Error loading Hostfully calendar"));
         }
       }
     })();
@@ -78,7 +80,7 @@ export default function HostfullyCalendarWidgetEmbed({
       const el = document.getElementById(containerId);
       if (el) el.innerHTML = "";
     };
-  }, [containerId, widgetId, name, showTentative, monthsToDisplay]);
+  }, [containerId, widgetId, name, showTentative, monthsToDisplay, t]);
 
   return (
     <div className={cn("hostfully-calendar-widget-embed space-y-3", className)}>

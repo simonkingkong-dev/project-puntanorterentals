@@ -13,6 +13,7 @@ import {
   hasHostfullyWidgetConfig,
 } from "@/lib/hostfully-widget-config";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/components/providers/locale-provider";
 
 export interface HostfullyBookingEmbedProps {
   /** UID de la propiedad en Hostfully (mismo valor que `hostfullyPropertyId` en Firestore). */
@@ -34,6 +35,7 @@ export default function HostfullyBookingEmbed({
   hostfullyPropertyUid,
   className,
 }: HostfullyBookingEmbedProps) {
+  const { t } = useLocale();
   const agencyUid = getHostfullyPublicAgencyUid();
   const scriptSrc = getHostfullyWidgetScriptSrc();
   const iframeTemplate = getHostfullyBookingIframeUrlTemplate();
@@ -59,21 +61,21 @@ export default function HostfullyBookingEmbed({
       <Card className="border-amber-200 bg-amber-50">
         <CardHeader>
           <CardTitle className="text-amber-900 text-base">
-            Widget Hostfully no configurado
+            {t("hostfully_widget_unconfigured", "Hostfully widget not configured")}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-amber-800 space-y-2">
           <p>
-            Añade en el entorno{" "}
-            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_WIDGET_SCRIPT_SRC</code>{" "}
-            (y opcionalmente{" "}
-            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_BOOKING_IFRAME_URL</code>
-            ) según el snippet del panel Hostfully.
+            {t(
+              "hostfully_widget_env_help",
+              "Add NEXT_PUBLIC_HOSTFULLY_WIDGET_SCRIPT_SRC to the environment (and optionally NEXT_PUBLIC_HOSTFULLY_BOOKING_IFRAME_URL) based on the Hostfully panel snippet."
+            )}
           </p>
           <p>
-            También{" "}
-            <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_HOSTFULLY_AGENCY_UID</code>{" "}
-            debe coincidir con tu agencia en Hostfully.
+            {t(
+              "hostfully_widget_agency_help",
+              "NEXT_PUBLIC_HOSTFULLY_AGENCY_UID must also match your Hostfully agency."
+            )}
           </p>
         </CardContent>
       </Card>
@@ -89,7 +91,7 @@ export default function HostfullyBookingEmbed({
         )}
       >
         <iframe
-          title="Reserva Hostfully"
+          title={t("hostfully_iframe_title", "Hostfully booking")}
           src={iframeSrc}
           className="w-full min-h-[520px] border-0"
           sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
@@ -114,8 +116,10 @@ export default function HostfullyBookingEmbed({
         {...dataProps}
       />
       <p className="text-xs text-gray-500">
-        Las fechas, precios y el pago los gestiona Hostfully. Apariencia fina del widget: panel
-        Hostfully → Custom branding / Custom CSS.
+        {t(
+          "hostfully_widget_note",
+          "Dates, rates, and payment are managed by Hostfully. Fine-tune the widget appearance in Hostfully -> Custom branding / Custom CSS."
+        )}
       </p>
     </div>
   );

@@ -286,7 +286,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const reservationId = data.reservationId;
-      if (!reservationId) throw new Error('No se recibió ID de reserva');
+      if (!reservationId) throw new Error(t('toast_prepare_error', 'Could not prepare the booking. Please try again.'));
 
       toast.success(t('toast_redirecting', 'Redirecting to payment…'));
       router.push(`/payment?reservation=${reservationId}&currency=${currency}`);
@@ -465,7 +465,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     <SelectItem key={num} value={num.toString()}>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
-                        {num} {num === 1 ? 'huésped' : 'huéspedes'}
+                        {num} {num === 1 ? t('property_guest_singular', 'guest') : t('property_guests', 'guests')}
                       </div>
                     </SelectItem>
                   ))}
@@ -499,7 +499,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <div className="mt-2 space-y-1">
                   {(nightlyBreakdown.length > 0
                     ? nightlyBreakdown
-                    : Array.from({ length: nights }, (_, i) => ({ date: `Noche ${i + 1}`, amount: property.pricePerNight }))
+                    : Array.from({ length: nights }, (_, i) => ({ date: `${t('night_singular', 'night')} ${i + 1}`, amount: property.pricePerNight }))
                   ).map((night, idx) => (
                     <div key={`${night.date}-${idx}`} className="flex justify-between text-gray-600">
                       <span>{night.date}</span>
@@ -514,7 +514,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <span>
                   {t('pricing_extra_guests', 'Extra guests')}
                   <span className="block text-xs text-gray-500 font-normal">
-                    ({Math.max(0, bookingGuests - getIncludedGuests(property))} x {getExtraGuestFeePerNightUsd(property)} USD {t('pricing_per_night', 'por noche')})
+                    ({Math.max(0, bookingGuests - getIncludedGuests(property))} x {getExtraGuestFeePerNightUsd(property)} USD {t('pricing_per_night', 'per night')})
                   </span>
                 </span>
                 <span>{formatPrice(extraGuestDisplay, currency)}</span>
