@@ -49,12 +49,11 @@ export async function handleUpdateProperty(propertyId: string, formData: UpdateP
 
     revalidatePath("/admin/properties");
     revalidatePath(`/admin/properties/${propertyId}/edit`);
+    return { success: true };
   } catch (error) {
     console.error("Error updating property:", error);
     return { success: false, error: "Error al actualizar la propiedad." };
   }
-
-  redirect("/admin/properties");
 }
 
 

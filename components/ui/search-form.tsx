@@ -2,26 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays, Users, Search } from 'lucide-react';
+import { CalendarDays, Users, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocale } from '@/components/providers/locale-provider';
 
-/**
- * Displays a search form for users to find properties based on check-in and check-out dates, and number of guests.
- * @example
- * SearchForm()
- * Renders a form with inputs for check-in and check-out dates, and guest selection.
- * @returns {JSX.Element} A JSX element containing the search form UI.
- */
 export default function SearchForm() {
   const router = useRouter();
   const urlSearchParams = useSearchParams();
   const { t } = useLocale();
   const checkInRef = useRef<HTMLInputElement>(null);
   const checkOutRef = useRef<HTMLInputElement>(null);
+  const [isOpen, setIsOpen] = useState(true);
   const [searchParams, setSearchParams] = useState(() => ({
     checkIn: urlSearchParams.get('checkIn') ?? '',
     checkOut: urlSearchParams.get('checkOut') ?? '',
@@ -53,101 +47,130 @@ export default function SearchForm() {
   const guestWord = (n: number) =>
     n === 1 ? t("property_guest_singular") : t("property_guests");
 
+  const hasActiveFilters = searchParams.checkIn || searchParams.checkOut || searchParams.guests;
+
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-2xl border border-border/60 bg-card/95 backdrop-blur-md">
-      <CardContent className="p-6 sm:p-7">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Check In */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-muted-foreground" />
-              {t("search_check_in")}
-            </label>
-            <div
-              className="cursor-pointer select-none"
-              onClick={() => {
-                checkInRef.current?.showPicker?.();
-              }}
-            >
-              <Input
-                ref={checkInRef}
-                type="date"
-                value={searchParams.checkIn}
-                onChange={(e) => {
-                  const checkIn = e.target.value;
-                  setSearchParams((prev) => ({ ...prev, checkIn }));
-                  requestAnimationFrame(() => {
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-6 sm:px-7 pt-5 pb-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Search className="w-4 h-4" />
+          {t("search_submit", "Search")}
+          {!isOpen && hasActiveFilters && (
+            <span className="ml-1 inline-flex h-2 w-2 rounded-full bg-orange-500" />
+          )}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <CardContent className="px-6 sm:px-7 pb-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Check In */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  {t("search_check_in")}
+                </label>
+                <div
+                  className="cursor-pointer select-none"
+                  onClick={() => {
+                    checkInRef.current?.showPicker?.();
+                  }}
+                >
+                  <Input
+                    ref={checkInRef}
+                    type="date"
+                    value={searchParams.checkIn}
+                    onChange={(e) => {
+                      const checkIn = e.target.value;
+                      setSearchParams((prev) => ({ ...prev, checkIn }));
+                      requestAnimationFrame(() => {
+                        checkOutRef.current?.showPicker?.();
+                      });
+                    }}
+                    className="search-date-input h-12 select-none caret-transparent"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+
+              {/* Check Out */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  {t("search_check_out")}
+                </label>
+                <div
+                  className="cursor-pointer select-none"
+                  onClick={() => {
                     checkOutRef.current?.showPicker?.();
-                  });
-                }}
-                className="search-date-input h-12 select-none caret-transparent"
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
+                  }}
+                >
+                  <Input
+                    ref={checkOutRef}
+                    type="date"
+                    value={searchParams.checkOut}
+                    onChange={(e) =>
+                      setSearchParams((prev) => ({ ...prev, checkOut: e.target.value }))
+                    }
+                    className="search-date-input h-12 select-none caret-transparent"
+                    min={searchParams.checkIn || new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
 
-          {/* Check Out */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-muted-foreground" />
-              {t("search_check_out")}
-            </label>
-            <div
-              className="cursor-pointer select-none"
-              onClick={() => {
-                checkOutRef.current?.showPicker?.();
-              }}
-            >
-              <Input
-                ref={checkOutRef}
-                type="date"
-                value={searchParams.checkOut}
-                onChange={(e) =>
-                  setSearchParams((prev) => ({ ...prev, checkOut: e.target.value }))
-                }
-                className="search-date-input h-12 select-none caret-transparent"
-                min={searchParams.checkIn || new Date().toISOString().split('T')[0]}
-              />
+              {/* Guests */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  {t("search_guests")}
+                </label>
+                <Select
+                  value={searchParams.guests}
+                  onValueChange={(value) =>
+                    setSearchParams((prev) => ({ ...prev, guests: value }))
+                  }
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder={t("search_guests_placeholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {guestWord(num)}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="6">
+                      6-14 {t("property_guests")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          {/* Guests */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              {t("search_guests")}
-            </label>
-            <Select
-              value={searchParams.guests}
-              onValueChange={(value) =>
-                setSearchParams((prev) => ({ ...prev, guests: value }))
-              }
+            <Button
+              onClick={handleSearch}
+              className="w-full mt-6 h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02]"
             >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder={t("search_guests_placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {guestWord(num)}
-                  </SelectItem>
-                ))}
-                <SelectItem value="6">
-                  6-14 {t("property_guests")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <Search className="w-4 h-4 mr-2" />
+              {t("search_submit")}
+            </Button>
+          </CardContent>
         </div>
-
-        <Button
-          onClick={handleSearch}
-          className="w-full mt-6 h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02]"
-        >
-          <Search className="w-4 h-4 mr-2" />
-          {t("search_submit")}
-        </Button>
-      </CardContent>
+      </div>
     </Card>
   );
 }

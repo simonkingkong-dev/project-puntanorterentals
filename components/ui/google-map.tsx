@@ -159,20 +159,25 @@ export function GoogleMap({
       .then(async (googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
         const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
+        let MapCtor: any = googleNs.maps?.Map;
         let AdvancedMarkerElement: any = null;
         let PinElement: any = null;
+        if (typeof googleNs.maps.importLibrary === "function") {
+          const mapsLib = await googleNs.maps.importLibrary("maps");
+          MapCtor = mapsLib.Map || googleNs.maps.Map;
 
-        if (mapId && typeof googleNs.maps.importLibrary === "function") {
-          const markerLibrary = await googleNs.maps.importLibrary("marker");
-          AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
-          PinElement = markerLibrary.PinElement;
+          if (mapId) {
+            const markerLibrary = await googleNs.maps.importLibrary("marker");
+            AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
+            PinElement = markerLibrary.PinElement;
+          }
         }
 
-        if (isCancelled || !mapRef.current) return;
+        if (isCancelled || !mapRef.current || !MapCtor) return;
 
         const mapCenter = { lat: centerLat, lng: centerLng };
         if (!mapInstanceRef.current) {
-          mapInstanceRef.current = new googleNs.maps.Map(mapRef.current, {
+          mapInstanceRef.current = new MapCtor(mapRef.current, {
             center: mapCenter,
             zoom,
             ...(mapId ? { mapId } : {}),

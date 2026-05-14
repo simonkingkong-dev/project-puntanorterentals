@@ -64,7 +64,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6">
       {/* Lista de propiedades (scroll) */}
-      <div className="h-[70vh] overflow-y-auto pr-1 space-y-6">
+      <div className="h-[calc(100vh-76px)] overflow-y-auto pr-1 space-y-6">
         <div className="lg:hidden sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm pb-3">
           <Button
             type="button"
@@ -89,7 +89,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
       </div>
 
       {/* Mapa */}
-      <div className="relative hidden lg:block h-[70vh] rounded-lg overflow-hidden border bg-gray-100">
+      <div className="relative hidden lg:block h-[calc(100vh-76px)] sticky top-[66px] rounded-lg overflow-hidden border bg-gray-100">
         <GoogleMap
           center={initialCenter}
           markers={markers}

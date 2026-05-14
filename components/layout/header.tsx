@@ -64,7 +64,14 @@ export default function Header() {
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b">
+    <header
+      className="sticky top-0 isolate z-[100] bg-white/95 backdrop-blur-sm shadow-sm border-b"
+      style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        WebkitBackdropFilter: 'blur(4px)',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

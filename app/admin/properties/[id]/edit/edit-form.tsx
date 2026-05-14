@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Property } from "@/lib/types";
+import { Property, BedType } from "@/lib/types";
 import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
   DEFAULT_INCLUDED_GUESTS,
@@ -49,12 +49,6 @@ const commonAmenitiesByLang = {
 interface PropertyEditFormProps {
   initialData: Property;
 }
-
-const isNextRedirectError = (error: unknown): boolean => {
-  if (!error || typeof error !== "object") return false;
-  const maybeDigest = (error as { digest?: unknown }).digest;
-  return typeof maybeDigest === "string" && maybeDigest.startsWith("NEXT_REDIRECT");
-};
 
 /** Campos numéricos de widgets como string en inputs HTML. */
 type PropertyEditFormState = Omit<
@@ -141,6 +135,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     summaryEn: initialData.summaryEn ?? '',
     latitude: initialData.latitude,
     longitude: initialData.longitude,
+    beds: initialData.beds ?? [],
   });
 
   // --- CORREGIDO: Estados separados para imágenes ---
@@ -254,9 +249,6 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         toast.success("Propiedad actualizada exitosamente.");
       }
     } catch (error) {
-      if (isNextRedirectError(error)) {
-        return;
-      }
       console.error("Error al actualizar la propiedad:", error);
       toast.error("Error al subir las imágenes. Revisa la consola.");
     } finally {
@@ -460,6 +452,65 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
                 }
               />
             </div>
+          </div>
+
+          {/* --- Bed types editor --- */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">Tipos de cama</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    beds: [...(prev.beds ?? []), "double" as BedType],
+                  }))
+                }
+              >
+                <Plus className="mr-1 h-4 w-4" /> Agregar cama
+              </Button>
+            </div>
+
+            {(formData.beds ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No se han definido camas. Presiona &quot;Agregar cama&quot; para comenzar.
+              </p>
+            )}
+
+            {(formData.beds ?? []).map((bed, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="w-8 text-sm text-muted-foreground text-right">{idx + 1}.</span>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={bed}
+                  onChange={(e) => {
+                    const updated = [...(formData.beds ?? [])];
+                    updated[idx] = e.target.value as BedType;
+                    setFormData((prev) => ({ ...prev, beds: updated }));
+                  }}
+                >
+                  <option value="bunk">Litera</option>
+                  <option value="single">Individual</option>
+                  <option value="double">Matrimonial</option>
+                  <option value="queen">Queen</option>
+                  <option value="king">King</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                  onClick={() => {
+                    const updated = (formData.beds ?? []).filter((_, i) => i !== idx);
+                    setFormData((prev) => ({ ...prev, beds: updated }));
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

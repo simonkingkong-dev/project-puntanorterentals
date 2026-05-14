@@ -1,3 +1,5 @@
+export type BedType = 'bunk' | 'single' | 'double' | 'queen' | 'king';
+
 export interface Property {
   id: string;
   /** Nombre interno para operación/admin. No se muestra a clientes. */
@@ -29,6 +31,8 @@ export interface Property {
   bedrooms?: number;
   /** Baños (Hostfully). */
   bathrooms?: number;
+  /** Tipos de cama por habitación. */
+  beds?: BedType[];
   /** Resumen corto (Hostfully). */
   summary?: string;
   /** Descripción corta local/Hostfully (Short Description). */
