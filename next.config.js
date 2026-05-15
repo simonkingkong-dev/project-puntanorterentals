@@ -42,6 +42,17 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Evita 308 cuando Airbnb/Hostfully piden /calendar-feed/?ical=... (barra final)
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/calendar-feed/',
+          destination: '/calendar-feed',
+        },
+      ],
+    };
+  },
 };
 
 module.exports = nextConfig;
