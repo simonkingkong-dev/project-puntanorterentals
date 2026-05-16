@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,6 +101,32 @@ function createClassicMarkerIcon(
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
+function isValidLatLng(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180
+  );
+}
+
+function getMapContainer(mapInstance: unknown): HTMLElement | null {
+  const map = mapInstance as { getDiv?: () => HTMLElement };
+  return typeof map.getDiv === "function" ? map.getDiv() : null;
+}
+
+function clearMarkerInstances(markersRef: MutableRefObject<Record<string, unknown>>) {
+  Object.values(markersRef.current).forEach((m) => {
+    const marker = m as { setMap?: (map: null) => void; map?: unknown };
+    if (typeof marker.setMap === "function") {
+      marker.setMap(null);
+    } else {
+      marker.map = null;
+    }
+  });
+  markersRef.current = {};
+}
+
 /** z-index por encima del header del sitio (z-[100]) */
 const MAP_OVERLAY_Z = 250;
 
@@ -112,6 +145,7 @@ export function GoogleMap({
   const { t } = useLocale();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<unknown>(null);
+  const googleNsRef = useRef<GoogleNamespace | null>(null);
   const cameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const markersRef = useRef<Record<string, unknown>>({});
   const onMarkerClickRef = useRef(onMarkerClick);
@@ -207,15 +241,7 @@ export function GoogleMap({
       const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
       const hasSelectedMarker = Boolean(selectedId);
 
-      Object.values(markersRef.current).forEach((m) => {
-        const marker = m as { setMap?: (map: null) => void; map?: unknown };
-        if (typeof marker.setMap === "function") {
-          marker.setMap(null);
-        } else {
-          marker.map = null;
-        }
-      });
-      markersRef.current = {};
+      clearMarkerInstances(markersRef);
 
       markers.forEach((marker) => {
         const isSelected = selectedId === marker.id;
@@ -290,12 +316,27 @@ export function GoogleMap({
       return;
     }
 
+    if (!isValidLatLng(centerLat, centerLng)) {
+      setLoadStatus("error");
+      return;
+    }
+
     let isCancelled = false;
     setLoadStatus((s) => (s === "ready" ? "ready" : "loading"));
 
-    loadGoogleMaps(apiKey)
-      .then(async (googleNs) => {
-        if (isCancelled || !googleNs || !mapRef.current) return;
+    const initMap = async () => {
+      try {
+        const googleNs = await loadGoogleMaps(apiKey);
+        if (isCancelled || !googleNs || !mapRef.current) {
+          return;
+        }
+
+        const container = mapRef.current;
+        const rect = container.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) {
+          if (!isCancelled) setLoadStatus("error");
+          return;
+        }
 
         const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
         let MapCtor = googleNs.maps.Map;
@@ -328,6 +369,16 @@ export function GoogleMap({
           (googleNs as { __pinElement?: typeof PinElement }).__pinElement = PinElement;
         }
 
+        googleNsRef.current = googleNs;
+
+        const existingMap = mapInstanceRef.current;
+        const existingContainer = existingMap ? getMapContainer(existingMap) : null;
+        if (existingMap && existingContainer !== mapRef.current) {
+          clearMarkerInstances(markersRef);
+          mapInstanceRef.current = null;
+          cameraRef.current = null;
+        }
+
         const mapCenter = { lat: centerLat, lng: centerLng };
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = new MapCtor(mapRef.current, {
@@ -357,8 +408,6 @@ export function GoogleMap({
           }
         }
 
-        syncMarkers(googleNs, mapInstanceRef.current);
-
         const triggerResize = () => {
           if (!mapInstanceRef.current || !googleNs.maps?.event) return;
           googleNs.maps.event.trigger(mapInstanceRef.current, "resize");
@@ -368,18 +417,25 @@ export function GoogleMap({
         });
 
         if (!isCancelled) setLoadStatus("ready");
-      })
-      .catch((err) => {
+      } catch (err) {
         if (isCancelled) return;
         setLoadStatus("error");
         if (process.env.NODE_ENV === "development") {
           // eslint-disable-next-line no-console
           console.error("[GoogleMap] Error loading Google Maps", err);
         }
-      });
+      }
+    };
+
+    void initMap();
 
     return () => {
       isCancelled = true;
+      clearMarkerInstances(markersRef);
+      mapInstanceRef.current = null;
+      googleNsRef.current = null;
+      cameraRef.current = null;
+      setLoadStatus((s) => (s === "loading" ? "idle" : s));
     };
   }, [
     hasEnteredViewport,
@@ -387,12 +443,27 @@ export function GoogleMap({
     centerLat,
     centerLng,
     zoom,
-    syncMarkers,
     disableNativeFullscreen,
   ]);
 
+  useEffect(() => {
+    if (loadStatus !== "ready" || !mapInstanceRef.current || !googleNsRef.current) return;
+    try {
+      syncMarkers(googleNsRef.current, mapInstanceRef.current);
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.error("[GoogleMap] Error syncing markers", err);
+      }
+    }
+  }, [loadStatus, syncMarkers]);
+
   const handleRetry = () => {
     resetGoogleMapsLoader();
+    clearMarkerInstances(markersRef);
+    mapInstanceRef.current = null;
+    googleNsRef.current = null;
+    cameraRef.current = null;
     setLoadStatus("idle");
     setLoadAttempt((n) => n + 1);
     if (eager) setHasEnteredViewport(true);

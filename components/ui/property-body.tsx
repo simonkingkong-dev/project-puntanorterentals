@@ -196,6 +196,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const [bookingGuests, setBookingGuests] = useState(() =>
     getInitialBookingGuests(property.maxGuests, property.includedGuests, initialGuests)
   );
+  const [activeTab, setActiveTab] = useState("overview");
   useEffect(() => {
     setSelectedDates(
       getInitialSelectedDates({
@@ -254,7 +255,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const localizedAmenities = getLocalizedPropertyAmenities(property, locale);
 
   const propertyTabs = (
-    <Tabs defaultValue="overview" className="w-full">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto flex-wrap gap-1">
         <TabsTrigger value="overview">{t("property_tabs_overview", "Overview")}</TabsTrigger>
         <TabsTrigger value="amenities">{t("property_tabs_amenities", "Amenities")}</TabsTrigger>
@@ -358,26 +359,29 @@ export default function PropertyBody(props: PropertyBodyProps) {
 
       <TabsContent value="map" className="mt-4">
         {hasMap ? (
-          <div className="rounded-lg overflow-hidden border bg-gray-100 aspect-video">
-            <GoogleMap
-              center={{
-                lat: property.latitude as number,
-                lng: property.longitude as number,
-              }}
-              markers={[
-                {
-                  id: property.id,
+          activeTab === "map" ? (
+            <div className="rounded-lg overflow-hidden border bg-gray-100 aspect-video">
+              <GoogleMap
+                eager
+                center={{
                   lat: property.latitude as number,
                   lng: property.longitude as number,
-                  title: property.title,
-                  url: `/properties/${property.slug}`,
-                },
-              ]}
-              selectedId={property.id}
-              className="w-full h-full min-h-[300px]"
-              zoom={15}
-            />
-          </div>
+                }}
+                markers={[
+                  {
+                    id: property.id,
+                    lat: property.latitude as number,
+                    lng: property.longitude as number,
+                    title: property.title,
+                    url: `/properties/${property.slug}`,
+                  },
+                ]}
+                selectedId={property.id}
+                className="w-full h-full min-h-[300px]"
+                zoom={15}
+              />
+            </div>
+          ) : null
         ) : (
           <p className="text-gray-500">{t("map_unavailable", "Map not available for this property.")}</p>
         )}
