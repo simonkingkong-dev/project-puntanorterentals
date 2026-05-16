@@ -1,22 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Loader2, Plus, X, Link2 } from 'lucide-react';
+import { Save, Loader2, Plus, X, Link2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property, BedType } from "@/lib/types";
 import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
   DEFAULT_INCLUDED_GUESTS,
 } from "@/lib/pricing-guests";
-import { handleUpdateProperty, UpdatePropertyFormData } from "../../actions";
+import {
+  handleBulkAppendPropertyAmenity,
+  handleBulkUpdatePropertyAmenities,
+  handleUpdateProperty,
+  handleUpdatePropertyAmenities,
+  UpdatePropertyFormData,
+} from "../../actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
 
@@ -65,8 +81,16 @@ type PropertyEditFormState = Omit<
 
 export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
   const [isPending, setIsPending] = useState(false);
+  const [isAmenitiesPending, setIsAmenitiesPending] = useState(false);
+  const [isBulkAmenitiesPending, setIsBulkAmenitiesPending] = useState(false);
+  const [isBulkAppendPending, setIsBulkAppendPending] = useState(false);
+  const initialAmenitiesByLang = useRef({
+    es: [...(initialData.amenitiesEs ?? initialData.amenities ?? [])],
+    en: [...(initialData.amenitiesEn ?? [])],
+  });
   const [contentLang, setContentLang] = useState<'es' | 'en'>('es');
   const [amenityLang, setAmenityLang] = useState<'es' | 'en'>('es');
+  const [draggingAmenityIndex, setDraggingAmenityIndex] = useState<number | null>(null);
   
   // 1. El estado del formulario principal
   const [formData, setFormData] = useState<PropertyEditFormState>({
@@ -152,6 +176,22 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
       : formData.amenitiesEn ?? [];
   const commonAmenities = commonAmenitiesByLang[amenityLang];
 
+  const newAmenitiesSinceLoad = useMemo(() => {
+    const baseline = initialAmenitiesByLang.current[amenityLang];
+    return activeAmenities.filter((a) => !baseline.includes(a));
+  }, [activeAmenities, amenityLang]);
+
+  const markAmenitiesAsSavedBaseline = () => {
+    initialAmenitiesByLang.current[amenityLang] = [...activeAmenities];
+  };
+
+  const markAmenityInBaseline = (amenity: string) => {
+    const baseline = initialAmenitiesByLang.current[amenityLang];
+    if (!baseline.includes(amenity)) {
+      initialAmenitiesByLang.current[amenityLang] = [...baseline, amenity];
+    }
+  };
+
   const getLangValue = (
     baseKey: string,
     esKey: string,
@@ -201,6 +241,9 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         hostfullyCalendarWidgetId: calWidgetIdStr,
         hostfullyCalendarShowTentative: calStStr,
         hostfullyCalendarMonthsToDisplay: calMdStr,
+        amenities: _amenities,
+        amenitiesEs: _amenitiesEs,
+        amenitiesEn: _amenitiesEn,
         ...formRest
       } = formData;
 
@@ -273,6 +316,122 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
   };
   const removeAmenity = (amenity: string) => {
     setAmenitiesForActiveLang(activeAmenities.filter(a => a !== amenity));
+  };
+
+  const reorderAmenity = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= activeAmenities.length ||
+      toIndex >= activeAmenities.length
+    ) {
+      return;
+    }
+    const updated = [...activeAmenities];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    setAmenitiesForActiveLang(updated);
+  };
+
+  const saveAmenitiesForCurrentProperty = async () => {
+    setIsAmenitiesPending(true);
+    try {
+      const result = await handleUpdatePropertyAmenities(
+        initialData.id,
+        amenityLang,
+        activeAmenities
+      );
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        markAmenitiesAsSavedBaseline();
+        toast.success(
+          amenityLang === "es"
+            ? "Amenidades en español guardadas en esta propiedad."
+            : "English amenities saved for this property."
+        );
+      }
+    } catch {
+      toast.error("Error al guardar las amenidades.");
+    } finally {
+      setIsAmenitiesPending(false);
+    }
+  };
+
+  const appendAmenityToAllProperties = async (amenity: string) => {
+    setIsBulkAppendPending(true);
+    try {
+      const result = await handleBulkAppendPropertyAmenity(amenityLang, amenity);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        markAmenityInBaseline(amenity);
+        const added = result.addedCount ?? 0;
+        const skipped = result.skippedCount ?? 0;
+        toast.success(
+          amenityLang === "es"
+            ? `"${amenity}" añadida en ${added} propiedad${added === 1 ? "" : "es"} (${skipped} ya la tenían).`
+            : `"${amenity}" added to ${added} propert${added === 1 ? "y" : "ies"} (${skipped} already had it).`
+        );
+      }
+    } catch {
+      toast.error("Error al añadir la amenidad en todas las propiedades.");
+    } finally {
+      setIsBulkAppendPending(false);
+    }
+  };
+
+  const appendAllNewAmenitiesToAllProperties = async () => {
+    if (newAmenitiesSinceLoad.length === 0) return;
+    setIsBulkAppendPending(true);
+    try {
+      let totalAdded = 0;
+      let totalSkipped = 0;
+      for (const amenity of newAmenitiesSinceLoad) {
+        const result = await handleBulkAppendPropertyAmenity(amenityLang, amenity);
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
+        totalAdded += result.addedCount ?? 0;
+        totalSkipped += result.skippedCount ?? 0;
+        markAmenityInBaseline(amenity);
+      }
+      toast.success(
+        amenityLang === "es"
+          ? `${newAmenitiesSinceLoad.length} amenidad${newAmenitiesSinceLoad.length === 1 ? "" : "es"} nuevas añadidas (${totalAdded} actualizaciones, ${totalSkipped} ya existían).`
+          : `${newAmenitiesSinceLoad.length} new amenit${newAmenitiesSinceLoad.length === 1 ? "y" : "ies"} added (${totalAdded} updates, ${totalSkipped} already existed).`
+      );
+    } catch {
+      toast.error("Error al añadir las amenidades en todas las propiedades.");
+    } finally {
+      setIsBulkAppendPending(false);
+    }
+  };
+
+  const saveAmenitiesForAllProperties = async () => {
+    setIsBulkAmenitiesPending(true);
+    try {
+      const result = await handleBulkUpdatePropertyAmenities(
+        amenityLang,
+        activeAmenities
+      );
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        markAmenitiesAsSavedBaseline();
+        toast.success(
+          amenityLang === "es"
+            ? `Amenidades en español aplicadas a ${result.count ?? 0} propiedades.`
+            : `English amenities applied to ${result.count ?? 0} properties.`
+        );
+      }
+    } catch {
+      toast.error("Error al guardar amenidades en todas las propiedades.");
+    } finally {
+      setIsBulkAmenitiesPending(false);
+    }
   };
 
   // --- CORREGIDO: Nueva función para borrar imágenes existentes ---
@@ -553,12 +712,46 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
           {activeAmenities.length > 0 && (
             <div className="space-y-2">
               <Label>Amenidades Seleccionadas</Label>
-              <div className="flex flex-wrap gap-2">
-                {activeAmenities.map((amenity) => (
-                  <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
-                    {amenity}
-                    <button type="button" onClick={() => removeAmenity(amenity)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
-                  </Badge>
+              <p className="text-xs text-muted-foreground">
+                {amenityLang === "es"
+                  ? "Arrastra para cambiar el orden en que se muestran en el sitio."
+                  : "Drag to change the display order on the site."}
+              </p>
+              <div className="flex max-w-xl flex-col gap-1.5">
+                {activeAmenities.map((amenity, index) => (
+                  <div
+                    key={amenity}
+                    className={`flex items-center gap-2 rounded-md border bg-secondary/50 px-2 py-1.5 ${
+                      draggingAmenityIndex === index ? "ring-2 ring-primary opacity-70" : ""
+                    }`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggingAmenityIndex !== null) {
+                        reorderAmenity(draggingAmenityIndex, index);
+                      }
+                      setDraggingAmenityIndex(null);
+                    }}
+                  >
+                    <div
+                      draggable
+                      onDragStart={() => setDraggingAmenityIndex(index)}
+                      onDragEnd={() => setDraggingAmenityIndex(null)}
+                      className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+                      title={amenityLang === "es" ? "Arrastrar" : "Drag"}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </div>
+                    <span className="flex-1 text-sm">{amenity}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAmenity(amenity)}
+                      className="rounded p-0.5 text-muted-foreground hover:text-red-600"
+                      aria-label={amenityLang === "es" ? `Quitar ${amenity}` : `Remove ${amenity}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -588,6 +781,119 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
+          </div>
+
+          {newAmenitiesSinceLoad.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 space-y-3 dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="text-sm text-amber-950 dark:text-amber-100">
+                {amenityLang === "es"
+                  ? "Amenidades nuevas en esta sesión. Puedes añadirlas al resto de propiedades sin reemplazar sus listas:"
+                  : "New amenities in this session. You can add them to other properties without replacing their lists:"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {newAmenitiesSinceLoad.map((amenity) => (
+                  <Button
+                    key={amenity}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 bg-white hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50"
+                    disabled={
+                      isAmenitiesPending ||
+                      isBulkAmenitiesPending ||
+                      isBulkAppendPending
+                    }
+                    onClick={() => appendAmenityToAllProperties(amenity)}
+                  >
+                    {isBulkAppendPending ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Plus className="w-3 h-3 mr-1" />
+                    )}
+                    {amenityLang === "es"
+                      ? `Añadir «${amenity}» a todas`
+                      : `Add «${amenity}» to all`}
+                  </Button>
+                ))}
+              </div>
+              {newAmenitiesSinceLoad.length > 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={
+                    isAmenitiesPending ||
+                    isBulkAmenitiesPending ||
+                    isBulkAppendPending
+                  }
+                  onClick={appendAllNewAmenitiesToAllProperties}
+                >
+                  {amenityLang === "es"
+                    ? `Añadir las ${newAmenitiesSinceLoad.length} nuevas a todas las propiedades`
+                    : `Add all ${newAmenitiesSinceLoad.length} new to every property`}
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                isAmenitiesPending ||
+                isBulkAmenitiesPending ||
+                isBulkAppendPending
+              }
+              onClick={saveAmenitiesForCurrentProperty}
+            >
+              {isAmenitiesPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" /> Guardar amenidades (esta propiedad)</>
+              )}
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    isAmenitiesPending ||
+                    isBulkAmenitiesPending ||
+                    isBulkAppendPending
+                  }
+                >
+                  {isBulkAmenitiesPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Aplicando...</>
+                  ) : (
+                    <>Aplicar a todas las propiedades ({amenityLang === "es" ? "ES" : "EN"})</>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Aplicar amenidades a todas las propiedades?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Se reemplazará la lista de amenidades en{" "}
+                    <strong>{amenityLang === "es" ? "español" : "inglés"}</strong> en{" "}
+                    <strong>todas</strong> las propiedades con la lista actual (
+                    {activeAmenities.length} amenidad
+                    {activeAmenities.length === 1 ? "" : "es"}).
+                    {amenityLang === "es"
+                      ? " Las amenidades en inglés no se modificarán."
+                      : " Las amenidades en español no se modificarán."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={saveAmenitiesForAllProperties}>
+                    Sí, aplicar a todas
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
