@@ -117,6 +117,10 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={inter.variable}>
+      <head>
+        <link rel="preconnect" href="https://maps.googleapis.com" />
+        <link rel="preconnect" href="https://maps.gstatic.com" crossOrigin="" />
+      </head>
       <body className={`${inter.className} min-h-screen flex flex-col bg-gray-50`}>
         <script
           type="application/ld+json"

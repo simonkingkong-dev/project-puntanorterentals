@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Map as MapIcon, X } from "lucide-react";
+import { preloadGoogleMaps } from "@/lib/google-maps-loader";
 import { Property } from "@/lib/types";
 import PropertyCard from "@/components/ui/property-card";
 import GoogleMap, { GoogleMapMarker } from "@/components/ui/google-map";
@@ -19,10 +21,16 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [openPropertyId, setOpenPropertyId] = useState<string | null>(null);
   const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLocale();
   const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
+
+  useEffect(() => {
+    setMounted(true);
+    preloadGoogleMaps();
+  }, []);
 
   const markers = useMemo<GoogleMapMarker[]>(() => {
     return properties
@@ -121,22 +129,30 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
 
       {/* Mapa móvil: pantalla completa */}
       {isMobileMapOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex min-h-0 flex-col bg-background">
-          <div className="absolute left-0 right-0 top-0 z-20 flex justify-end px-3 pt-[max(16px,env(safe-area-inset-top))] pr-[max(16px,env(safe-area-inset-right))]">
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon"
-              className="rounded-full shadow-md"
-              onClick={() => setIsMobileMapOpen(false)}
-              aria-label={t("map_close", "Close map")}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+        <div className="lg:hidden fixed inset-0 z-[200] flex min-h-0 flex-col bg-background">
+          {mounted &&
+            createPortal(
+              <div
+                className="pointer-events-none fixed inset-x-0 top-0 flex justify-end px-3 pt-[max(16px,env(safe-area-inset-top))] pr-[max(16px,env(safe-area-inset-right))]"
+                style={{ zIndex: 250 }}
+              >
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="pointer-events-auto rounded-full shadow-md"
+                  onClick={() => setIsMobileMapOpen(false)}
+                  aria-label={t("map_close", "Close map")}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>,
+              document.body
+            )}
 
           <GoogleMap
             eager
+            disableNativeFullscreen
             center={initialCenter}
             markers={markers}
             selectedId={highlightedId}
@@ -146,7 +162,20 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
           >
             {selectedProperty && (
               <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/55 via-black/25 to-transparent">
-                <div className="max-h-[42vh] overflow-y-auto rounded-xl">
+                <div className="relative max-h-[42vh] overflow-y-auto rounded-xl">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-2 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md"
+                    onClick={() => {
+                      setOpenPropertyId(null);
+                      setHighlightedId(null);
+                    }}
+                    aria-label={t("map_close_property_card", "Close property card")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                   <PropertyCard property={selectedProperty} />
                 </div>
               </div>

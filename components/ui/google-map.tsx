@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-// Usamos any para evitar depender del tipo global `google` en build/TypeScript
-type GoogleNamespace = any;
+import {
+  loadGoogleMaps,
+  resetGoogleMapsLoader,
+  type GoogleNamespace,
+} from "@/lib/google-maps-loader";
+import { useLocale } from "@/components/providers/locale-provider";
 
 export interface GoogleMapMarker {
   id: string;
@@ -24,10 +28,12 @@ interface GoogleMapProps {
   onMarkerClick?: (marker: GoogleMapMarker) => void;
   className?: string;
   children?: ReactNode;
-  /** Sin esperar a IntersectionObserver (útil en overlays fixed recién montados en móvil). */
+  /** Sin esperar a IntersectionObserver (overlay móvil, mapa ya visible). */
   eager?: boolean;
   /** Etiqueta del botón para salir del modo pantalla completa nativo del mapa. */
   fullscreenExitLabel?: string;
+  /** Oculta el control de pantalla completa de Google (p. ej. overlay móvil propio). */
+  disableNativeFullscreen?: boolean;
 }
 
 function getDocumentFullscreenElement(): Element | null {
@@ -61,48 +67,15 @@ async function exitDocumentFullscreen(): Promise<void> {
   }
 }
 
-let googleMapsPromise: Promise<GoogleNamespace> | null = null;
-
-function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
-  if (typeof window === "undefined") return Promise.resolve(undefined);
-
-  if ((window as any).google?.maps) {
-    return Promise.resolve((window as any).google);
-  }
-
-  if (googleMapsPromise) return googleMapsPromise;
-
-  googleMapsPromise = new Promise((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[data-google-maps="true"]'
-    );
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve((window as any).google));
-      existingScript.addEventListener("error", () => reject(new Error("Google Maps failed to load")));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
-      apiKey
-    )}&loading=async&v=weekly`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleMaps = "true";
-    script.onload = () => resolve((window as any).google);
-    script.onerror = () => reject(new Error("Google Maps failed to load"));
-    document.head.appendChild(script);
-  });
-
-  return googleMapsPromise;
-}
-
 function createClassicMarkerIcon(
   googleNs: GoogleNamespace,
   isSelected: boolean,
   hasSelectedMarker: boolean
 ) {
+  const maps = googleNs.maps as {
+    Size: new (w: number, h: number) => unknown;
+    Point: new (x: number, y: number) => unknown;
+  };
   const width = isSelected ? 34 : hasSelectedMarker ? 22 : 26;
   const height = Math.round(width * 1.35);
   const svg = `
@@ -114,10 +87,15 @@ function createClassicMarkerIcon(
 
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new googleNs.maps.Size(width, height),
-    anchor: new googleNs.maps.Point(width / 2, height),
+    scaledSize: new maps.Size(width, height),
+    anchor: new maps.Point(width / 2, height),
   };
 }
+
+type LoadStatus = "idle" | "loading" | "ready" | "error";
+
+/** z-index por encima del header del sitio (z-[100]) */
+const MAP_OVERLAY_Z = 250;
 
 export function GoogleMap({
   center,
@@ -129,13 +107,22 @@ export function GoogleMap({
   children,
   eager = false,
   fullscreenExitLabel,
+  disableNativeFullscreen = false,
 }: GoogleMapProps) {
+  const { t } = useLocale();
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<unknown>(null);
   const cameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
-  const markersRef = useRef<Record<string, any>>({});
+  const markersRef = useRef<Record<string, unknown>>({});
+  const onMarkerClickRef = useRef(onMarkerClick);
+  onMarkerClickRef.current = onMarkerClick;
+
   const [hasEnteredViewport, setHasEnteredViewport] = useState(eager);
+  const [loadStatus, setLoadStatus] = useState<LoadStatus>("idle");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [fullscreenElement, setFullscreenElement] = useState<Element | null>(null);
+  const [mounted, setMounted] = useState(false);
+
   const centerLat = center.lat;
   const centerLng = center.lng;
 
@@ -146,6 +133,10 @@ export function GoogleMap({
         fullscreenElement.contains(mapRef.current) ||
         mapRef.current.contains(fullscreenElement))
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const syncFullscreen = () => setFullscreenElement(getDocumentFullscreenElement());
@@ -177,7 +168,7 @@ export function GoogleMap({
           observer.disconnect();
         }
       },
-      { rootMargin: "300px", threshold: [0, 0.01, 1] }
+      { rootMargin: "400px", threshold: [0, 0.01, 1] }
     );
 
     observer.observe(mapRef.current);
@@ -211,6 +202,79 @@ export function GoogleMap({
     };
   }, [eager, hasEnteredViewport]);
 
+  const syncMarkers = useCallback(
+    (googleNs: GoogleNamespace, mapInstance: unknown) => {
+      const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
+      const hasSelectedMarker = Boolean(selectedId);
+
+      Object.values(markersRef.current).forEach((m) => {
+        const marker = m as { setMap?: (map: null) => void; map?: unknown };
+        if (typeof marker.setMap === "function") {
+          marker.setMap(null);
+        } else {
+          marker.map = null;
+        }
+      });
+      markersRef.current = {};
+
+      markers.forEach((marker) => {
+        const isSelected = selectedId === marker.id;
+        let gMarker: {
+          setMap?: (map: null) => void;
+          map?: unknown;
+          addEventListener?: (type: string, fn: () => void) => void;
+          addListener?: (type: string, fn: () => void) => void;
+        };
+
+        const AdvancedMarkerElement = (
+          googleNs as { __advancedMarker?: new (...args: unknown[]) => unknown }
+        ).__advancedMarker;
+        const PinElement = (googleNs as { __pinElement?: new (...args: unknown[]) => unknown })
+          .__pinElement;
+
+        if (mapId && AdvancedMarkerElement && PinElement) {
+          const markerScale = isSelected ? 1.45 : hasSelectedMarker ? 0.8 : 1;
+          const pin = new PinElement({
+            background: "#dc2626",
+            borderColor: "#ffffff",
+            glyphColor: "#ffffff",
+            scale: markerScale,
+          });
+          gMarker = new AdvancedMarkerElement({
+            position: { lat: marker.lat, lng: marker.lng },
+            map: mapInstance,
+            title: marker.title,
+            content: pin,
+            gmpClickable: true,
+            zIndex: isSelected ? 1000 : 1,
+          }) as typeof gMarker;
+        } else {
+          const MarkerCtor = googleNs.maps.Marker;
+          if (!MarkerCtor) return;
+          gMarker = new MarkerCtor({
+            position: { lat: marker.lat, lng: marker.lng },
+            map: mapInstance,
+            title: marker.title,
+            icon: createClassicMarkerIcon(googleNs, isSelected, hasSelectedMarker),
+            zIndex: isSelected ? 1000 : 1,
+          }) as typeof gMarker;
+        }
+
+        const clickHandler = () => onMarkerClickRef.current?.(marker);
+        if (clickHandler) {
+          if (typeof gMarker.addEventListener === "function") {
+            gMarker.addEventListener("gmp-click", clickHandler);
+          } else if (typeof gMarker.addListener === "function") {
+            gMarker.addListener("click", clickHandler);
+          }
+        }
+
+        markersRef.current[marker.id] = gMarker;
+      });
+    },
+    [markers, selectedId]
+  );
+
   useEffect(() => {
     if (!hasEnteredViewport) return;
 
@@ -222,30 +286,47 @@ export function GoogleMap({
           "[GoogleMap] Falta NEXT_PUBLIC_GOOGLE_MAPS_API_KEY. El mapa no se mostrará."
         );
       }
+      setLoadStatus("error");
       return;
     }
 
     let isCancelled = false;
+    setLoadStatus((s) => (s === "ready" ? "ready" : "loading"));
 
     loadGoogleMaps(apiKey)
       .then(async (googleNs) => {
         if (isCancelled || !googleNs || !mapRef.current) return;
+
         const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
-        let MapCtor: any = googleNs.maps?.Map;
-        let AdvancedMarkerElement: any = null;
-        let PinElement: any = null;
+        let MapCtor = googleNs.maps.Map;
+        let AdvancedMarkerElement: (new (...args: unknown[]) => unknown) | null = null;
+        let PinElement: (new (...args: unknown[]) => unknown) | null = null;
+
         if (typeof googleNs.maps.importLibrary === "function") {
-          const mapsLib = await googleNs.maps.importLibrary("maps");
-          MapCtor = mapsLib.Map || googleNs.maps.Map;
+          const mapsLib = (await googleNs.maps.importLibrary("maps")) as {
+            Map?: typeof googleNs.maps.Map;
+          };
+          MapCtor = mapsLib.Map ?? googleNs.maps.Map;
 
           if (mapId) {
-            const markerLibrary = await googleNs.maps.importLibrary("marker");
+            const markerLibrary = (await googleNs.maps.importLibrary("marker")) as {
+              AdvancedMarkerElement: new (...args: unknown[]) => unknown;
+              PinElement: new (...args: unknown[]) => unknown;
+            };
             AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
             PinElement = markerLibrary.PinElement;
           }
         }
 
         if (isCancelled || !mapRef.current || !MapCtor) return;
+
+        if (AdvancedMarkerElement) {
+          (googleNs as { __advancedMarker?: typeof AdvancedMarkerElement }).__advancedMarker =
+            AdvancedMarkerElement;
+        }
+        if (PinElement) {
+          (googleNs as { __pinElement?: typeof PinElement }).__pinElement = PinElement;
+        }
 
         const mapCenter = { lat: centerLat, lng: centerLng };
         if (!mapInstanceRef.current) {
@@ -255,7 +336,7 @@ export function GoogleMap({
             ...(mapId ? { mapId } : {}),
             mapTypeControl: false,
             streetViewControl: false,
-            fullscreenControl: true,
+            fullscreenControl: !disableNativeFullscreen,
           });
           cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
         } else {
@@ -266,65 +347,17 @@ export function GoogleMap({
             lastCamera.lng !== centerLng ||
             lastCamera.zoom !== zoom
           ) {
-            mapInstanceRef.current.setCenter(mapCenter);
-            mapInstanceRef.current.setZoom(zoom);
+            const map = mapInstanceRef.current as {
+              setCenter: (c: { lat: number; lng: number }) => void;
+              setZoom: (z: number) => void;
+            };
+            map.setCenter(mapCenter);
+            map.setZoom(zoom);
             cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
           }
         }
 
-        // Limpiar marcadores anteriores
-        Object.values(markersRef.current).forEach((m) => {
-          if (typeof m.setMap === "function") {
-            m.setMap(null);
-          } else {
-            m.map = null;
-          }
-        });
-        markersRef.current = {};
-
-        const hasSelectedMarker = Boolean(selectedId);
-        const useAdvancedMarkers = Boolean(mapId && AdvancedMarkerElement && PinElement);
-
-        markers.forEach((marker) => {
-          const isSelected = selectedId === marker.id;
-          let gMarker: any;
-
-          if (useAdvancedMarkers) {
-            const markerScale = isSelected ? 1.45 : hasSelectedMarker ? 0.8 : 1;
-            const pin = new PinElement({
-              background: "#dc2626",
-              borderColor: "#ffffff",
-              glyphColor: "#ffffff",
-              scale: markerScale,
-            });
-            gMarker = new AdvancedMarkerElement({
-              position: { lat: marker.lat, lng: marker.lng },
-              map: mapInstanceRef.current!,
-              title: marker.title,
-              content: pin,
-              gmpClickable: true,
-              zIndex: isSelected ? 1000 : 1,
-            });
-          } else {
-            gMarker = new googleNs.maps.Marker({
-              position: { lat: marker.lat, lng: marker.lng },
-              map: mapInstanceRef.current!,
-              title: marker.title,
-              icon: createClassicMarkerIcon(googleNs, isSelected, hasSelectedMarker),
-              zIndex: isSelected ? 1000 : 1,
-            });
-          }
-
-          if (onMarkerClick) {
-            if (typeof gMarker.addEventListener === "function") {
-              gMarker.addEventListener("gmp-click", () => onMarkerClick(marker));
-            } else {
-              gMarker.addListener("click", () => onMarkerClick(marker));
-            }
-          }
-
-          markersRef.current[marker.id] = gMarker;
-        });
+        syncMarkers(googleNs, mapInstanceRef.current);
 
         const triggerResize = () => {
           if (!mapInstanceRef.current || !googleNs.maps?.event) return;
@@ -334,8 +367,11 @@ export function GoogleMap({
           requestAnimationFrame(triggerResize);
         });
 
+        if (!isCancelled) setLoadStatus("ready");
       })
       .catch((err) => {
+        if (isCancelled) return;
+        setLoadStatus("error");
         if (process.env.NODE_ENV === "development") {
           // eslint-disable-next-line no-console
           console.error("[GoogleMap] Error loading Google Maps", err);
@@ -345,7 +381,22 @@ export function GoogleMap({
     return () => {
       isCancelled = true;
     };
-  }, [hasEnteredViewport, centerLat, centerLng, zoom, markers, selectedId, onMarkerClick]);
+  }, [
+    hasEnteredViewport,
+    loadAttempt,
+    centerLat,
+    centerLng,
+    zoom,
+    syncMarkers,
+    disableNativeFullscreen,
+  ]);
+
+  const handleRetry = () => {
+    resetGoogleMapsLoader();
+    setLoadStatus("idle");
+    setLoadAttempt((n) => n + 1);
+    if (eager) setHasEnteredViewport(true);
+  };
 
   return (
     <div
@@ -355,26 +406,25 @@ export function GoogleMap({
         className
       )}
     >
+      {loadStatus === "loading" && (
+        <MapLoadingOverlay message={t("map_loading", "Loading map…")} />
+      )}
+      {loadStatus === "error" && <MapErrorOverlay onRetry={handleRetry} />}
       {!isMapFullscreen && children}
-      {isMapFullscreen && fullscreenElement
+      {mounted &&
+        isMapFullscreen &&
+        fullscreenExitLabel &&
+        createPortal(
+          <MapFullscreenExitButton
+            label={fullscreenExitLabel}
+            onExit={() => void exitDocumentFullscreen()}
+          />,
+          document.body
+        )}
+      {isMapFullscreen && fullscreenElement && children
         ? createPortal(
-            <div className="pointer-events-none fixed inset-0 z-[2147483647]">
-              {fullscreenExitLabel ? (
-                <div className="pointer-events-auto absolute left-0 right-0 top-0 z-[2147483647] flex justify-end px-3 pt-[max(12px,env(safe-area-inset-top))] pr-[max(12px,env(safe-area-inset-right))]">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-full shadow-md"
-                    onClick={() => void exitDocumentFullscreen()}
-                  >
-                    {fullscreenExitLabel}
-                  </Button>
-                </div>
-              ) : null}
-              <div className="pointer-events-none absolute inset-0">
-                <div className="pointer-events-auto relative h-full w-full">{children}</div>
-              </div>
+            <div className="pointer-events-none absolute inset-0">
+              <MapChildrenWrap>{children}</MapChildrenWrap>
             </div>,
             fullscreenElement
           )
@@ -383,5 +433,54 @@ export function GoogleMap({
   );
 }
 
-export default GoogleMap;
+function MapLoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-2 bg-gray-100 text-sm text-gray-600">
+      <Loader2 className="h-8 w-8 animate-spin text-orange-500" aria-hidden />
+      <span>{message}</span>
+    </div>
+  );
+}
 
+function MapErrorOverlay({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLocale();
+  return (
+    <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 bg-gray-100 px-4 text-center">
+      <p className="text-sm text-gray-600">{t("map_load_error", "Could not load the map")}</p>
+      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+        {t("map_retry", "Retry")}
+      </Button>
+    </div>
+  );
+}
+
+function MapFullscreenExitButton({
+  label,
+  onExit,
+}: {
+  label: string;
+  onExit: () => void;
+}) {
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 top-0 flex justify-end px-3 pt-[max(12px,env(safe-area-inset-top))] pr-[max(12px,env(safe-area-inset-right))]"
+      style={{ zIndex: MAP_OVERLAY_Z }}
+    >
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="pointer-events-auto rounded-full shadow-md"
+        onClick={onExit}
+      >
+        {label}
+      </Button>
+    </div>
+  );
+}
+
+function MapChildrenWrap({ children }: { children: ReactNode }) {
+  return <div className="pointer-events-auto relative h-full w-full">{children}</div>;
+}
+
+export default GoogleMap;
