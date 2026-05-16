@@ -64,7 +64,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6">
       {/* Lista de propiedades (scroll) */}
-      <div className="h-[calc(100vh-76px)] overflow-y-auto pr-1 space-y-6">
+      <div className="h-[calc(100dvh-4rem)] min-h-[calc(100vh-4rem)] overflow-y-auto pr-1 space-y-6">
         <div className="lg:hidden sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm pb-3">
           <Button
             type="button"
@@ -89,12 +89,13 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
       </div>
 
       {/* Mapa */}
-      <div className="relative hidden lg:block h-[calc(100vh-76px)] sticky top-[66px] rounded-lg overflow-hidden border bg-gray-100">
+      <div className="hidden lg:block h-[calc(100dvh-4rem)] min-h-[calc(100vh-4rem)] lg:sticky lg:top-16 rounded-lg overflow-hidden border bg-gray-100">
         <GoogleMap
           center={initialCenter}
           markers={markers}
           selectedId={highlightedId}
           onMarkerClick={handleMarkerClick}
+          fullscreenExitLabel={t("map_exit_fullscreen", "Exit fullscreen")}
           className="h-full w-full"
         >
           {selectedProperty && (
@@ -120,8 +121,8 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
 
       {/* Mapa móvil: pantalla completa */}
       {isMobileMapOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-background">
-          <div className="absolute top-4 right-4 z-20">
+        <div className="lg:hidden fixed inset-0 z-50 flex min-h-0 flex-col bg-background">
+          <div className="absolute left-0 right-0 top-0 z-20 flex justify-end px-3 pt-[max(16px,env(safe-area-inset-top))] pr-[max(16px,env(safe-area-inset-right))]">
             <Button
               type="button"
               variant="secondary"
@@ -135,11 +136,13 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
           </div>
 
           <GoogleMap
+            eager
             center={initialCenter}
             markers={markers}
             selectedId={highlightedId}
             onMarkerClick={handleMarkerClick}
-            className="h-full w-full rounded-none"
+            fullscreenExitLabel={t("map_exit_fullscreen", "Exit fullscreen")}
+            className="min-h-0 flex-1 w-full rounded-none"
           >
             {selectedProperty && (
               <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/55 via-black/25 to-transparent">

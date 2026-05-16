@@ -12,6 +12,7 @@ import { Property, SearchParams } from '@/lib/types';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 import { getServerLocale, tServer } from '@/lib/i18n/server';
 import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
+import { listingSearchHasAnyActiveFilters } from '@/lib/listing-search-params';
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ function PropertySkeleton() {
 async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
   const params = searchParams ?? {};
   let properties: Property[];
-  const hasSearchParams = Object.keys(params).length > 0;
+  const hasSearchParams = listingSearchHasAnyActiveFilters(params);
 
   try {
     if (hasSearchParams) {
@@ -113,7 +114,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
   const params = (await searchParams) ?? {};
   const pageContent = await getCachedPropertiesPageContent();
   const c = contentMap(pageContent);
-  const hasFilters = Object.keys(params).length > 0;
+  const hasFilters = listingSearchHasAnyActiveFilters(params);
   const numericSearchParams: SearchParams = {
     ...params,
     guests: params.guests ? Number(params.guests) : undefined,

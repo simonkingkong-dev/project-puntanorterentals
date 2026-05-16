@@ -96,36 +96,48 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
         p.location.toLowerCase().includes(params.location!.toLowerCase())
       );
     }
-    if (params.checkIn && params.checkOut) {
-      const checkIn = new Date(params.checkIn);
-      const checkOut = new Date(params.checkOut);
-      const filteredByLocalAvailability = properties.filter(p => {
-        let current = new Date(checkIn);
-        while (current < checkOut) {
-          const dateStr = current.toISOString().split('T')[0];
-          if (p.availability?.[dateStr] === false) return false;
-          current.setDate(current.getDate() + 1);
-        }
-        return true;
-      });
+    const checkInTrim = params.checkIn?.trim();
+    const checkOutTrim = params.checkOut?.trim();
+    // Checkout without check-in cannot define a window; ignore date filtering in that case.
+    if (checkInTrim) {
+      const checkIn = new Date(checkInTrim);
+      let checkOut: Date;
+      if (checkOutTrim) {
+        checkOut = new Date(checkOutTrim);
+      } else {
+        checkOut = new Date(checkIn);
+        checkOut.setDate(checkOut.getDate() + 1);
+      }
 
-      const availabilityResults = await Promise.all(
-        filteredByLocalAvailability.map(async (property) => {
-          if (!property.hostfullyPropertyId) {
-            return { property, available: true };
+      if (checkOut > checkIn) {
+        const filteredByLocalAvailability = properties.filter((p) => {
+          let current = new Date(checkIn);
+          while (current < checkOut) {
+            const dateStr = current.toISOString().split("T")[0];
+            if (p.availability?.[dateStr] === false) return false;
+            current.setDate(current.getDate() + 1);
           }
-          const result = await checkHostfullyAvailability(
-            property.hostfullyPropertyId,
-            checkIn,
-            checkOut
-          );
-          return { property, available: result.available };
-        })
-      );
+          return true;
+        });
 
-      properties = availabilityResults
-        .filter((item) => item.available)
-        .map((item) => item.property);
+        const availabilityResults = await Promise.all(
+          filteredByLocalAvailability.map(async (property) => {
+            if (!property.hostfullyPropertyId) {
+              return { property, available: true };
+            }
+            const result = await checkHostfullyAvailability(
+              property.hostfullyPropertyId,
+              checkIn,
+              checkOut
+            );
+            return { property, available: result.available };
+          })
+        );
+
+        properties = availabilityResults
+          .filter((item) => item.available)
+          .map((item) => item.property);
+      }
     }
     return properties;
   } catch (error) {

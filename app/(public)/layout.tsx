@@ -30,18 +30,20 @@ async function LocaleLayout({
   return (
     <LocaleProvider initialLocale={initialLocale}>
       <CartProvider>
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg focus:ring-2 focus:ring-orange-500"
-        >
-          {m.skip_to_main_content}
-        </a>
-        <Header />
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
-        <WhatsAppFab />
-        <Footer />
+        <div className="flex min-h-screen w-full flex-col">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg focus:ring-2 focus:ring-orange-500"
+          >
+            {m.skip_to_main_content}
+          </a>
+          <Header />
+          <main id="main-content" className="min-h-0 flex-1">
+            {children}
+          </main>
+          <WhatsAppFab />
+          <Footer />
+        </div>
       </CartProvider>
     </LocaleProvider>
   );

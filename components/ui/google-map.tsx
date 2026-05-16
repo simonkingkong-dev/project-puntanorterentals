@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Usamos any para evitar depender del tipo global `google` en build/TypeScript
@@ -23,6 +24,41 @@ interface GoogleMapProps {
   onMarkerClick?: (marker: GoogleMapMarker) => void;
   className?: string;
   children?: ReactNode;
+  /** Sin esperar a IntersectionObserver (útil en overlays fixed recién montados en móvil). */
+  eager?: boolean;
+  /** Etiqueta del botón para salir del modo pantalla completa nativo del mapa. */
+  fullscreenExitLabel?: string;
+}
+
+function getDocumentFullscreenElement(): Element | null {
+  const doc = document as Document & {
+    webkitFullscreenElement?: Element | null;
+    mozFullScreenElement?: Element | null;
+    msFullscreenElement?: Element | null;
+  };
+  return (
+    doc.fullscreenElement ??
+    doc.webkitFullscreenElement ??
+    doc.mozFullScreenElement ??
+    doc.msFullscreenElement ??
+    null
+  );
+}
+
+async function exitDocumentFullscreen(): Promise<void> {
+  const doc = document as Document & {
+    webkitExitFullscreen?: () => Promise<void> | void;
+    mozCancelFullScreen?: () => Promise<void> | void;
+    msExitFullscreen?: () => Promise<void> | void;
+  };
+  try {
+    if (typeof doc.exitFullscreen === "function") await doc.exitFullscreen();
+    else if (typeof doc.webkitExitFullscreen === "function") await doc.webkitExitFullscreen();
+    else if (typeof doc.mozCancelFullScreen === "function") await doc.mozCancelFullScreen();
+    else if (typeof doc.msExitFullscreen === "function") await doc.msExitFullscreen();
+  } catch {
+    /* algunos navegadores rechazan si ya no hay fullscreen */
+  }
 }
 
 let googleMapsPromise: Promise<GoogleNamespace> | null = null;
@@ -91,12 +127,14 @@ export function GoogleMap({
   onMarkerClick,
   className,
   children,
+  eager = false,
+  fullscreenExitLabel,
 }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const cameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const markersRef = useRef<Record<string, any>>({});
-  const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(eager);
   const [fullscreenElement, setFullscreenElement] = useState<Element | null>(null);
   const centerLat = center.lat;
   const centerLng = center.lng;
@@ -110,16 +148,23 @@ export function GoogleMap({
   );
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setFullscreenElement(document.fullscreenElement);
-    };
+    const syncFullscreen = () => setFullscreenElement(getDocumentFullscreenElement());
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    syncFullscreen();
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener("webkitfullscreenchange", syncFullscreen as EventListener);
+    document.addEventListener("mozfullscreenchange", syncFullscreen as EventListener);
+    document.addEventListener("MSFullscreenChange", syncFullscreen as EventListener);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+      document.removeEventListener("webkitfullscreenchange", syncFullscreen as EventListener);
+      document.removeEventListener("mozfullscreenchange", syncFullscreen as EventListener);
+      document.removeEventListener("MSFullscreenChange", syncFullscreen as EventListener);
+    };
   }, []);
 
   useEffect(() => {
-    if (hasEnteredViewport || !mapRef.current) return;
+    if (eager || hasEnteredViewport || !mapRef.current) return;
     if (!("IntersectionObserver" in window)) {
       setHasEnteredViewport(true);
       return;
@@ -127,17 +172,44 @@ export function GoogleMap({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting || entry.intersectionRatio > 0) {
           setHasEnteredViewport(true);
           observer.disconnect();
         }
       },
-      { rootMargin: "300px" }
+      { rootMargin: "300px", threshold: [0, 0.01, 1] }
     );
 
     observer.observe(mapRef.current);
-    return () => observer.disconnect();
-  }, [hasEnteredViewport]);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        const el = mapRef.current;
+        if (!el) return;
+        const cr = el.getBoundingClientRect();
+        if (cr.width >= 32 && cr.height >= 32) {
+          setHasEnteredViewport(true);
+        }
+      });
+      ro.observe(mapRef.current);
+    }
+
+    const id = window.requestAnimationFrame(() => {
+      const el = mapRef.current;
+      if (!el) return;
+      const cr = el.getBoundingClientRect();
+      if (cr.width >= 32 && cr.height >= 32) {
+        setHasEnteredViewport(true);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+      ro?.disconnect();
+      window.cancelAnimationFrame(id);
+    };
+  }, [eager, hasEnteredViewport]);
 
   useEffect(() => {
     if (!hasEnteredViewport) return;
@@ -254,6 +326,14 @@ export function GoogleMap({
           markersRef.current[marker.id] = gMarker;
         });
 
+        const triggerResize = () => {
+          if (!mapInstanceRef.current || !googleNs.maps?.event) return;
+          googleNs.maps.event.trigger(mapInstanceRef.current, "resize");
+        };
+        requestAnimationFrame(() => {
+          requestAnimationFrame(triggerResize);
+        });
+
       })
       .catch((err) => {
         if (process.env.NODE_ENV === "development") {
@@ -279,7 +359,22 @@ export function GoogleMap({
       {isMapFullscreen && fullscreenElement
         ? createPortal(
             <div className="pointer-events-none fixed inset-0 z-[2147483647]">
-              {children}
+              {fullscreenExitLabel ? (
+                <div className="pointer-events-auto absolute left-0 right-0 top-0 z-[2147483647] flex justify-end px-3 pt-[max(12px,env(safe-area-inset-top))] pr-[max(12px,env(safe-area-inset-right))]">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full shadow-md"
+                    onClick={() => void exitDocumentFullscreen()}
+                  >
+                    {fullscreenExitLabel}
+                  </Button>
+                </div>
+              ) : null}
+              <div className="pointer-events-none absolute inset-0">
+                <div className="pointer-events-auto relative h-full w-full">{children}</div>
+              </div>
             </div>,
             fullscreenElement
           )

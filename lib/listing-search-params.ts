@@ -31,6 +31,36 @@ export function listingSearchQueryFromServerSearchParams(
   return qs.toString();
 }
 
+/** True if any listing search filter has a non-empty value (handles raw URL params or normalized SearchParams). */
+export function listingSearchHasAnyActiveFilters(
+  params: Partial<Record<ListingSearchKey | 'location', string | number | undefined>>
+): boolean {
+  const cin =
+    typeof params.checkIn === 'string'
+      ? params.checkIn.trim()
+      : '';
+  const cout =
+    typeof params.checkOut === 'string'
+      ? params.checkOut.trim()
+      : '';
+  const loc =
+    typeof params.location === 'string'
+      ? params.location.trim()
+      : '';
+  let guestNum = NaN;
+  if (typeof params.guests === 'number') {
+    guestNum = params.guests;
+  } else if (typeof params.guests === 'string') {
+    guestNum = Number(params.guests);
+  }
+  return Boolean(
+    cin ||
+    cout ||
+    loc ||
+    (Number.isFinite(guestNum) && guestNum > 0)
+  );
+}
+
 export function listingSearchSelectionFromServerSearchParams(
   sp: Record<string, string | string[] | undefined>
 ): ListingSearchSelection {
