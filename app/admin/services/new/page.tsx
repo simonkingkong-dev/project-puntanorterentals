@@ -20,9 +20,13 @@ export default function NewServicePage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    image: '', // URL de imagen
+    image: '',
     externalLink: '',
     featured: false,
+    slug: '',
+    providerType: 'manual' as 'manual' | 'ical' | 'api',
+    priceFrom: 0,
+    providerConfig: {} as Record<string, string>,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,6 +115,96 @@ export default function NewServicePage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
                   placeholder="https://images.pexels.com/photos/..."
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug (URL en el sitio)</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
+                  placeholder="buceo-cenotes"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="providerType">Proveedor de disponibilidad</Label>
+                <select
+                  id="providerType"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.providerType}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      providerType: e.target.value as 'manual' | 'ical' | 'api',
+                    }))
+                  }
+                >
+                  <option value="manual">Manual (Firestore)</option>
+                  <option value="ical">iCal</option>
+                  <option value="api">API REST (configurable)</option>
+                </select>
+              </div>
+
+              {formData.providerType === 'ical' && (
+                <div className="space-y-2">
+                  <Label htmlFor="icalUrl">URL del calendario iCal</Label>
+                  <Input
+                    id="icalUrl"
+                    value={formData.providerConfig?.icalUrl ?? ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        providerConfig: { ...prev.providerConfig, icalUrl: e.target.value },
+                      }))
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+              )}
+
+              {formData.providerType === 'api' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="calendarApiUrl">URL API calendario</Label>
+                    <Input
+                      id="calendarApiUrl"
+                      value={formData.providerConfig?.calendarApiUrl ?? ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          providerConfig: { ...prev.providerConfig, calendarApiUrl: e.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="productId">ID producto proveedor</Label>
+                    <Input
+                      id="productId"
+                      value={formData.providerConfig?.productId ?? ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          providerConfig: { ...prev.providerConfig, productId: e.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="priceFrom">Precio desde (USD)</Label>
+                <Input
+                  id="priceFrom"
+                  type="number"
+                  min={0}
+                  value={formData.priceFrom || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, priceFrom: Number(e.target.value) || 0 }))
+                  }
                 />
               </div>
 

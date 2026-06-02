@@ -28,6 +28,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    match /property_reviews/{docId} {
+      allow read: if resource.data.status == 'published';
+      allow write: if false;
+    }
 
     // Reservaciones: sin acceso directo desde cliente (todo vía Admin SDK)
     match /reservations/{docId} {

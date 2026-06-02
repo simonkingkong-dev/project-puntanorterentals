@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m pip install pypdf pypdfium2)",
+      "Bash(ls \"C:/Users/Simon/Desktop/Proyectos/\" 2>/dev/null || echo \"directory exists check\")",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(PYTHONIOENCODING=utf-8 python3 -c ' *)"
+    ]
+  }
+}

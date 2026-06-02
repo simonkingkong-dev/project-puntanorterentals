@@ -4,20 +4,21 @@ import { unstable_cache } from 'next/cache';
 import SearchForm from '@/components/ui/search-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  getAdminProperties,
+  getAdminPropertiesForList,
   getSiteContentBySectionAdmin,
-  searchPropertiesAdmin,
+  searchPropertiesForList,
 } from '@/lib/firebase-admin-queries';
-import { Property, SearchParams } from '@/lib/types';
+import { SearchParams } from '@/lib/types';
+import type { PropertyListItem } from '@/lib/property-list-item';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 import { getServerLocale, tServer } from '@/lib/i18n/server';
 import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 import { listingSearchHasAnyActiveFilters } from '@/lib/listing-search-params';
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const getCachedProperties = unstable_cache(
-  async () => getAdminProperties(),
+  async () => getAdminPropertiesForList(),
   ['public-properties'],
   { revalidate: 300, tags: ['properties'] }
 );
@@ -63,7 +64,7 @@ function PropertySkeleton() {
 
 async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
   const params = searchParams ?? {};
-  let properties: Property[];
+  let properties: PropertyListItem[];
   const hasSearchParams = listingSearchHasAnyActiveFilters(params);
 
   try {
@@ -72,7 +73,7 @@ async function PropertiesList({ searchParams }: { searchParams: SearchParams }) 
         ...params,
         guests: params.guests ? Number(params.guests) : undefined,
       };
-      properties = await searchPropertiesAdmin(paramsForSearch);
+      properties = await searchPropertiesForList(paramsForSearch);
     } else {
       properties = await getCachedProperties();
     }
@@ -115,6 +116,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
   const pageContent = await getCachedPropertiesPageContent();
   const c = contentMap(pageContent);
   const hasFilters = listingSearchHasAnyActiveFilters(params);
+  const hasDateFilters = Boolean(params.checkIn?.trim());
   const numericSearchParams: SearchParams = {
     ...params,
     guests: params.guests ? Number(params.guests) : undefined,
@@ -154,6 +156,11 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 
       {/* Properties + Map */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-1">
+        {hasFilters && hasDateFilters && (
+          <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            {await tServer('properties_search_availability_notice')}
+          </p>
+        )}
         <Suspense
           fallback={
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

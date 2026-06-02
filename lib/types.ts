@@ -111,6 +111,39 @@ export interface Property {
   hostfullyCalendarMonthsToDisplay?: number;
   /** Precio por noche por fecha (YYYY-MM-DD). Rellenado por sync desde Hostfully. */
   dailyRates?: Record<string, number>;
+  /** Mínimo entre noches disponibles futuras (cron de precios 1×/día). Para "Desde" en tarjetas. */
+  lowestAvailableNightlyRate?: number | null;
+  /** Última sync de disponibilidad (cron ~10 min). */
+  availabilitySyncedAt?: Date;
+  /** Última sync de precios (cron 1×/día). */
+  pricesSyncedAt?: Date;
+}
+
+export type { PropertyListItem } from "@/lib/property-list-item";
+
+export type PropertyReviewChannel =
+  | "airbnb"
+  | "booking"
+  | "google"
+  | "vrbo"
+  | "tripadvisor"
+  | "other";
+
+export interface PropertyReview {
+  id: string;
+  propertyId: string;
+  channel: PropertyReviewChannel;
+  author: string;
+  rating: number;
+  text: string;
+  reviewDate?: string;
+  locale?: "es" | "en";
+  screenshotUrl: string;
+  sourceUrl?: string;
+  status: "draft" | "published";
+  sortOrder: number;
+  createdAt: Date;
+  extractedBy?: "ai" | "manual";
 }
 
 export interface Reservation {
@@ -164,6 +197,8 @@ export interface ModificationRequest {
   updatedAt: Date;
 }
 
+export type ServiceProviderType = "manual" | "ical" | "api";
+
 export interface Service {
   id: string;
   title: string;
@@ -171,6 +206,14 @@ export interface Service {
   image: string;
   externalLink: string;
   featured: boolean;
+  slug?: string;
+  providerType?: ServiceProviderType;
+  providerConfig?: Record<string, string>;
+  availability?: Record<string, boolean>;
+  dailyRates?: Record<string, number>;
+  capacityPerSlot?: number;
+  durationMinutes?: number;
+  priceFrom?: number;
   createdAt: Date;
 }
 

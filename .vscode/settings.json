@@ -1,4 +1,25 @@
 {
+  "git.autoRepositoryDetection": "openEditors",
+  "git.openRepositoryInParentFolders": "never",
+  "git.repositoryScanMaxDepth": 0,
+  "git.repositoryScanIgnoredFolders": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo"
+  ],
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true
+  },
   "files.associations": {
     "*.css": "postcss",
     "*.module.css": "postcss",

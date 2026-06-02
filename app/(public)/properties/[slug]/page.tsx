@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PropertyPageContent from '@/components/property-page-content';
-import { getPropertyBySlugAdmin } from '@/lib/firebase-admin-queries';
+import {
+  getPropertyBySlugAdmin,
+  getPublishedPropertyReviewsAdmin,
+} from '@/lib/firebase-admin-queries';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
 import {
@@ -18,7 +21,7 @@ import {
   listingSearchSelectionFromServerSearchParams,
 } from '@/lib/listing-search-params';
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const getCachedPropertyBySlug = unstable_cache(
   async (slug: string) => getPropertyBySlugAdmin(slug),
@@ -96,6 +99,8 @@ export default async function PropertyPage({
     notFound();
   }
 
+  const curatedReviews = await getPublishedPropertyReviewsAdmin(property.id);
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const amenities = getLocalizedPropertyAmenities(property, locale);
@@ -139,7 +144,11 @@ export default async function PropertyPage({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PropertyPageContent property={property} initialSearch={listingSearchSelection} />
+        <PropertyPageContent
+          property={property}
+          curatedReviews={curatedReviews}
+          initialSearch={listingSearchSelection}
+        />
       </div>
     </div>
   );

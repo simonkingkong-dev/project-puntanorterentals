@@ -27,6 +27,8 @@ interface ServiceCardProps {
  */
 export default function ServiceCard({ service }: ServiceCardProps) {
   const { t } = useLocale();
+  const detailHref = service.slug ? `/services/${service.slug}` : service.externalLink;
+  const isExternal = !service.slug;
 
   return (
     <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -58,9 +60,14 @@ export default function ServiceCard({ service }: ServiceCardProps) {
             asChild
             className="w-full bg-teal-500 hover:bg-teal-600 text-white"
           >
-            <Link href={service.externalLink} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              {t('service_book_experience', 'Book experience')}
+            <Link
+              href={detailHref}
+              {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            >
+              {isExternal ? <ExternalLink className="w-4 h-4 mr-2" /> : null}
+              {isExternal
+                ? t('service_book_experience', 'Book experience')
+                : t('service_view_details', 'View details & availability')}
             </Link>
           </Button>
         </div>

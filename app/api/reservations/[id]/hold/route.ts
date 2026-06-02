@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
-import { generateDateRange } from '@/lib/utils/date';
-
 /**
  * POST /api/reservations/[id]/hold
- * Bloquea las fechas de la reserva pendiente al entrar en la página de pago.
- * Idempotente: si ya estaban bloqueadas (datesHeld), no hace nada.
+ * Marca la reserva como "en pago" (datesHeld) sin escribir en property.availability.
+ * La disponibilidad visible sigue viniendo del cron Hostfully; la corroboración en vivo es al pagar.
+ * Idempotente: si ya tenía datesHeld, no hace nada.
  */
 export async function POST(
   _request: NextRequest,
@@ -33,12 +31,6 @@ export async function POST(
       return NextResponse.json({ held: true, alreadyHeld: true });
     }
 
-    const checkIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
-    const checkOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
-    const propertyId = data.propertyId as string;
-
-    const dateStrings = generateDateRange(checkIn, checkOut);
-    await updatePropertyAvailabilityAdmin(propertyId, dateStrings, false);
     await ref.update({ datesHeld: true });
 
     return NextResponse.json({ held: true });

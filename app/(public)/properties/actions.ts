@@ -4,6 +4,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { Reservation } from "@/lib/types";
 import { generateDateRange } from "@/lib/utils/date";
 import { checkHostfullyAvailability } from "@/lib/hostfully/client";
+import { hasOverlappingActiveHold } from "@/lib/availability-holds";
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -135,10 +136,21 @@ async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: stri
  * - Si hay `hostfullyPropertyId`: consulta Hostfully en tiempo real.
  * - Si no hay hostfully id: usa Firestore + liberación de holds expirados.
  */
+export type CheckPropertyAvailabilityOptions = {
+  /** Excluye esta reserva del chequeo de holds (p. ej. la que está en página de pago). */
+  excludeReservationId?: string;
+  excludeClientToken?: string;
+};
+
+/**
+ * Verificación en vivo al reservar/pagar solamente.
+ * Listados y calendario usan Firestore sincronizado por cron (~10 min).
+ */
 export async function checkPropertyAvailability(
   propertyId: string,
   checkIn: Date,
-  checkOut: Date
+  checkOut: Date,
+  options?: CheckPropertyAvailabilityOptions
 ): Promise<{ available: boolean; error?: string }> {
   try {
     const { getPropertyByIdAdmin } = await import("@/lib/firebase-admin-queries");
@@ -148,12 +160,30 @@ export async function checkPropertyAvailability(
     const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
     await releaseExpiredHoldsForDates(propertyId, dateStrings);
 
+    const holdOverlap = await hasOverlappingActiveHold(
+      propertyId,
+      new Date(checkIn),
+      new Date(checkOut),
+      {
+        excludeReservationId: options?.excludeReservationId,
+        excludeClientToken: options?.excludeClientToken,
+      }
+    );
+    if (holdOverlap) {
+      return {
+        available: false,
+        error: "Esas fechas están reservadas temporalmente por otro huésped en proceso de pago.",
+      };
+    }
+
     if (property.hostfullyPropertyId) {
-      return checkHostfullyAvailability(
+      const hostfully = await checkHostfullyAvailability(
         property.hostfullyPropertyId,
         new Date(checkIn),
         new Date(checkOut)
       );
+      if (!hostfully.available) return hostfully;
+      return { available: true };
     }
 
     let prop = property;

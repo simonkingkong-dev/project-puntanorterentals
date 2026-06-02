@@ -8,7 +8,7 @@ import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
 import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
 import {
-  getFeaturedPropertiesAdmin,
+  getFeaturedPropertiesForList,
   getSiteContentBySectionAdmin,
   getAdminTestimonials,
 } from "@/lib/firebase-admin-queries";
@@ -18,10 +18,10 @@ import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
 import { contentMap, pickSiteContent } from "@/lib/site-content-localization";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const getCachedFeaturedProperties = unstable_cache(
-  async () => getFeaturedPropertiesAdmin(),
+  async () => getFeaturedPropertiesForList(),
   ["homepage-featured-properties"],
   { revalidate: 300, tags: ["properties"] }
 );
@@ -30,6 +30,12 @@ const getCachedHomepageContent = unstable_cache(
   async () => getSiteContentBySectionAdmin("homepage"),
   ["homepage-content"],
   { revalidate: 300, tags: ["site-content"] }
+);
+
+const getCachedTestimonials = unstable_cache(
+  async () => getAdminTestimonials(),
+  ["homepage-testimonials"],
+  { revalidate: 300, tags: ["testimonials"] }
 );
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,7 +81,7 @@ export default async function HomePage() {
   const [featuredProperties, homepageContent, testimonials] = await Promise.all([
     getCachedFeaturedProperties(),
     getCachedHomepageContent(),
-    getAdminTestimonials(),
+    getCachedTestimonials(),
   ]);
 
   const c = contentMap(homepageContent);
@@ -147,12 +153,12 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[520px] sm:min-h-[600px] flex items-center justify-center">
+      <section className="relative min-h-[55vh] sm:min-h-[600px] flex items-center justify-center">
         <div className="absolute inset-0">
-          <HeroBackgroundRotator images={heroCoverImages} intervalMs={20000} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+          <HeroBackgroundRotator images={heroCoverImages} intervalMs={15000} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent pointer-events-none" />
         </div>
-        <div className="relative z-10 container mx-auto px-4 text-white min-h-[520px] sm:min-h-[600px] flex flex-col justify-center py-10 sm:py-12 md:py-14">
+        <div className="relative z-10 container mx-auto px-4 text-white min-h-[55vh] sm:min-h-[600px] flex flex-col justify-center py-10 sm:py-12 md:py-14 pointer-events-none">
           <div className="text-center mt-10 sm:mt-14 md:mt-20">
             <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/80 mb-4">
               Punta Norte Rentals

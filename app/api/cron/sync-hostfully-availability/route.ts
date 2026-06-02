@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getPropertyCalendar } from "@/lib/hostfully/client";
-import type { HostfullyPropertyCalendarDay } from "@/lib/hostfully/client";
+import { parseHostfullyCalendarDays } from "@/lib/hostfully-calendar-sync";
 
 const MONTHS_AHEAD = 24;
 
 /**
  * POST /api/cron/sync-hostfully-availability
- * Sincroniza disponibilidad y precios por noche desde Hostfully a Firestore.
- * Debe ser llamado por un cron (ej. cada 5–15 min). Protegido por CRON_SECRET.
- * Por defecto **sí** persiste en Firestore. Pon `HOSTFULLY_PERSIST_AVAILABILITY=false`
- * solo si usas solo Hostfully en vivo y no quieres copiar calendario a Firestore.
+ * Sincroniza solo **disponibilidad** desde Hostfully (cada ~10 min).
+ * Los precios (`dailyRates`) se actualizan en `/api/cron/sync-hostfully-prices` (1×/día).
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -34,12 +32,24 @@ export async function POST(request: Request) {
     const today = new Date();
     const end = new Date(today);
     end.setMonth(end.getMonth() + MONTHS_AHEAD);
-    const startStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
-    const endStr = end.getFullYear() + "-" + String(end.getMonth() + 1).padStart(2, "0") + "-" + String(end.getDate()).padStart(2, "0");
+    const startStr =
+      today.getFullYear() +
+      "-" +
+      String(today.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(today.getDate()).padStart(2, "0");
+    const endStr =
+      end.getFullYear() +
+      "-" +
+      String(end.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(end.getDate()).padStart(2, "0");
 
     const snapshot = await adminDb.collection("properties").get();
     const docs = snapshot.docs.filter(
-      (d) => d.data().hostfullyPropertyId != null && String(d.data().hostfullyPropertyId).trim() !== ""
+      (d) =>
+        d.data().hostfullyPropertyId != null &&
+        String(d.data().hostfullyPropertyId).trim() !== ""
     );
 
     let updated = 0;
@@ -50,23 +60,11 @@ export async function POST(request: Request) {
       if (!uid) continue;
       try {
         const calendar = await getPropertyCalendar(uid, startStr, endStr);
-        const dates = (calendar.dates ?? []) as HostfullyPropertyCalendarDay[];
-        const availability: Record<string, boolean> = {};
-        const dailyRates: Record<string, number> = {};
-        for (const d of dates) {
-          const dateStr = d.date;
-          if (!dateStr) continue;
-          availability[dateStr] = d.available !== false;
-          if (d.available !== false) {
-            const rate = d.rate ?? d.price ?? d.dailyRate;
-            if (typeof rate === "number" && rate > 0) {
-              dailyRates[dateStr] = rate;
-            }
-          }
-        }
+        const { availability } = parseHostfullyCalendarDays(calendar.dates ?? []);
+
         await doc.ref.update({
           availability,
-          dailyRates,
+          availabilitySyncedAt: new Date(),
           updatedAt: new Date(),
         });
         updated++;
@@ -78,6 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      scope: "availability",
       updated,
       total: docs.length,
       errors: errors.length > 0 ? errors : undefined,

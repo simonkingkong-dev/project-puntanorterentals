@@ -4,11 +4,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase-admin";
 import { Service } from "@/lib/types";
+import { slugifyServiceTitle } from "@/lib/service-slug";
+
+function withSlug(data: Partial<Service>): Partial<Service> {
+  const slug =
+    data.slug?.trim() ||
+    (data.title ? slugifyServiceTitle(data.title) : undefined);
+  return slug ? { ...data, slug } : data;
+}
 
 export async function handleCreateService(formData: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>) {
   try {
     await adminDb.collection('services').add({
-      ...formData,
+      ...withSlug(formData),
+      providerType: formData.providerType ?? 'manual',
       createdAt: new Date(),
     });
     revalidatePath("/admin/services");
@@ -27,8 +36,7 @@ export async function handleUpdateService(serviceId: string, formData: UpdateSer
 
   try {
     await adminDb.collection('services').doc(serviceId).update({
-      ...formData,
-      // No actualizamos createdAt
+      ...withSlug(formData),
     });
     revalidatePath("/admin/services");
     revalidatePath(`/admin/services/${serviceId}/edit`);

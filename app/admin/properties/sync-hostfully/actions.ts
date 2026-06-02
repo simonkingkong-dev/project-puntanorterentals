@@ -10,6 +10,7 @@ import {
   getPropertyAmenities,
 } from "@/lib/hostfully/client";
 import { Property } from "@/lib/types";
+import { optimizePropertyImageUrls } from "@/lib/optimize-property-image";
 
 type HostfullyRaw = Record<string, unknown>;
 const HOSTFULLY_DEBUG_PROPERTY_UID = "8dbf9762-f3b9-46a7-9fb7-1659e1102e7d";
@@ -697,7 +698,17 @@ export async function syncHostfullyProperties(): Promise<{
         }
       }
 
-      const propData = mapHostfullyToProperty(raw);
+      let propData = mapHostfullyToProperty(raw);
+      if (process.env.HOSTFULLY_OPTIMIZE_IMAGES !== "false" && propData.images?.length) {
+        propData = {
+          ...propData,
+          images: await optimizePropertyImageUrls(
+            propData.images,
+            `properties/${propData.slug || uid}`,
+            10
+          ),
+        };
+      }
 
       await adminDb.runTransaction(async (transaction) => {
         const q = adminDb

@@ -6,7 +6,7 @@ import { getAdminServices, getSiteContentBySectionAdmin } from '@/lib/firebase-a
 import ServiceCard from '@/components/ui/service-card';
 import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();

@@ -52,7 +52,9 @@ En `api/cron/sync-hostfully-availability/route.ts`:
 ## 3. Configuración en el backend (este sitio)
 
 - **Variables de entorno:** `HOSTFULLY_API_KEY`, `HOSTFULLY_AGENCY_UID`; opcional `HOSTFULLY_BASE_URL` (si no se define se usa sandbox). Para el cron: `CRON_SECRET`.
-- **Cron:** Llamar `POST /api/cron/sync-hostfully-availability` con header `Authorization: Bearer <CRON_SECRET>` con la frecuencia deseada (ej. cada 5–15 min) para mantener `availability` y `dailyRates` al día.
+- **Cron disponibilidad (~10 min):** `POST /api/cron/sync-hostfully-availability` — solo `availability`.
+- **Cron precios (1×/día):** `POST /api/cron/sync-hostfully-prices` — `dailyRates` y `lowestAvailableNightlyRate` (precio "Desde" en tarjetas = mínimo entre noches disponibles futuras).
+- Header: `Authorization: Bearer <CRON_SECRET>`.
 
 ---
 
@@ -61,8 +63,9 @@ En `api/cron/sync-hostfully-availability/route.ts`:
 - **Fuente de verdad:** Hostfully para: nombre público, descripción, fotos, capacidad, amenidades, reseñas, precios por noche (por fecha si el calendario los devuelve), disponibilidad por fecha.
 - **Firestore:** Caché de todo lo anterior; la UI solo lee Firestore. Las reservas se crean y actualizan en Firestore (y Stripe); no se escriben reservas en Hostfully desde esta app.
 - **Sync de propiedades (manual):** Admin → Sync Hostfully. Actualiza datos de cada propiedad y mantiene `hostfullyPropertyId`; no sobrescribe `availability` (eso lo hace el cron).
-- **Sync de disponibilidad y precios (automático):** Cron que para cada propiedad con `hostfullyPropertyId` llama a `getPropertyCalendar` (24 meses), rellena `availability` y `dailyRates` y actualiza el documento en Firestore.
-- **Verificación de disponibilidad al reservar:** Solo Firestore (`checkPropertyAvailability` lee `property.availability`); no se llama a Hostfully en el flujo de pago.
+- **Sync de disponibilidad (automático, ~10 min):** Cron que rellena solo `availability` en Firestore.
+- **Sync de precios (automático, 1×/día):** Cron que rellena `dailyRates` y el mínimo disponible para tarjetas.
+- **Verificación al pagar:** Hostfully en vivo + holds de otros huéspedes; listados/calendario usan Firestore del cron.
 
 ### Cambios de código recomendados (si algo falla)
 - Si la disponibilidad no coincide: revisar timezone en el cron y en Hostfully; ampliar rango del cron si hace falta; asegurar que el calendario de Hostfully devuelva `available` y opcionalmente `rate`/`price`/`dailyRate` por día.

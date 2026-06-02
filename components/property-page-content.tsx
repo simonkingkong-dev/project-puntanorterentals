@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Property, BedType } from "@/lib/types";
+import { Property, BedType, PropertyReview } from "@/lib/types";
 import { Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PropertyGallery from "@/components/ui/property-gallery";
@@ -14,6 +14,7 @@ import type { ListingSearchSelection } from "@/lib/listing-search-params";
 
 interface PropertyPageContentProps {
   property: Property;
+  curatedReviews: PropertyReview[];
   initialSearch?: ListingSearchSelection;
 }
 
@@ -55,7 +56,11 @@ function BedIcon({ type }: { type: BedType }) {
   }
 }
 
-export default function PropertyPageContent({ property, initialSearch }: PropertyPageContentProps) {
+export default function PropertyPageContent({
+  property,
+  curatedReviews,
+  initialSearch,
+}: PropertyPageContentProps) {
   const { t, locale } = useLocale();
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const [currency, setCurrency] = useState<"USD" | "MXN" | "EUR">("USD");
@@ -157,6 +162,7 @@ export default function PropertyPageContent({ property, initialSearch }: Propert
 
       <PropertyBody
         property={property}
+        curatedReviews={curatedReviews}
         initialSearch={initialSearch}
         currency={currency}
         onCurrencyChange={setCurrency}

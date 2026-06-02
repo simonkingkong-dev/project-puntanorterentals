@@ -50,10 +50,8 @@ const GoogleMap = dynamic(() => import("@/components/ui/google-map"), {
   loading: () => <div className="h-full min-h-[300px] rounded-lg bg-gray-100" />,
 });
 
-const ReviewForm = dynamic(() => import("@/components/ui/review-form"), {
-  ssr: false,
-  loading: () => <div className="h-40 rounded-lg border bg-gray-50" />,
-});
+import PropertyCuratedReviews from "@/components/ui/property-curated-reviews";
+import type { PropertyReview } from "@/lib/types";
 
 const HostfullyBookingEmbed = dynamic(
   () => import("@/components/ui/hostfully-booking-embed"),
@@ -122,6 +120,7 @@ function getAmenityIcon(amenity: string): LucideIcon {
 
 interface PropertyBodyProps {
   property: Property;
+  curatedReviews: PropertyReview[];
   initialSearch?: ListingSearchSelection;
   currency: Currency;
   onCurrencyChange: (c: Currency) => void;
@@ -185,7 +184,8 @@ function Section({
 }
 
 export default function PropertyBody(props: PropertyBodyProps) {
-  const { property, initialSearch, currency, onCurrencyChange, pricePerNightDisplay } = props;
+  const { property, curatedReviews, initialSearch, currency, onCurrencyChange, pricePerNightDisplay } =
+    props;
   const { locale, t } = useLocale();
   const initialCheckIn = initialSearch?.checkIn;
   const initialCheckOut = initialSearch?.checkOut;
@@ -217,7 +217,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const useHostfullyWidgets = isHostfullyBookingEngine();
 
   const hasMap = property.latitude != null && property.longitude != null;
-  const hasReviews = property.reviews && property.reviews.length > 0;
+  const hasReviews = curatedReviews.length > 0;
 
   const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) => {
     const localized = locale === "en" ? en : es;
@@ -388,34 +388,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
       </TabsContent>
 
       <TabsContent value="reviews" className="mt-4 space-y-6">
-        {hasReviews ? (
-          <div className="space-y-4">
-            {property.reviews!.map((review, index) => (
-              <div key={index} className="p-4 rounded-lg border bg-gray-50">
-                <div className="flex items-center gap-2 mb-2">
-                  {review.rating != null && (
-                    <span className="flex items-center gap-1 text-amber-600">
-                      <Star className="w-4 h-4 fill-current" />
-                      {review.rating}
-                    </span>
-                  )}
-                  {review.author && (
-                    <span className="font-medium text-gray-900">{review.author}</span>
-                  )}
-                  {review.date && (
-                    <span className="text-sm text-gray-500">{review.date}</span>
-                  )}
-                </div>
-                {review.text && <p className="text-gray-600 text-sm">{review.text}</p>}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">
-            {t("reviews_empty", "There are no approved reviews for this property yet.")}
-          </p>
-        )}
-        <ReviewForm propertyId={property.id} />
+        <PropertyCuratedReviews reviews={curatedReviews} />
       </TabsContent>
     </Tabs>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, Home, Building, ShoppingCart, Calendar } from 'lucide-react';
+import { Menu, Home, Building, ShoppingCart, Calendar, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -59,16 +59,20 @@ export default function Header() {
   const navigation = [
     { name: t('nav_home', 'Home'), href: '/', icon: Home },
     { name: t('nav_properties', 'Properties'), href: '/properties', icon: Building },
+    { name: t('nav_services', 'Services'), href: '/services', icon: Compass },
     { name: t('nav_my_reservations', 'My reservations'), href: '/my-reservations', icon: Calendar },
   ];
   useEffect(() => setMounted(true), []);
 
   return (
     <header className="sticky top-0 z-[100] isolate flex min-h-16 w-full shrink-0 flex-col border-b border-gray-200 bg-white shadow-sm supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2" aria-label={`Punta Norte Rentals - ${t('nav_home', 'Home')}`}>
+      <div className="w-full max-w-7xl mx-auto pl-2 pr-4 sm:pl-4 sm:pr-6 lg:pl-6 lg:pr-8">
+        <div className="grid grid-cols-[1fr_auto] items-center h-16 gap-4">
+          <Link
+            href="/"
+            className="flex items-center space-x-2 justify-self-start min-w-0"
+            aria-label={`Punta Norte Rentals - ${t('nav_home', 'Home')}`}
+          >
             <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} priority />
             <div className="flex flex-col leading-none">
               <span className="text-lg font-bold text-gray-900 leading-none">Punta Norte</span>
@@ -77,7 +81,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation: Inicio, Propiedades, Carrito */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-6 justify-self-end">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -115,7 +119,7 @@ export default function Header() {
           {/* Mobile menu: solo en cliente para evitar hydration mismatch (Radix genera IDs distintos en SSR vs cliente) */}
           {mounted ? (
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild className="md:hidden">
+              <SheetTrigger asChild className="md:hidden justify-self-end col-start-2">
                 <Button variant="ghost" size="icon" aria-label={t('nav_open_menu', 'Open menu')}>
                   <Menu className="w-5 h-5" />
                 </Button>

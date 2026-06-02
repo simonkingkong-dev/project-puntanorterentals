@@ -72,13 +72,6 @@ export default function AvailabilityCalendar({
   const toMonth = addMonths(today, MONTHS_WINDOW - 1);
   const [currentMonth, setCurrentMonth] = useState(() => today);
   const [monthsVisible, setMonthsVisible] = useState(3);
-  const [realtimeAvailability, setRealtimeAvailability] = useState<
-    Record<string, boolean> | null
-  >(null);
-  const [realtimeDailyRates, setRealtimeDailyRates] = useState<Record<string, number> | null>(
-    null
-  );
-  const [loadingRealtime, setLoadingRealtime] = useState(false);
 
   useEffect(() => {
     const computeMonthsVisible = () =>
@@ -100,100 +93,22 @@ export default function AvailabilityCalendar({
     if (canGoNext) setCurrentMonth((m) => addMonths(m, 1));
   }, [canGoNext]);
 
-  useEffect(() => {
-    if (!property.hostfullyPropertyId) {
-      setRealtimeAvailability(null);
-      setRealtimeDailyRates(null);
-      return;
-    }
-
-    const start = new Date();
-    start.setDate(1);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + MONTHS_WINDOW);
-    end.setDate(0);
-    const toDateStr = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-        d.getDate()
-      ).padStart(2, "0")}`;
-
-    let cancelled = false;
-    setLoadingRealtime(true);
-    fetch(
-      `/api/properties/calendar?propertyId=${encodeURIComponent(property.id)}&startDate=${toDateStr(
-        start
-      )}&endDate=${toDateStr(end)}`
-    )
-      .then(async (r) => {
-        const data = (await r.json()) as {
-          availability?: Record<string, boolean>;
-          dailyRates?: Record<string, number>;
-          error?: string;
-          warning?: string;
-          source?: string;
-        };
-        if (!r.ok) {
-          throw new Error(data?.error || `HTTP ${r.status}`);
-        }
-        return data;
-      })
-      .then((data) => {
-        if (cancelled) return;
-        if (data?.warning) {
-          toast.warning(
-            t(
-              'calendar_warning_fallback',
-              'Showing saved on-site availability (Hostfully did not respond).'
-            )
-          );
-        }
-        if (data?.availability && typeof data.availability === "object") {
-          setRealtimeAvailability(data.availability as Record<string, boolean>);
-        } else {
-          setRealtimeAvailability({});
-        }
-        if (data?.dailyRates && typeof data.dailyRates === "object") {
-          setRealtimeDailyRates(data.dailyRates as Record<string, number>);
-        } else {
-          setRealtimeDailyRates({});
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRealtimeAvailability({});
-          setRealtimeDailyRates({});
-          toast.error(
-            t(
-              'calendar_error_realtime',
-              'Could not load live availability from Hostfully.'
-            )
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRealtime(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [property.id, property.hostfullyPropertyId, t]);
-
   const availabilityMap = useMemo(
-    () => (property.hostfullyPropertyId ? realtimeAvailability ?? {} : property.availability),
-    [property.hostfullyPropertyId, property.availability, realtimeAvailability]
+    () => property.availability ?? {},
+    [property.availability]
+  );
+
+  const dailyRatesMap = useMemo(
+    () => property.dailyRates ?? {},
+    [property.dailyRates]
   );
 
   const isNightAvailable = useCallback(
     (date: Date): boolean => {
       const dateString = format(date, 'yyyy-MM-dd');
-      if (property.hostfullyPropertyId) {
-        const v = availabilityMap[dateString];
-        return v === true;
-      }
       return availabilityMap[dateString] !== false;
     },
-    [property.hostfullyPropertyId, availabilityMap]
+    [availabilityMap]
   );
 
   const canUseAsCheckout = useCallback(
@@ -222,25 +137,10 @@ export default function AvailabilityCalendar({
       const isCheckoutCandidate =
         rangeFrom != null && startOfDay(date).getTime() > startOfDay(rangeFrom).getTime();
 
-      if (property.hostfullyPropertyId) {
-        if (loadingRealtime && realtimeAvailability == null) return true;
-        if (isCheckoutCandidate) return !canUseAsCheckout(date);
-        // Conservador: si Hostfully no devuelve la fecha, la tratamos como no seleccionable.
-        const v = availabilityMap[dateString];
-        return v !== true;
-      }
-
       if (isCheckoutCandidate) return !canUseAsCheckout(date);
       return availabilityMap[dateString] === false;
     },
-    [
-      property.hostfullyPropertyId,
-      loadingRealtime,
-      realtimeAvailability,
-      availabilityMap,
-      rangeFrom,
-      canUseAsCheckout,
-    ]
+    [availabilityMap, rangeFrom, canUseAsCheckout]
   );
 
   const handleDayClick = useCallback(
@@ -369,7 +269,7 @@ export default function AvailabilityCalendar({
   const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
   const nightlySumUsd = useMemo(() => {
     if (!displayCheckIn || !displayCheckOut || nightsCount <= 0) return 0;
-    const rates = property.hostfullyPropertyId ? realtimeDailyRates ?? {} : property.dailyRates ?? {};
+    const rates = dailyRatesMap;
     const cursor = new Date(
       displayCheckIn.getFullYear(),
       displayCheckIn.getMonth(),
@@ -396,9 +296,7 @@ export default function AvailabilityCalendar({
     displayCheckIn,
     displayCheckOut,
     nightsCount,
-    property.hostfullyPropertyId,
-    realtimeDailyRates,
-    property.dailyRates,
+    dailyRatesMap,
     property.pricePerNight,
   ]);
   const extraGuestFeesUsd = useMemo(

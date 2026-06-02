@@ -283,10 +283,35 @@ function PaymentContent() {
         if (expiresAt) {
           setSecondsLeft(Math.max(0, Math.floor((expiry - now) / 1000)));
         }
-        return fetch(`/api/reservations/${reservationId}/hold`, { method: 'POST', credentials: 'include' }).then((holdRes) => {
+        const propertyId = data.propertyId as string;
+        return fetch('/api/properties/check-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            propertyId,
+            checkIn,
+            checkOut,
+            excludeReservationId: reservationId,
+          }),
+        })
+          .then((avRes) => avRes.json().then((av) => ({ ok: avRes.ok, av })))
+          .then(({ ok, av }) => {
+            if (!ok || !av.available) {
+              throw new Error(
+                av.error || 'Las fechas ya no están disponibles. Vuelve al carrito y elige otras fechas.'
+              );
+            }
+          })
+          .then(() =>
+            fetch(`/api/reservations/${reservationId}/hold`, {
+              method: 'POST',
+              credentials: 'include',
+            })
+          )
+          .then((holdRes) => {
           if (!holdRes.ok) return holdRes.json().then((err: { error?: string }) => { throw new Error(err.error || 'Error al bloquear fechas'); });
           const slug = (data as { propertySlug?: string }).propertySlug ?? '';
-          const propertyId = data.propertyId as string;
           const item = { propertyId, slug, checkIn: checkIn ?? '', checkOut: checkOut ?? '', reservationId };
           const existing = getItemByKey(reservationId);
           if (existing) updateCartItem(reservationId, item);

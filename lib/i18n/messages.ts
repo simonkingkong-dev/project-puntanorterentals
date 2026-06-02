@@ -7,6 +7,7 @@ export const messages: Record<Locale, Record<string, string>> = {
   es: {
     nav_home: "Inicio",
     nav_properties: "Propiedades",
+    nav_services: "Servicios",
     nav_my_reservations: "Mis reservas",
     nav_cart: "Carrito",
     nav_view_cart: "Ver carrito",
@@ -76,6 +77,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Propiedades que coinciden con tu búsqueda",
     properties_empty_search_title: "No se encontraron propiedades",
     properties_empty_search_subtitle: "Intenta ajustar tus filtros de búsqueda.",
+    properties_search_availability_notice:
+      "La disponibilidad se sincroniza con Hostfully cada 10 minutos. Al pagar se verifica en tiempo real que las fechas sigan libres.",
     properties_empty_title: "Aún no hay propiedades cargadas",
     properties_empty_subtitle:
       "Vuelve pronto o carga propiedades desde el panel de administración.",
@@ -124,6 +127,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     reviews_empty_channel:
       "Las reseñas están disponibles en los canales de reserva (por ejemplo Airbnb).",
     reviews_empty: "Aún no hay reseñas aprobadas para esta propiedad.",
+    reviews_empty_curated: "Aún no hay reseñas publicadas para esta propiedad.",
     calendar_hint_select_checkout:
       "Selecciona la fecha de salida (o haz clic en otra fecha para cambiar la entrada)",
     calendar_hint_select_stay: "Selecciona las fechas de tu estancia",
@@ -426,6 +430,7 @@ export const messages: Record<Locale, Record<string, string>> = {
   en: {
     nav_home: "Home",
     nav_properties: "Properties",
+    nav_services: "Services",
     nav_my_reservations: "My reservations",
     nav_cart: "Cart",
     nav_view_cart: "View cart",
@@ -495,6 +500,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Properties matching your search",
     properties_empty_search_title: "No properties found",
     properties_empty_search_subtitle: "Try adjusting your search filters.",
+    properties_search_availability_notice:
+      "Availability syncs from Hostfully every 10 minutes. When you pay, dates are verified live against Hostfully.",
     properties_empty_title: "No properties yet",
     properties_empty_subtitle:
       "Check back soon or add properties from the admin panel.",
@@ -543,6 +550,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     reviews_empty_channel:
       "Reviews are available on booking channels (e.g. Airbnb).",
     reviews_empty: "There are no approved reviews for this property yet.",
+    reviews_empty_curated: "There are no published reviews for this property yet.",
     calendar_hint_select_checkout:
       "Select check-out (or click another date to change check-in)",
     calendar_hint_select_stay: "Select your stay dates",

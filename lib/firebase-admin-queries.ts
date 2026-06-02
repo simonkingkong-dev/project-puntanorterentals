@@ -1,7 +1,18 @@
 import "server-only";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
-import { Property, Reservation, Service, GlobalAmenity, Testimonial, ContactInfo, SearchParams, SiteContent } from "@/lib/types";
-import { checkHostfullyAvailability } from "@/lib/hostfully/client";
+import {
+  Property,
+  PropertyReview,
+  Reservation,
+  Service,
+  GlobalAmenity,
+  Testimonial,
+  ContactInfo,
+  SearchParams,
+  SiteContent,
+} from "@/lib/types";
+import { toPropertyListItems, type PropertyListItem } from "@/lib/property-list-item";
 
 /** Converts Firestore Timestamp, Date, or ISO string to Date. Returns epoch for missing/invalid to avoid Invalid Date. */
 function safeTimestampToDate(value: unknown): Date {
@@ -66,6 +77,16 @@ export const getPropertyBySlugAdmin = async (slug: string): Promise<Property | n
   }
 };
 
+export const getAdminPropertiesForList = async (): Promise<PropertyListItem[]> => {
+  const properties = await getAdminProperties();
+  return toPropertyListItems(properties);
+};
+
+export const getFeaturedPropertiesForList = async (): Promise<PropertyListItem[]> => {
+  const properties = await getFeaturedPropertiesAdmin();
+  return toPropertyListItems(properties);
+};
+
 /** Propiedades destacadas (para homepage pública, usa Admin SDK en servidor). */
 export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
   try {
@@ -82,6 +103,12 @@ export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured properties', error);
     return [];
   }
+};
+
+/** Busca propiedades con filtros; devuelve DTO liviano para listados. */
+export const searchPropertiesForList = async (params: SearchParams): Promise<PropertyListItem[]> => {
+  const properties = await searchPropertiesAdmin(params);
+  return toPropertyListItems(properties);
 };
 
 /** Busca propiedades con filtros (usa Admin SDK en servidor). */
@@ -110,7 +137,8 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
       }
 
       if (checkOut > checkIn) {
-        const filteredByLocalAvailability = properties.filter((p) => {
+        // Firestore availability (cron Hostfully ~10 min). Verificación en vivo solo al pagar.
+        properties = properties.filter((p) => {
           let current = new Date(checkIn);
           while (current < checkOut) {
             const dateStr = current.toISOString().split("T")[0];
@@ -119,24 +147,6 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
           }
           return true;
         });
-
-        const availabilityResults = await Promise.all(
-          filteredByLocalAvailability.map(async (property) => {
-            if (!property.hostfullyPropertyId) {
-              return { property, available: true };
-            }
-            const result = await checkHostfullyAvailability(
-              property.hostfullyPropertyId,
-              checkIn,
-              checkOut
-            );
-            return { property, available: result.available };
-          })
-        );
-
-        properties = availabilityResults
-          .filter((item) => item.available)
-          .map((item) => item.property);
       }
     }
     return properties;
@@ -217,6 +227,64 @@ export const getServiceByIdAdmin = async (id: string): Promise<Service | null> =
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching service by ID', error);
     return null;
+  }
+};
+
+export const getServiceBySlugAdmin = async (slug: string): Promise<Service | null> => {
+  try {
+    const snapshot = await adminDb.collection('services').where('slug', '==', slug).limit(1).get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      ...data,
+      id: doc.id,
+      createdAt: safeTimestampToDate(data.createdAt),
+    } as Service;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching service by slug', error);
+    return null;
+  }
+};
+
+// --- RESEÑAS CURADAS (property_reviews) ---
+function mapPropertyReviewDoc(doc: QueryDocumentSnapshot): PropertyReview {
+  const d = doc.data()!;
+  return {
+    ...d,
+    id: doc.id,
+    createdAt: safeTimestampToDate(d.createdAt),
+  } as PropertyReview;
+}
+
+export const getPublishedPropertyReviewsAdmin = async (
+  propertyId: string
+): Promise<PropertyReview[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('property_reviews')
+      .where('propertyId', '==', propertyId)
+      .where('status', '==', 'published')
+      .orderBy('sortOrder', 'asc')
+      .get();
+    return snapshot.docs.map(mapPropertyReviewDoc);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching published reviews', error);
+    return [];
+  }
+};
+
+export const getPropertyReviewsForAdmin = async (propertyId: string): Promise<PropertyReview[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('property_reviews')
+      .where('propertyId', '==', propertyId)
+      .orderBy('sortOrder', 'asc')
+      .get();
+    return snapshot.docs.map(mapPropertyReviewDoc);
+  } catch (error) {
+    console.error('Admin: Error fetching property reviews', error);
+    return [];
   }
 };
 
@@ -408,8 +476,7 @@ export const releasePendingReservationAdmin = async (reservationId: string): Pro
   const checkOut = safeTimestampToDate(data.checkOut);
   const propertyId = data.propertyId as string;
   await ref.update({ status: 'cancelled', updatedAt: new Date() });
-  const dateStrings = generateDateRange(checkIn, checkOut);
-  await updatePropertyAvailabilityAdmin(propertyId, dateStrings, true);
+  // No modificamos property.availability: el cron Hostfully es la fuente para listados/calendario.
   return true;
 };
 

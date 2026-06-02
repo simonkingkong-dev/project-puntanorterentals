@@ -9,7 +9,7 @@ import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { propertyId, checkIn, checkOut } = body;
+    const { propertyId, checkIn, checkOut, excludeReservationId, excludeClientToken } = body;
     if (!propertyId || !checkIn || !checkOut) {
       return NextResponse.json(
         { available: false, error: 'propertyId, checkIn y checkOut son requeridos' },
@@ -19,7 +19,13 @@ export async function POST(request: NextRequest) {
     const result = await checkPropertyAvailability(
       String(propertyId),
       new Date(checkIn),
-      new Date(checkOut)
+      new Date(checkOut),
+      {
+        excludeReservationId:
+          typeof excludeReservationId === 'string' ? excludeReservationId : undefined,
+        excludeClientToken:
+          typeof excludeClientToken === 'string' ? excludeClientToken : undefined,
+      }
     );
     return NextResponse.json(result);
   } catch (e) {

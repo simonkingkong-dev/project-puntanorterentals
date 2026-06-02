@@ -32,10 +32,13 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
               Volver a Propiedades
             </Link>
           </Button>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-gray-900">Editar Propiedad</h1>
             <p className="text-gray-600 truncate">Modificando: {property.title}</p>
           </div>
+          <Button asChild variant="outline">
+            <Link href={`/admin/properties/${id}/reviews`}>Reseñas curadas</Link>
+          </Button>
         </div>
 
         {/* 3. Pasamos los datos cargados al formulario (Client Component) */}

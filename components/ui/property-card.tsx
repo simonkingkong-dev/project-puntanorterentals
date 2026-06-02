@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Users, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Property } from '@/lib/types';
+import type { PropertyListItem } from '@/lib/property-list-item';
 import { remoteImageShouldBypassOptimization } from '@/lib/remote-image';
 import { useLocale } from '@/components/providers/locale-provider';
 import {
@@ -17,33 +17,7 @@ import {
 import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
 
 interface PropertyCardProps {
-  property: Property;
-}
-
-function toDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function getFirstAvailableNightlyRate(property: Property): number | null {
-  const baseRate =
-    typeof property.pricePerNight === 'number' && Number.isFinite(property.pricePerNight)
-      ? property.pricePerNight
-      : null;
-  const rates = property.dailyRates ?? {};
-  const todayKey = toDateKey(new Date());
-
-  const firstAvailableRate = Object.entries(rates)
-    .filter(([dateKey, rate]) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || dateKey < todayKey) return false;
-      if (property.availability?.[dateKey] === false) return false;
-      return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
-    })
-    .sort(([a], [b]) => a.localeCompare(b))[0]?.[1];
-
-  return firstAvailableRate ?? baseRate;
+  property: PropertyListItem;
 }
 
 /**
@@ -71,7 +45,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const propertyDescription = getLocalizedPropertyDescription(property, locale);
   const amenities = getLocalizedPropertyAmenities(property, locale);
-  const nightlyRate = useMemo(() => getFirstAvailableNightlyRate(property), [property]);
+  const nightlyRate = property.displayNightlyRate;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -105,14 +79,14 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       tabIndex={0}
       onClick={openPropertyDetail}
       onKeyDown={handleCardKeyDown}
-      className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer border-0 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+      className="overflow-hidden group md:hover:shadow-xl md:transition-shadow md:duration-300 md:hover:-translate-y-1 cursor-pointer border-0 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
     >
         <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
           <Image
             src={images[currentImageIndex]}
             alt={propertyTitle}
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            className="object-cover md:group-hover:scale-105 md:transition-transform md:duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             quality={70}
             unoptimized={remoteImageShouldBypassOptimization(images[currentImageIndex])}
