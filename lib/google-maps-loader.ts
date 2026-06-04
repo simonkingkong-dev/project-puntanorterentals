@@ -24,7 +24,11 @@ function getGoogle(): GoogleNamespace | undefined {
   return (window as Window & { google?: GoogleNamespace }).google;
 }
 
-function waitForGoogleNamespace(
+function isGoogleMapsReady(g: GoogleNamespace | undefined): g is GoogleNamespace {
+  return typeof g?.maps?.importLibrary === "function";
+}
+
+function waitForGoogleMapsReady(
   settle: (fn: () => void) => void,
   resolve: (g: GoogleNamespace) => void,
   reject: (err: Error) => void,
@@ -32,8 +36,19 @@ function waitForGoogleNamespace(
 ): void {
   const tick = () => {
     const g = getGoogle();
-    if (g?.maps) {
-      settle(() => resolve(g));
+    if (isGoogleMapsReady(g)) {
+      void (async () => {
+        try {
+          await g.maps.importLibrary!("maps");
+          await g.maps.importLibrary!("marker");
+          settle(() => resolve(g));
+        } catch (e) {
+          googleMapsPromise = null;
+          settle(() =>
+            reject(e instanceof Error ? e : new Error("Google Maps libraries failed to load"))
+          );
+        }
+      })();
       return;
     }
     if (Date.now() >= deadlineMs) {
@@ -47,7 +62,7 @@ function waitForGoogleNamespace(
 }
 
 function scriptLibrariesParam(): string {
-  return "&libraries=marker";
+  return "&loading=async";
 }
 
 /** Warm the Maps script (e.g. on /properties before the user opens the map). */
@@ -66,7 +81,13 @@ export function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
   }
 
   const ready = getGoogle();
-  if (ready?.maps) return Promise.resolve(ready);
+  if (isGoogleMapsReady(ready)) {
+    return Promise.resolve(ready).then(async (g) => {
+      await g.maps.importLibrary!("maps");
+      await g.maps.importLibrary!("marker");
+      return g;
+    });
+  }
 
   if (googleMapsPromise) return googleMapsPromise;
 
@@ -84,18 +105,13 @@ export function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
       'script[data-google-maps="true"]'
     );
 
-    if (existingScript) {
-      const g = getGoogle();
-      if (g?.maps) {
-        settle(() => resolve(g));
-        return;
-      }
-      existingScript.addEventListener(
+    const attachListeners = (script: HTMLScriptElement) => {
+      script.addEventListener(
         "load",
-        () => waitForGoogleNamespace(settle, resolve, reject, deadlineMs),
+        () => waitForGoogleMapsReady(settle, resolve, reject, deadlineMs),
         { once: true }
       );
-      existingScript.addEventListener(
+      script.addEventListener(
         "error",
         () => {
           googleMapsPromise = null;
@@ -103,24 +119,38 @@ export function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
         },
         { once: true }
       );
-      waitForGoogleNamespace(settle, resolve, reject, deadlineMs);
+    };
+
+    if (existingScript) {
+      const g = getGoogle();
+      if (isGoogleMapsReady(g)) {
+        void (async () => {
+          try {
+            await g.maps.importLibrary!("maps");
+            await g.maps.importLibrary!("marker");
+            settle(() => resolve(g));
+          } catch (e) {
+            googleMapsPromise = null;
+            settle(() =>
+              reject(e instanceof Error ? e : new Error("Google Maps libraries failed"))
+            );
+          }
+        })();
+        return;
+      }
+      attachListeners(existingScript);
+      waitForGoogleMapsReady(settle, resolve, reject, deadlineMs);
       return;
     }
 
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}&loading=async&v=weekly${scriptLibrariesParam()}`;
+    )}${scriptLibrariesParam()}&v=weekly`;
     script.async = true;
     script.defer = true;
     script.dataset.googleMaps = "true";
-    script.onload = () => {
-      waitForGoogleNamespace(settle, resolve, reject, deadlineMs);
-    };
-    script.onerror = () => {
-      googleMapsPromise = null;
-      settle(() => reject(new Error("Google Maps failed to load")));
-    };
+    attachListeners(script);
     document.head.appendChild(script);
   });
 

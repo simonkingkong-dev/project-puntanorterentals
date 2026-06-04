@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Property, PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
 import { Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,9 @@ import { getUsdDisplayMultiplier } from "@/lib/display-exchange-rate";
 import { useLocale } from "@/components/providers/locale-provider";
 import { getLocalizedPropertyTitle } from "@/lib/property-localization";
 import type { ListingSearchSelection } from "@/lib/listing-search-params";
+import { parseCurrency } from "@/lib/parse-currency";
+import type { Currency } from "@/components/ui/currency-select";
+import { useExchangeRates } from "@/hooks/use-exchange-rates";
 
 interface PropertyPageContentProps {
   property: Property;
@@ -32,28 +35,10 @@ export default function PropertyPageContent({
   const { t, locale } = useLocale();
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const configuredBeds = normalizeBeds(property.beds) ?? [];
-  const [currency, setCurrency] = useState<"USD" | "MXN" | "EUR">("USD");
-  const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
-  const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (currency === "MXN") {
-      fetch("/api/exchange-rate?from=USD&to=MXN")
-        .then((r) => r.json())
-        .then((data) => setUsdMxnRate(data.rate))
-        .catch(() => setUsdMxnRate(17.2));
-      setUsdEurRate(null);
-    } else if (currency === "EUR") {
-      fetch("/api/exchange-rate?from=USD&to=EUR")
-        .then((r) => r.json())
-        .then((data) => setUsdEurRate(data.rate))
-        .catch(() => setUsdEurRate(0.92));
-      setUsdMxnRate(null);
-    } else {
-      setUsdMxnRate(null);
-      setUsdEurRate(null);
-    }
-  }, [currency]);
+  const [currency, setCurrency] = useState<Currency>(() =>
+    parseCurrency(initialSearch?.currency)
+  );
+  const { usdMxnRate, usdEurRate } = useExchangeRates(currency);
 
   const baseNightlyUsd = property.pricePerNight;
   const displayMult = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);

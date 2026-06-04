@@ -89,6 +89,9 @@ function createAdvancedMarkerPin(googleNs: GoogleNamespace, isSelected: boolean,
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
+const MAP_INIT_TIMEOUT_MS = 30_000;
+const CONTAINER_READY_MAX_MS = 8_000;
+
 function isValidLatLng(lat: number, lng: number): boolean {
   return (
     Number.isFinite(lat) &&
@@ -113,6 +116,40 @@ function clearMarkerInstances(markersRef: MutableRefObject<Record<string, unknow
     }
   });
   markersRef.current = {};
+}
+
+async function waitForMapContainer(
+  getEl: () => HTMLDivElement | null,
+  minPx = 8,
+  maxMs = CONTAINER_READY_MAX_MS
+): Promise<HTMLDivElement> {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const el = getEl();
+    if (el) {
+      const { width, height } = el.getBoundingClientRect();
+      if (width >= minPx && height >= minPx) return el;
+    }
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  }
+  throw new Error("Map container not ready");
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), ms);
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
 
 function destroyMapSurface(
@@ -251,17 +288,32 @@ export function GoogleMap({
 
       clearMarkerInstances(markersRef);
 
+      const LegacyMarker = googleNs.maps.Marker;
+
       if (!mapId || !AdvancedMarkerElement) {
-        if (process.env.NODE_ENV === "development" && markers.length > 0) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[GoogleMap] Define NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID (o usa DEMO_MAP_ID en dev) para marcadores."
-          );
+        if (markers.length > 0 && LegacyMarker) {
+          markers.forEach((marker) => {
+            if (!isValidLatLng(marker.lat, marker.lng)) return;
+            const gMarker = new LegacyMarker({
+              position: { lat: marker.lat, lng: marker.lng },
+              map: mapInstance,
+              title: marker.title,
+              zIndex: selectedId === marker.id ? 1000 : 1,
+            }) as {
+              setMap?: (map: null) => void;
+              addListener?: (type: string, fn: () => void) => void;
+            };
+            if (typeof gMarker.addListener === "function") {
+              gMarker.addListener("click", () => onMarkerClickRef.current?.(marker));
+            }
+            markersRef.current[marker.id] = gMarker;
+          });
         }
         return;
       }
 
       markers.forEach((marker) => {
+        if (!isValidLatLng(marker.lat, marker.lng)) return;
         const isSelected = selectedId === marker.id;
         const pin = createAdvancedMarkerPin(googleNs, isSelected, hasSelectedMarker);
 
@@ -317,79 +369,86 @@ export function GoogleMap({
 
     const initMap = async () => {
       try {
-        const googleNs = await loadGoogleMaps(apiKey);
-        if (isCancelled || !googleNs || !mapRef.current) {
-          return;
-        }
+        await withTimeout(
+          (async () => {
+            const googleNs = await loadGoogleMaps(apiKey);
+            if (isCancelled) return;
 
-        const container = mapRef.current;
-        const rect = container.getBoundingClientRect();
-        if (rect.width < 8 || rect.height < 8) {
-          if (!isCancelled) setLoadStatus("error");
-          return;
-        }
+            const container = await waitForMapContainer(() => mapRef.current);
+            if (isCancelled) return;
 
-        const mapId = getGoogleMapsMapId();
-        let MapCtor = googleNs.maps.Map;
-        let AdvancedMarkerElement: (new (...args: unknown[]) => unknown) | null = null;
-        let PinElement: (new (...args: unknown[]) => unknown) | null = null;
+            const mapId = getGoogleMapsMapId();
+            let MapCtor = googleNs.maps.Map;
+            let AdvancedMarkerElement: (new (...args: unknown[]) => unknown) | null = null;
+            let PinElement: (new (...args: unknown[]) => unknown) | null = null;
 
-        if (typeof googleNs.maps.importLibrary === "function") {
-          const mapsLib = (await googleNs.maps.importLibrary("maps")) as {
-            Map?: typeof googleNs.maps.Map;
-          };
-          MapCtor = mapsLib.Map ?? googleNs.maps.Map;
+            if (typeof googleNs.maps.importLibrary === "function") {
+              const mapsLib = (await googleNs.maps.importLibrary("maps")) as {
+                Map?: typeof googleNs.maps.Map;
+              };
+              MapCtor = mapsLib.Map ?? googleNs.maps.Map;
 
-          const markerLibrary = (await googleNs.maps.importLibrary("marker")) as {
-            AdvancedMarkerElement: new (...args: unknown[]) => unknown;
-            PinElement: new (...args: unknown[]) => unknown;
-          };
-          AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
-          PinElement = markerLibrary.PinElement;
-        }
+              const markerLibrary = (await googleNs.maps.importLibrary("marker")) as {
+                AdvancedMarkerElement: new (...args: unknown[]) => unknown;
+                PinElement: new (...args: unknown[]) => unknown;
+              };
+              AdvancedMarkerElement = markerLibrary.AdvancedMarkerElement;
+              PinElement = markerLibrary.PinElement;
+            }
 
-        if (isCancelled || !mapRef.current || !MapCtor) return;
+            if (isCancelled || !mapRef.current || !MapCtor) {
+              throw new Error("Google Maps Map constructor unavailable");
+            }
 
-        if (AdvancedMarkerElement) {
-          (googleNs as { __advancedMarker?: typeof AdvancedMarkerElement }).__advancedMarker =
-            AdvancedMarkerElement;
-        }
-        if (PinElement) {
-          (googleNs as { __pinElement?: typeof PinElement }).__pinElement = PinElement;
-        }
+            if (AdvancedMarkerElement) {
+              (googleNs as { __advancedMarker?: typeof AdvancedMarkerElement }).__advancedMarker =
+                AdvancedMarkerElement;
+            }
+            if (PinElement) {
+              (googleNs as { __pinElement?: typeof PinElement }).__pinElement = PinElement;
+            }
 
-        googleNsRef.current = googleNs;
+            googleNsRef.current = googleNs;
 
-        const existingMap = mapInstanceRef.current;
-        const existingContainer = existingMap ? getMapContainer(existingMap) : null;
-        if (existingMap && existingContainer !== mapRef.current) {
-          clearMarkerInstances(markersRef);
-          mapInstanceRef.current = null;
-          cameraRef.current = null;
-        }
+            const existingMap = mapInstanceRef.current;
+            const existingContainer = existingMap ? getMapContainer(existingMap) : null;
+            if (existingMap && existingContainer !== mapRef.current) {
+              clearMarkerInstances(markersRef);
+              mapInstanceRef.current = null;
+              cameraRef.current = null;
+            }
 
-        const mapCenter = { lat: centerLat, lng: centerLng };
-        if (!mapInstanceRef.current) {
-          mapInstanceRef.current = new MapCtor(mapRef.current, {
-            center: mapCenter,
-            zoom,
-            ...(mapId ? { mapId } : {}),
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: !disableNativeFullscreen,
-          });
-          cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
-        }
+            const mapCenter = { lat: centerLat, lng: centerLng };
+            if (!mapInstanceRef.current) {
+              mapInstanceRef.current = new MapCtor(container, {
+                center: mapCenter,
+                zoom,
+                ...(mapId ? { mapId } : {}),
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: !disableNativeFullscreen,
+              });
+              cameraRef.current = { lat: centerLat, lng: centerLng, zoom };
+            }
 
-        const triggerResize = () => {
-          if (!mapInstanceRef.current || !googleNs.maps?.event) return;
-          googleNs.maps.event.trigger(mapInstanceRef.current, "resize");
-        };
-        requestAnimationFrame(() => {
-          requestAnimationFrame(triggerResize);
-        });
+            const triggerResize = () => {
+              if (!mapInstanceRef.current || !googleNs.maps?.event) return;
+              googleNs.maps.event.trigger(mapInstanceRef.current, "resize");
+            };
+            requestAnimationFrame(() => {
+              requestAnimationFrame(triggerResize);
+            });
 
-        if (!isCancelled) setLoadStatus("ready");
+            if (!isCancelled) {
+              setLoadStatus("ready");
+              if (googleNsRef.current && mapInstanceRef.current) {
+                syncMarkers(googleNsRef.current, mapInstanceRef.current);
+              }
+            }
+          })(),
+          MAP_INIT_TIMEOUT_MS,
+          "Map init timeout"
+        );
       } catch (err) {
         if (isCancelled) return;
         setLoadStatus("error");

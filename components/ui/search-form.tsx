@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays, Users, Search, ChevronDown, X } from 'lucide-react';
+import { CalendarDays, Users, Search, ChevronDown, X, Coins } from 'lucide-react';
 import {
   differenceInCalendarDays,
   format,
@@ -22,6 +22,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocale } from '@/components/providers/locale-provider';
+import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
+import { parseCurrency, writeStoredListingCurrency } from '@/lib/parse-currency';
 import { cn } from '@/lib/utils';
 
 function parseDateOnly(value: string): Date | undefined {
@@ -53,6 +55,7 @@ export default function SearchForm() {
     checkIn: urlSearchParams.get('checkIn') ?? '',
     checkOut: urlSearchParams.get('checkOut') ?? '',
     guests: urlSearchParams.get('guests') ?? '',
+    currency: parseCurrency(urlSearchParams.get('currency')),
   }));
 
   useEffect(() => {
@@ -70,16 +73,17 @@ export default function SearchForm() {
       checkIn: params.get('checkIn') ?? '',
       checkOut: params.get('checkOut') ?? '',
       guests: params.get('guests') ?? '',
+      currency: parseCurrency(params.get('currency')),
     });
   }, [urlKey]);
 
   const handleSearch = () => {
+    writeStoredListingCurrency(searchParams.currency);
     const params = new URLSearchParams();
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (value) {
-        params.set(key, value);
-      }
-    });
+    if (searchParams.checkIn) params.set('checkIn', searchParams.checkIn);
+    if (searchParams.checkOut) params.set('checkOut', searchParams.checkOut);
+    if (searchParams.guests) params.set('guests', searchParams.guests);
+    params.set('currency', searchParams.currency);
     router.push(`/properties?${params.toString()}`);
   };
 
@@ -89,7 +93,8 @@ export default function SearchForm() {
   const hasActiveFilters =
     Boolean(searchParams.checkIn?.trim()) ||
     Boolean(searchParams.checkOut?.trim()) ||
-    Boolean(searchParams.guests?.trim());
+    Boolean(searchParams.guests?.trim()) ||
+    searchParams.currency !== 'USD';
 
   const checkInParsed = useMemo(
     () => parseDateOnly(searchParams.checkIn),
@@ -277,7 +282,7 @@ export default function SearchForm() {
       >
         <div className="overflow-hidden">
           <CardContent className="px-6 sm:px-7 pb-6 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Check-in */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
@@ -398,6 +403,21 @@ export default function SearchForm() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Moneda */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2 min-w-0">
+                  <Coins className="w-4 h-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{t('search_currency', 'Currency')}</span>
+                </label>
+                <CurrencySelect
+                  className="w-full h-12"
+                  value={searchParams.currency}
+                  onValueChange={(value: Currency) =>
+                    setSearchParams((prev) => ({ ...prev, currency: value }))
+                  }
+                />
               </div>
             </div>
 

@@ -16,6 +16,13 @@ env:
       - BUILD
       - RUNTIME
 
+  # Map ID (Cloud Console → Map Management) para Advanced Markers en producción.
+  - variable: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+    secret: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+    availability:
+      - BUILD
+      - RUNTIME
+
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
     availability:

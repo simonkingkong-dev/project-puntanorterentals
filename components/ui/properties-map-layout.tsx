@@ -123,6 +123,7 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
       <div className="hidden lg:block h-[calc(100dvh-4rem)] min-h-[calc(100vh-4rem)] lg:sticky lg:top-16 rounded-lg overflow-hidden border bg-gray-100">
         {desktopMapEnabled ? (
           <GoogleMap
+            eager
             center={initialCenter}
             markers={markers}
             selectedId={highlightedId}

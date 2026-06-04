@@ -15,6 +15,7 @@ import {
   getLocalizedPropertyTitle,
 } from '@/lib/property-localization';
 import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-params';
+import { useListingDisplayCurrency } from '@/hooks/use-listing-display-currency';
 
 interface PropertyCardProps {
   property: PropertyListItem;
@@ -41,13 +42,21 @@ export default function PropertyCard({ property, imagePriority = false }: Proper
     ? `/properties/${property.slug}?${listingQs}`
     : `/properties/${property.slug}`;
   const { locale, t } = useLocale();
+  const { currency, formatFromUsd } = useListingDisplayCurrency();
   const images = property.images && property.images.length > 0
     ? property.images
     : ['https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg'];
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const propertyDescription = getLocalizedPropertyDescription(property, locale);
   const amenities = getLocalizedPropertyAmenities(property, locale);
-  const nightlyRate = property.displayNightlyRate;
+  const nightlyRateUsd = property.displayNightlyRate;
+
+  const perNightSuffix =
+    currency === 'MXN'
+      ? t('property_card_per_night_mxn', 'MXN/night')
+      : currency === 'EUR'
+        ? t('property_card_per_night_eur', 'EUR/night')
+        : t('property_card_per_night', 'USD/night');
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -141,14 +150,14 @@ export default function PropertyCard({ property, imagePriority = false }: Proper
             </p>
             
             <div className="flex items-start justify-between gap-3 pt-2 border-t">
-              {nightlyRate != null && (
+              {nightlyRateUsd != null && (
                 <div className="shrink-0">
                   <p className="text-xs text-gray-500">
                     {t('property_card_from', 'Desde')}
                   </p>
-                  <p className="text-base font-bold text-gray-900 leading-tight">
-                    ${Math.round(nightlyRate).toLocaleString('en-US')}
-                    <span className="text-xs font-medium text-gray-500"> {t('property_card_per_night', 'USD/night')}</span>
+                  <p className="text-base font-bold text-gray-900 leading-tight tabular-nums">
+                    {formatFromUsd(nightlyRateUsd)}
+                    <span className="text-xs font-medium text-gray-500"> {perNightSuffix}</span>
                   </p>
                 </div>
               )}

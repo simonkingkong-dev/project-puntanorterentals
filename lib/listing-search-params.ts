@@ -1,6 +1,6 @@
 /** Query keys forwarded between listing ↔ property detail so filters persist when navigating back. */
 
-export const LISTING_SEARCH_KEYS = ['checkIn', 'checkOut', 'guests'] as const;
+export const LISTING_SEARCH_KEYS = ['checkIn', 'checkOut', 'guests', 'currency'] as const;
 
 export type ListingSearchKey = (typeof LISTING_SEARCH_KEYS)[number];
 
@@ -8,6 +8,8 @@ export interface ListingSearchSelection {
   checkIn?: string;
   checkOut?: string;
   guests?: number;
+  /** USD | MXN | EUR — misma clave que en el buscador. */
+  currency?: string;
 }
 
 export function listingSearchQueryFromURLSearchParams(sp: URLSearchParams): string {
@@ -71,9 +73,16 @@ export function listingSearchSelectionFromServerSearchParams(
 
   const guests = Number(getFirstValue('guests'));
 
+  const currencyRaw = getFirstValue('currency');
+  const currency =
+    currencyRaw === 'USD' || currencyRaw === 'MXN' || currencyRaw === 'EUR'
+      ? currencyRaw
+      : undefined;
+
   return {
     checkIn: getFirstValue('checkIn'),
     checkOut: getFirstValue('checkOut'),
     guests: Number.isFinite(guests) && guests > 0 ? guests : undefined,
+    currency,
   };
 }
