@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase-admin";
 import { Property } from "@/lib/types";
@@ -62,9 +62,9 @@ export async function handleUpdateProperty(propertyId: string, formData: UpdateP
     revalidatePath("/properties");
     if (slug) {
       revalidatePath(`/properties/${slug}`);
-      revalidateTag(`property:${slug}`);
+      updateTag(`property:${slug}`);
     }
-    revalidateTag("properties");
+    updateTag("properties");
     return { success: true };
   } catch (error) {
     console.error("Error updating property:", error);

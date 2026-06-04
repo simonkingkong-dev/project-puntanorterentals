@@ -17,7 +17,7 @@ async function revalidateTestimonialPaths(propertyIds: Array<string | undefined>
   revalidatePath("/admin/testimonials");
   revalidatePath("/");
 
-  const uniqueIds = [...new Set(propertyIds.filter(Boolean))] as string[];
+  const uniqueIds = Array.from(new Set(propertyIds.filter(Boolean))) as string[];
   await Promise.all(
     uniqueIds.map(async (id) => {
       const snap = await adminDb.collection("properties").doc(id).get();
