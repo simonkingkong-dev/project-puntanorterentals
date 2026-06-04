@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Star, User } from 'lucide-react';
 import Image from 'next/image';
-import { getAdminTestimonials } from '@/lib/firebase-admin-queries';
+import { getAdminProperties, getAdminTestimonials } from '@/lib/firebase-admin-queries';
 import DeleteTestimonialButton from './delete-testimonials-button';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,11 @@ const renderStars = (rating: number) => {
 };
 
 export default async function AdminTestimonialsPage() {
-  const testimonials = await getAdminTestimonials();
+  const [testimonials, properties] = await Promise.all([
+    getAdminTestimonials(),
+    getAdminProperties(),
+  ]);
+  const propertyTitleById = new Map(properties.map((property) => [property.id, property.title]));
 
   return (
       <div className="space-y-6">
@@ -111,6 +115,11 @@ export default async function AdminTestimonialsPage() {
                       </Badge>
                     )}
                   </div>
+                  {testimonial.propertyId && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Propiedad: {propertyTitleById.get(testimonial.propertyId) ?? testimonial.propertyId}
+                    </p>
+                  )}
                 </CardHeader>
                 
                 <CardContent className="space-y-4">

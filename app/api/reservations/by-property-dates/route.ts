@@ -1,5 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { isMissingFirestoreIndexError } from '@/lib/firestore-query-utils';
+
+const ACTIVE_STATUSES = new Set(['pending', 'confirmed']);
+
+async function getReservationsForProperty(propertyId: string) {
+  try {
+    return await adminDb
+      .collection('reservations')
+      .where('propertyId', '==', propertyId)
+      .where('status', 'in', ['pending', 'confirmed'])
+      .limit(10)
+      .get();
+  } catch (error) {
+    if (!isMissingFirestoreIndexError(error)) throw error;
+    const snapshot = await adminDb
+      .collection('reservations')
+      .where('propertyId', '==', propertyId)
+      .limit(25)
+      .get();
+    return {
+      docs: snapshot.docs.filter((doc) => ACTIVE_STATUSES.has(String(doc.data().status ?? ''))),
+    };
+  }
+}
 
 /**
  * GET /api/reservations/by-property-dates?propertyId=xxx&checkIn=xxx&checkOut=xxx
@@ -22,12 +46,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const snapshot = await adminDb
-      .collection('reservations')
-      .where('propertyId', '==', propertyId)
-      .where('status', 'in', ['pending', 'confirmed'])
-      .limit(10)
-      .get();
+    const snapshot = await getReservationsForProperty(propertyId);
 
     for (const doc of snapshot.docs) {
       const data = doc.data();

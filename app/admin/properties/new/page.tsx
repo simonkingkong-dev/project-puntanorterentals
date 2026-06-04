@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { handleCreateProperty } from '../actions'; 
 import { uploadImageToStorage } from '@/lib/firebase/storage';
-import ImageUploader, { FileWithPreview } from '@/components/admin/image-uploader';
+import ImageUploader from '@/components/admin/image-uploader';
 import { Property } from '@/lib/types';
 import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
@@ -128,11 +128,28 @@ export default function NewPropertyPage() {
     hostfullyCalendarMonthsToDisplay: '',
   });
   
-  // Estado para manejar los archivos en cola
-  const [imageFiles, setImageFiles] = useState<FileWithPreview[]>([]);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const galleryFilesByUrl = useRef<Map<string, File>>(new Map());
   const [newAmenity, setNewAmenity] = useState('');
   const activeAmenities = amenityLang === 'es' ? formData.amenitiesEs : formData.amenitiesEn;
   const commonAmenities = commonAmenitiesByLang[amenityLang];
+
+  const handleAddGalleryFiles = async (files: File[]) => {
+    const blobUrls = files.map((file) => {
+      const blob = URL.createObjectURL(file);
+      galleryFilesByUrl.current.set(blob, file);
+      return blob;
+    });
+    setGalleryImages((prev) => [...prev, ...blobUrls]);
+  };
+
+  const handleRemoveGalleryImage = (url: string) => {
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+      galleryFilesByUrl.current.delete(url);
+    }
+    setGalleryImages((prev) => prev.filter((u) => u !== url));
+  };
 
   const getLangValue = (
     baseKey: keyof NewPropertyFormState,
@@ -183,20 +200,23 @@ export default function NewPropertyPage() {
       return;
     }
 
-    // Validación de imágenes
-    if (imageFiles.length === 0) {
+    if (galleryImages.length === 0) {
       toast.error('Agrega al menos una imagen');
       setIsLoading(false);
       return;
     }
 
     try {
-      // 1. Subir todas las imágenes en cola a Firebase Storage (Cliente)
       toast.info("Subiendo imágenes... esto puede tardar un momento.");
-      const uploadPromises = imageFiles.map(file => uploadImageToStorage(file, 'properties'));
-      
-      // Esperamos a que todas las imágenes se suban y obtenemos las URLs
-      const imageUrls = await Promise.all(uploadPromises);
+      const imageUrls = await Promise.all(
+        galleryImages.map((url) => {
+          const file = galleryFilesByUrl.current.get(url);
+          if (!file) {
+            throw new Error("Archivo de imagen no encontrado");
+          }
+          return uploadImageToStorage(file, "properties");
+        })
+      );
 
       // Generamos el slug básico para el objeto (aunque el server action lo regenera por seguridad)
       const canonicalTitle = formData.titleEs.trim();
@@ -523,8 +543,10 @@ export default function NewPropertyPage() {
                 </CardHeader>
                 <CardContent>
                   <ImageUploader
-                    files={imageFiles}
-                    onFilesChange={setImageFiles}
+                    images={galleryImages}
+                    onImagesChange={setGalleryImages}
+                    onRemoveImage={handleRemoveGalleryImage}
+                    onAddFiles={handleAddGalleryFiles}
                     folder="properties"
                   />
                 </CardContent>

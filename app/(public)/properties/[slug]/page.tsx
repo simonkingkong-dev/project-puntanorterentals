@@ -8,6 +8,8 @@ import PropertyPageContent from '@/components/property-page-content';
 import {
   getPropertyBySlugAdmin,
   getPublishedPropertyReviewsAdmin,
+  getPublishedPropertyReviewStatsAdmin,
+  getTestimonialsByPropertyIdAdmin,
 } from '@/lib/firebase-admin-queries';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
@@ -23,11 +25,13 @@ import {
 
 export const revalidate = 300;
 
-const getCachedPropertyBySlug = unstable_cache(
-  async (slug: string) => getPropertyBySlugAdmin(slug),
-  ['public-property-by-slug'],
-  { revalidate: 300, tags: ['properties'] }
-);
+async function getCachedPropertyBySlug(slug: string) {
+  return unstable_cache(
+    async () => getPropertyBySlugAdmin(slug),
+    ["public-property-by-slug", slug],
+    { revalidate: 300, tags: ["properties", `property:${slug}`] }
+  )();
+}
 
 interface PropertyPageProps {
   params: Promise<{
@@ -99,7 +103,11 @@ export default async function PropertyPage({
     notFound();
   }
 
-  const curatedReviews = await getPublishedPropertyReviewsAdmin(property.id);
+  const [curatedReviews, propertyTestimonials, platformStats] = await Promise.all([
+    getPublishedPropertyReviewsAdmin(property.id),
+    getTestimonialsByPropertyIdAdmin(property.id),
+    getPublishedPropertyReviewStatsAdmin(property.id),
+  ]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
@@ -143,10 +151,12 @@ export default async function PropertyPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-[max(6rem,env(safe-area-inset-bottom))] lg:pb-8">
         <PropertyPageContent
           property={property}
           curatedReviews={curatedReviews}
+          platformStats={platformStats}
+          propertyTestimonials={propertyTestimonials}
           initialSearch={listingSearchSelection}
         />
       </div>

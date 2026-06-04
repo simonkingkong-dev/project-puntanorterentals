@@ -116,7 +116,6 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
   const pageContent = await getCachedPropertiesPageContent();
   const c = contentMap(pageContent);
   const hasFilters = listingSearchHasAnyActiveFilters(params);
-  const hasDateFilters = Boolean(params.checkIn?.trim());
   const numericSearchParams: SearchParams = {
     ...params,
     guests: params.guests ? Number(params.guests) : undefined,
@@ -156,11 +155,6 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 
       {/* Properties + Map */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-1">
-        {hasFilters && hasDateFilters && (
-          <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            {await tServer('properties_search_availability_notice')}
-          </p>
-        )}
         <Suspense
           fallback={
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

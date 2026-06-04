@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPropertyByIdAdmin, getPropertyReviewsForAdmin } from "@/lib/firebase-admin-queries";
+import { getPropertyByIdAdmin, getPropertyReviewStatsForAdmin, getPropertyReviewsForAdmin } from "@/lib/firebase-admin-queries";
 import ReviewsClient from "./reviews-client";
 
 interface PageProps {
@@ -14,7 +14,10 @@ export default async function PropertyReviewsAdminPage({ params }: PageProps) {
   const property = await getPropertyByIdAdmin(id);
   if (!property) notFound();
 
-  const reviews = await getPropertyReviewsForAdmin(id);
+  const [reviews, platformStats] = await Promise.all([
+    getPropertyReviewsForAdmin(id),
+    getPropertyReviewStatsForAdmin(id),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -30,7 +33,12 @@ export default async function PropertyReviewsAdminPage({ params }: PageProps) {
           <p className="text-gray-600 truncate">{property.title}</p>
         </div>
       </div>
-      <ReviewsClient propertyId={id} propertyTitle={property.title} initialReviews={reviews} />
+      <ReviewsClient
+        propertyId={id}
+        propertyTitle={property.title}
+        initialReviews={reviews}
+        initialPlatformStats={platformStats}
+      />
     </div>
   );
 }

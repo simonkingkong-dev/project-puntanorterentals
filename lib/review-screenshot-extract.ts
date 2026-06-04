@@ -8,7 +8,12 @@ export interface ExtractedReviewFields {
   locale?: "es" | "en";
 }
 
-const EXTRACT_PROMPT = `You analyze a screenshot of a guest review from Airbnb, Booking.com, Google, Vrbo, or similar.
+export interface ExtractedPlatformStatFields {
+  averageRating: number;
+  reviewCount: number;
+}
+
+const EXTRACT_REVIEW_PROMPT = `You analyze a screenshot of a guest review from Airbnb, Booking.com, Google, Vrbo, or similar.
 Return ONLY valid JSON (no markdown) with:
 - author: string (reviewer name)
 - rating: number 1-5 (stars; use 5 if unclear)
@@ -16,17 +21,19 @@ Return ONLY valid JSON (no markdown) with:
 - reviewDate: string optional (as shown, e.g. "March 2024" or ISO date)
 - locale: "es" or "en" based on review language`;
 
-export async function extractReviewFromScreenshot(
-  imageUrl: string
-): Promise<ExtractedReviewFields> {
+const EXTRACT_PLATFORM_STAT_PROMPT = `You analyze a screenshot of a platform rating SUMMARY (not a single review), e.g. Google Business profile rating, Airbnb listing score, Booking.com property score.
+Extract the overall average rating and total review count shown in the image.
+Return ONLY valid JSON (no markdown) with:
+- averageRating: number from 1 to 5 (one decimal allowed). If the platform shows a score out of 10 (e.g. Booking 9.2/10), convert to 5-star scale: (score/10)*5 rounded to one decimal.
+- reviewCount: integer total number of reviews/opinions/ratings shown (e.g. 127, 1.2k -> 1200)`;
+
+async function callGeminiVision(
+  imageUrl: string,
+  prompt: string
+): Promise<Record<string, unknown>> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    return {
-      author: "Huésped",
-      rating: 5,
-      text: "",
-      locale: "es",
-    };
+    throw new Error("GEMINI_API_KEY no configurada");
   }
 
   const imageRes = await fetch(imageUrl, { signal: AbortSignal.timeout(25_000) });
@@ -44,7 +51,7 @@ export async function extractReviewFromScreenshot(
         contents: [
           {
             parts: [
-              { text: EXTRACT_PROMPT },
+              { text: prompt },
               { inline_data: { mime_type: mime.split(";")[0], data: base64 } },
             ],
           },
@@ -66,12 +73,27 @@ export async function extractReviewFromScreenshot(
   const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
   const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
 
-  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    return JSON.parse(cleaned) as Record<string, unknown>;
   } catch {
     throw new Error("La IA no devolvió JSON válido. Edita el borrador manualmente.");
   }
+}
+
+export async function extractReviewFromScreenshot(
+  imageUrl: string
+): Promise<ExtractedReviewFields> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      author: "Huésped",
+      rating: 5,
+      text: "",
+      locale: "es",
+    };
+  }
+
+  const parsed = await callGeminiVision(imageUrl, EXTRACT_REVIEW_PROMPT);
 
   const ratingRaw = parsed.rating;
   const rating =
@@ -90,3 +112,42 @@ export async function extractReviewFromScreenshot(
     locale: parsed.locale === "en" ? "en" : "es",
   };
 }
+
+export async function extractPlatformStatsFromScreenshot(
+  imageUrl: string
+): Promise<ExtractedPlatformStatFields> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      averageRating: 5,
+      reviewCount: 0,
+    };
+  }
+
+  const parsed = await callGeminiVision(imageUrl, EXTRACT_PLATFORM_STAT_PROMPT);
+
+  const averageRaw = parsed.averageRating;
+  const countRaw = parsed.reviewCount;
+
+  const averageRating =
+    typeof averageRaw === "number"
+      ? Math.min(5, Math.max(0, Math.round(averageRaw * 10) / 10))
+      : 5;
+
+  let reviewCount = 0;
+  if (typeof countRaw === "number" && Number.isFinite(countRaw)) {
+    reviewCount = Math.max(0, Math.round(countRaw));
+  } else if (typeof countRaw === "string") {
+    const normalized = countRaw.replace(/,/g, "").trim().toLowerCase();
+    const kMatch = /^([\d.]+)\s*k$/.exec(normalized);
+    if (kMatch) {
+      reviewCount = Math.round(parseFloat(kMatch[1]) * 1000);
+    } else {
+      const n = parseInt(normalized, 10);
+      reviewCount = Number.isFinite(n) ? Math.max(0, n) : 0;
+    }
+  }
+
+  return { averageRating, reviewCount };
+}
+

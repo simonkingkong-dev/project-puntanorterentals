@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getPropertyCalendar } from "@/lib/hostfully/client";
-import { parseHostfullyCalendarDays } from "@/lib/hostfully-calendar-sync";
+import { parseHostfullyCalendarResponse } from "@/lib/hostfully-calendar-sync";
 import { computeDisplayNightlyRate } from "@/lib/property-list-item";
 
 const MONTHS_AHEAD = 24;
@@ -62,7 +62,9 @@ export async function POST(request: Request) {
       try {
         const data = doc.data();
         const calendar = await getPropertyCalendar(uid, startStr, endStr);
-        const { dailyRates } = parseHostfullyCalendarDays(calendar.dates ?? []);
+        const { dailyRates } = parseHostfullyCalendarResponse(
+          calendar as Record<string, unknown>
+        );
         const availability =
           (data.availability as Record<string, boolean> | undefined) ?? {};
 

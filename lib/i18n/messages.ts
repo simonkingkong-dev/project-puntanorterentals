@@ -77,8 +77,6 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Propiedades que coinciden con tu búsqueda",
     properties_empty_search_title: "No se encontraron propiedades",
     properties_empty_search_subtitle: "Intenta ajustar tus filtros de búsqueda.",
-    properties_search_availability_notice:
-      "La disponibilidad se sincroniza con Hostfully cada 10 minutos. Al pagar se verifica en tiempo real que las fechas sigan libres.",
     properties_empty_title: "Aún no hay propiedades cargadas",
     properties_empty_subtitle:
       "Vuelve pronto o carga propiedades desde el panel de administración.",
@@ -120,6 +118,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     section_transit: "Transporte",
     section_house_manual: "Manual / notas",
     section_schedules: "Horarios",
+    section_beds: "Distribución de camas",
     section_cancellation: "Política de cancelación",
     section_house_rules: "Reglas de la casa",
     amenities_empty: "No hay amenidades listadas.",
@@ -128,6 +127,12 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Las reseñas están disponibles en los canales de reserva (por ejemplo Airbnb).",
     reviews_empty: "Aún no hay reseñas aprobadas para esta propiedad.",
     reviews_empty_curated: "Aún no hay reseñas publicadas para esta propiedad.",
+    reviews_stats_aggregate_combined: "Promedio combinado entre plataformas",
+    reviews_stats_aggregate_single: "Calificación promedio",
+    reviews_stats_total_reviews: "{count} opiniones",
+    reviews_stats_by_platform: "Por plataforma",
+    reviews_stats_platform_reviews: "{count} opiniones",
+    reviews_individual_heading: "Opiniones de huéspedes",
     calendar_hint_select_checkout:
       "Selecciona la fecha de salida (o haz clic en otra fecha para cambiar la entrada)",
     calendar_hint_select_stay: "Selecciona las fechas de tu estancia",
@@ -197,6 +202,11 @@ export const messages: Record<Locale, Record<string, string>> = {
     success_usd_reference_note:
       "Importe en USD guardado en la reserva; si pagaste en otra moneda, revisa el recibo de Stripe.",
     success_base_usd: "Importe base de la reserva (USD):",
+    payment_success_services_title: "¡Reserva confirmada!",
+    payment_success_services_body:
+      "Tu estancia en Isla Mujeres ya está asegurada. Explora nuestro catálogo de actividades y servicios para complementar tu viaje: tours, traslados, experiencias en el mar y más.",
+    payment_success_services_cta: "Ver actividades y servicios",
+    payment_success_services_skip: "Continuar a mi confirmación",
     payment_reservation_summary: "Resumen de reserva",
     payment_property_label: "Propiedad:",
     payment_timer_remaining: "restantes",
@@ -490,6 +500,11 @@ export const messages: Record<Locale, Record<string, string>> = {
       "You will receive full booking details and check-in instructions.",
     explore_more_properties: "Explore more properties",
     discover_experiences: "Discover experiences",
+    payment_success_services_title: "Booking confirmed!",
+    payment_success_services_body:
+      "Your stay in Isla Mujeres is all set. Browse our activities and services to enhance your trip—tours, transfers, ocean experiences, and more.",
+    payment_success_services_cta: "Browse activities & services",
+    payment_success_services_skip: "Continue to my confirmation",
     back_home: "Back to home",
     error_loading_reservation: "Could not load your booking",
     reservation_total_reference: "Reservation total (reference)",
@@ -500,8 +515,6 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Properties matching your search",
     properties_empty_search_title: "No properties found",
     properties_empty_search_subtitle: "Try adjusting your search filters.",
-    properties_search_availability_notice:
-      "Availability syncs from Hostfully every 10 minutes. When you pay, dates are verified live against Hostfully.",
     properties_empty_title: "No properties yet",
     properties_empty_subtitle:
       "Check back soon or add properties from the admin panel.",
@@ -543,6 +556,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     section_transit: "Getting around",
     section_house_manual: "House manual / notes",
     section_schedules: "Schedules",
+    section_beds: "Sleeping arrangements",
     section_cancellation: "Cancellation policy",
     section_house_rules: "House rules",
     amenities_empty: "No amenities listed.",
@@ -551,6 +565,12 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Reviews are available on booking channels (e.g. Airbnb).",
     reviews_empty: "There are no approved reviews for this property yet.",
     reviews_empty_curated: "There are no published reviews for this property yet.",
+    reviews_stats_aggregate_combined: "Combined average across platforms",
+    reviews_stats_aggregate_single: "Average rating",
+    reviews_stats_total_reviews: "{count} reviews",
+    reviews_stats_by_platform: "By platform",
+    reviews_stats_platform_reviews: "{count} reviews",
+    reviews_individual_heading: "Guest reviews",
     calendar_hint_select_checkout:
       "Select check-out (or click another date to change check-in)",
     calendar_hint_select_stay: "Select your stay dates",

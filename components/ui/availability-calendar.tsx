@@ -3,8 +3,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { roundForDisplay } from '@/lib/round-display-money';
-import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { Property } from '@/lib/types';
 import { Day, type DayProps } from 'react-day-picker';
 import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 'date-fns';
@@ -15,7 +13,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { useLocale } from '@/components/providers/locale-provider';
 import { computeExtraGuestFeesUsd, getIncludedGuests } from '@/lib/pricing-guests';
-import { computeLodgingTaxesUsd } from '@/lib/lodging-taxes';
+import { computeLodgingDisplayPricing } from '@/lib/lodging-display-pricing';
+import { sumNightlyRatesUsd } from '@/lib/property-nightly-total';
 
 interface AvailabilityCalendarProps {
   property: Property;
@@ -72,6 +71,12 @@ export default function AvailabilityCalendar({
   const toMonth = addMonths(today, MONTHS_WINDOW - 1);
   const [currentMonth, setCurrentMonth] = useState(() => today);
   const [monthsVisible, setMonthsVisible] = useState(3);
+  const [syncedAvailability, setSyncedAvailability] = useState<
+    Record<string, boolean> | null
+  >(null);
+  const [syncedDailyRates, setSyncedDailyRates] = useState<Record<string, number> | null>(
+    null
+  );
 
   useEffect(() => {
     const computeMonthsVisible = () =>
@@ -93,14 +98,73 @@ export default function AvailabilityCalendar({
     if (canGoNext) setCurrentMonth((m) => addMonths(m, 1));
   }, [canGoNext]);
 
+  useEffect(() => {
+    const start = new Date();
+    start.setDate(1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + MONTHS_WINDOW);
+    end.setDate(0);
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+      ).padStart(2, "0")}`;
+
+    let cancelled = false;
+    fetch(
+      `/api/properties/calendar?propertyId=${encodeURIComponent(property.id)}&startDate=${toDateStr(
+        start
+      )}&endDate=${toDateStr(end)}`
+    )
+      .then(async (r) => {
+        const data = (await r.json()) as {
+          availability?: Record<string, boolean>;
+          dailyRates?: Record<string, number>;
+          error?: string;
+        };
+        if (!r.ok) {
+          throw new Error(data?.error || `HTTP ${r.status}`);
+        }
+        return data;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setSyncedAvailability(
+          data?.availability && typeof data.availability === "object"
+            ? data.availability
+            : property.availability ?? {}
+        );
+        setSyncedDailyRates(
+          data?.dailyRates && typeof data.dailyRates === "object"
+            ? data.dailyRates
+            : property.dailyRates ?? {}
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSyncedAvailability(property.availability ?? {});
+          setSyncedDailyRates(property.dailyRates ?? {});
+          toast.error(
+            t(
+              "calendar_error_synced",
+              "Could not load availability. Showing last saved data."
+            )
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id, property.availability, property.dailyRates, t]);
+
   const availabilityMap = useMemo(
-    () => property.availability ?? {},
-    [property.availability]
+    () => syncedAvailability ?? property.availability ?? {},
+    [syncedAvailability, property.availability]
   );
 
   const dailyRatesMap = useMemo(
-    () => property.dailyRates ?? {},
-    [property.dailyRates]
+    () => syncedDailyRates ?? property.dailyRates ?? {},
+    [syncedDailyRates, property.dailyRates]
   );
 
   const isNightAvailable = useCallback(
@@ -266,71 +330,36 @@ export default function AvailabilityCalendar({
           )
         )
       : 0;
-  const displayRate = currency === 'MXN' && usdMxnRate != null ? usdMxnRate : 1;
   const nightlySumUsd = useMemo(() => {
     if (!displayCheckIn || !displayCheckOut || nightsCount <= 0) return 0;
-    const rates = dailyRatesMap;
-    const cursor = new Date(
-      displayCheckIn.getFullYear(),
-      displayCheckIn.getMonth(),
-      displayCheckIn.getDate()
-    );
-    const end = new Date(
-      displayCheckOut.getFullYear(),
-      displayCheckOut.getMonth(),
-      displayCheckOut.getDate()
-    );
-    let total = 0;
-    while (cursor < end) {
-      const key = format(cursor, 'yyyy-MM-dd');
-      const dynamic = rates[key];
-      const usdAmount =
-        typeof dynamic === 'number' && Number.isFinite(dynamic) && dynamic > 0
-          ? dynamic
-          : property.pricePerNight;
-      total += usdAmount;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return total;
-  }, [
-    displayCheckIn,
-    displayCheckOut,
-    nightsCount,
-    dailyRatesMap,
-    property.pricePerNight,
-  ]);
+    return sumNightlyRatesUsd(
+      displayCheckIn,
+      displayCheckOut,
+      dailyRatesMap,
+      property.pricePerNight ?? 0
+    ).totalUsd;
+  }, [displayCheckIn, displayCheckOut, nightsCount, dailyRatesMap, property.pricePerNight]);
   const extraGuestFeesUsd = useMemo(
     () => computeExtraGuestFeesUsd(guestCount, nightsCount, property),
     [guestCount, nightsCount, property]
   );
-  const accommodationDisplay = useMemo(
-    () => roundForDisplay(nightlySumUsd * displayRate, currency),
-    [nightlySumUsd, displayRate, currency]
-  );
-  const extraGuestDisplay = useMemo(
-    () => roundForDisplay(extraGuestFeesUsd * displayRate, currency),
-    [extraGuestFeesUsd, displayRate, currency]
-  );
-  const staySubtotalUsd = nightlySumUsd + extraGuestFeesUsd;
-  const { ivaUsd, ishUsd, taxesUsd } = useMemo(
-    () => computeLodgingTaxesUsd(staySubtotalUsd),
-    [staySubtotalUsd]
-  );
-  const staySubtotalDisplay = useMemo(
-    () => roundForDisplay(staySubtotalUsd * displayRate, currency),
-    [staySubtotalUsd, displayRate, currency]
-  );
-  const ivaDisplay = useMemo(
-    () => roundForDisplay(ivaUsd * displayRate, currency),
-    [ivaUsd, displayRate, currency]
-  );
-  const ishDisplay = useMemo(
-    () => roundForDisplay(ishUsd * displayRate, currency),
-    [ishUsd, displayRate, currency]
-  );
-  const grandTotalDisplay = useMemo(
-    () => roundForDisplay((staySubtotalUsd + taxesUsd) * displayRate, currency),
-    [staySubtotalUsd, taxesUsd, displayRate, currency]
+  const {
+    accommodationDisplay,
+    extraGuestDisplay,
+    subtotalDisplay: staySubtotalDisplay,
+    ivaDisplay,
+    ishDisplay,
+    totalDisplay: grandTotalDisplay,
+  } = useMemo(
+    () =>
+      computeLodgingDisplayPricing(
+        nightlySumUsd,
+        extraGuestFeesUsd,
+        currency,
+        usdMxnRate,
+        usdEurRate
+      ),
+    [nightlySumUsd, extraGuestFeesUsd, currency, usdMxnRate, usdEurRate]
   );
   const formatPrice = (amount: number) => {
     if (currency === 'MXN') {
@@ -447,35 +476,35 @@ export default function AvailabilityCalendar({
                 : '—'}
             </p>
           </div>
-          <div className="rounded-md border border-gray-200 p-3 md:rounded-none md:border-0 md:border-l md:pl-4 md:pr-0 md:py-0">
+          <div className="rounded-md border border-gray-200 p-3 max-md:pr-12 md:rounded-none md:border-0 md:border-l md:pl-4 md:pr-0 md:py-0">
             <p className="font-semibold text-gray-900">{t('calendar_price_summary', 'Price summary')}</p>
             {nightsCount > 0 ? (
               <div className="mt-2 space-y-1.5 text-gray-900">
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-gray-600">{t('pricing_accommodation', 'Accommodation')}</span>
-                  <span>{formatPrice(accommodationDisplay)}</span>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 text-gray-600">{t('pricing_accommodation', 'Accommodation')}</span>
+                  <span className="shrink-0 tabular-nums text-right">{formatPrice(accommodationDisplay)}</span>
                 </div>
                 {extraGuestFeesUsd > 0 && (
-                  <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-gray-600">{t('pricing_extra_guests', 'Extra guests')}</span>
-                    <span>{formatPrice(extraGuestDisplay)}</span>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 text-gray-600">{t('pricing_extra_guests', 'Extra guests')}</span>
+                    <span className="shrink-0 tabular-nums text-right">{formatPrice(extraGuestDisplay)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-4 text-sm pt-1 border-t border-gray-100">
-                  <span className="text-gray-600">{t('payment_subtotal', 'Subtotal')}</span>
-                  <span>{formatPrice(staySubtotalDisplay)}</span>
+                <div className="flex items-center justify-between gap-3 text-sm pt-1 border-t border-gray-100">
+                  <span className="min-w-0 text-gray-600">{t('payment_subtotal', 'Subtotal')}</span>
+                  <span className="shrink-0 tabular-nums text-right">{formatPrice(staySubtotalDisplay)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-gray-600">{t('payment_tax_iva', 'VAT (16%)')}</span>
-                  <span>{formatPrice(ivaDisplay)}</span>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 text-gray-600">{t('payment_tax_iva', 'VAT (16%)')}</span>
+                  <span className="shrink-0 tabular-nums text-right">{formatPrice(ivaDisplay)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-gray-600">{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
-                  <span>{formatPrice(ishDisplay)}</span>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 text-gray-600">{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+                  <span className="shrink-0 tabular-nums text-right">{formatPrice(ishDisplay)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 pt-1 border-t border-gray-100 font-semibold">
-                  <span>{t('payment_total', 'Total')}</span>
-                  <span>{formatPrice(grandTotalDisplay)}</span>
+                <div className="flex items-center justify-between gap-3 pt-1 border-t border-gray-100 font-semibold">
+                  <span className="min-w-0">{t('payment_total', 'Total')}</span>
+                  <span className="shrink-0 tabular-nums text-right">{formatPrice(grandTotalDisplay)}</span>
                 </div>
                 <p className="text-xs text-gray-500 pt-1">
                   {t('pricing_guests_included_short', 'Base rate includes {n} guests').replace(

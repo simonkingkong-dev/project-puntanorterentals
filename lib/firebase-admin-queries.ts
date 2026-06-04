@@ -4,6 +4,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import {
   Property,
   PropertyReview,
+  PropertyReviewPlatformStat,
   Reservation,
   Service,
   GlobalAmenity,
@@ -13,6 +14,13 @@ import {
   SiteContent,
 } from "@/lib/types";
 import { toPropertyListItems, type PropertyListItem } from "@/lib/property-list-item";
+import { normalizeBeds } from "@/lib/property-beds";
+import {
+  isMissingFirestoreIndexError,
+  sortByCreatedAtDesc,
+  sortBySortOrder,
+} from "@/lib/firestore-query-utils";
+import { ensureAllPropertiesAvailabilityFresh } from "@/lib/hostfully-availability-sync";
 
 /** Converts Firestore Timestamp, Date, or ISO string to Date. Returns epoch for missing/invalid to avoid Invalid Date. */
 function safeTimestampToDate(value: unknown): Date {
@@ -27,18 +35,31 @@ function safeTimestampToDate(value: unknown): Date {
   return new Date(0);
 }
 
+/** Normaliza documento Firestore → Property (serializable hacia Client Components). */
+function mapPropertyFromFirestore(id: string, data: Record<string, unknown>): Property {
+  const beds = normalizeBeds(data.beds ?? data.bedTypes);
+  const { beds: _rawBeds, bedTypes: _rawBedTypes, ...rest } = data;
+  return {
+    ...rest,
+    id,
+    ...(beds ? { beds } : {}),
+    createdAt: safeTimestampToDate(data.createdAt),
+    updatedAt: safeTimestampToDate(data.updatedAt),
+    availabilitySyncedAt:
+      data.availabilitySyncedAt != null
+        ? safeTimestampToDate(data.availabilitySyncedAt)
+        : undefined,
+    pricesSyncedAt:
+      data.pricesSyncedAt != null ? safeTimestampToDate(data.pricesSyncedAt) : undefined,
+  } as Property;
+}
+
 // --- PROPIEDADES ---
 export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property | null> => {
   try {
     const snap = await adminDb.collection('properties').doc(propertyId).get();
     if (!snap.exists) return null;
-    const data = snap.data()!;
-    return {
-      ...data,
-      id: snap.id,
-      createdAt: safeTimestampToDate(data.createdAt),
-      updatedAt: safeTimestampToDate(data.updatedAt),
-    } as Property;
+    return mapPropertyFromFirestore(snap.id, snap.data()!);
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching property by ID', error);
     return null;
@@ -48,10 +69,7 @@ export const getPropertyByIdAdmin = async (propertyId: string): Promise<Property
 export const getAdminProperties = async (): Promise<Property[]> => {
   try {
     const snapshot = await adminDb.collection('properties').orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => {
-      const d = doc.data();
-      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt), updatedAt: safeTimestampToDate(d.updatedAt) } as Property;
-    });
+    return snapshot.docs.map((doc) => mapPropertyFromFirestore(doc.id, doc.data()));
   } catch (error) {
     console.error('Admin: Error fetching properties', error);
     return [];
@@ -64,13 +82,7 @@ export const getPropertyBySlugAdmin = async (slug: string): Promise<Property | n
     const snapshot = await adminDb.collection('properties').where('slug', '==', slug).limit(1).get();
     if (snapshot.empty) return null;
     const doc = snapshot.docs[0];
-    const data = doc.data();
-    return {
-      ...data,
-      id: doc.id,
-      createdAt: safeTimestampToDate(data.createdAt),
-      updatedAt: safeTimestampToDate(data.updatedAt),
-    } as Property;
+    return mapPropertyFromFirestore(doc.id, doc.data());
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching property by slug', error);
     return null;
@@ -95,11 +107,12 @@ export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
       .where('featured', '==', true)
       .orderBy('createdAt', 'desc')
       .get();
-    return snapshot.docs.map(doc => {
-      const d = doc.data();
-      return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt), updatedAt: safeTimestampToDate(d.updatedAt) } as Property;
-    });
+    return snapshot.docs.map((doc) => mapPropertyFromFirestore(doc.id, doc.data()));
   } catch (error) {
+    if (isMissingFirestoreIndexError(error)) {
+      const all = await getAdminProperties();
+      return sortByCreatedAtDesc(all.filter((p) => p.featured));
+    }
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured properties', error);
     return [];
   }
@@ -114,15 +127,20 @@ export const searchPropertiesForList = async (params: SearchParams): Promise<Pro
 /** Busca propiedades con filtros (usa Admin SDK en servidor). */
 export const searchPropertiesAdmin = async (params: SearchParams): Promise<Property[]> => {
   try {
-    let properties = await getAdminProperties();
-    if (params.guests) {
-      properties = properties.filter(p => p.maxGuests >= params.guests!);
-    }
-    if (params.location) {
-      properties = properties.filter(p =>
-        p.location.toLowerCase().includes(params.location!.toLowerCase())
-      );
-    }
+    const applyGuestAndLocation = (list: Property[]) => {
+      let result = list;
+      if (params.guests) {
+        result = result.filter((p) => p.maxGuests >= params.guests!);
+      }
+      if (params.location) {
+        result = result.filter((p) =>
+          p.location.toLowerCase().includes(params.location!.toLowerCase())
+        );
+      }
+      return result;
+    };
+
+    let properties = applyGuestAndLocation(await getAdminProperties());
     const checkInTrim = params.checkIn?.trim();
     const checkOutTrim = params.checkOut?.trim();
     // Checkout without check-in cannot define a window; ignore date filtering in that case.
@@ -137,7 +155,9 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
       }
 
       if (checkOut > checkIn) {
-        // Firestore availability (cron Hostfully ~10 min). Verificación en vivo solo al pagar.
+        // Hostfully cada ~20 min → Firestore caché. Verificación en vivo solo al pagar.
+        await ensureAllPropertiesAvailabilityFresh();
+        properties = applyGuestAndLocation(await getAdminProperties());
         properties = properties.filter((p) => {
           let current = new Date(checkIn);
           while (current < checkOut) {
@@ -264,10 +284,12 @@ export const getPublishedPropertyReviewsAdmin = async (
     const snapshot = await adminDb
       .collection('property_reviews')
       .where('propertyId', '==', propertyId)
-      .where('status', '==', 'published')
-      .orderBy('sortOrder', 'asc')
       .get();
-    return snapshot.docs.map(mapPropertyReviewDoc);
+    return sortBySortOrder(
+      snapshot.docs
+        .map(mapPropertyReviewDoc)
+        .filter((review) => review.status === 'published')
+    );
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching published reviews', error);
     return [];
@@ -279,11 +301,56 @@ export const getPropertyReviewsForAdmin = async (propertyId: string): Promise<Pr
     const snapshot = await adminDb
       .collection('property_reviews')
       .where('propertyId', '==', propertyId)
-      .orderBy('sortOrder', 'asc')
       .get();
-    return snapshot.docs.map(mapPropertyReviewDoc);
+    return sortBySortOrder(snapshot.docs.map(mapPropertyReviewDoc));
   } catch (error) {
     console.error('Admin: Error fetching property reviews', error);
+    return [];
+  }
+};
+
+function mapPropertyReviewPlatformStatDoc(doc: QueryDocumentSnapshot): PropertyReviewPlatformStat {
+  const d = doc.data()!;
+  return {
+    ...d,
+    id: doc.id,
+    createdAt: safeTimestampToDate(d.createdAt),
+  } as PropertyReviewPlatformStat;
+}
+
+export const getPublishedPropertyReviewStatsAdmin = async (
+  propertyId: string
+): Promise<PropertyReviewPlatformStat[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('property_review_stats')
+      .where('propertyId', '==', propertyId)
+      .get();
+    return snapshot.docs
+      .map(mapPropertyReviewPlatformStatDoc)
+      .filter((stat) => stat.status === 'published')
+      .sort((a, b) => a.channel.localeCompare(b.channel));
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin: Error fetching published review stats', error);
+    }
+    return [];
+  }
+};
+
+export const getPropertyReviewStatsForAdmin = async (
+  propertyId: string
+): Promise<PropertyReviewPlatformStat[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('property_review_stats')
+      .where('propertyId', '==', propertyId)
+      .get();
+    return snapshot.docs
+      .map(mapPropertyReviewPlatformStatDoc)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  } catch (error) {
+    console.error('Admin: Error fetching property review stats', error);
     return [];
   }
 };
@@ -301,6 +368,10 @@ export const getFeaturedServicesAdmin = async (): Promise<Service[]> => {
       return { ...d, id: doc.id, createdAt: safeTimestampToDate(d.createdAt) } as Service;
     });
   } catch (error) {
+    if (isMissingFirestoreIndexError(error)) {
+      const all = await getAdminServices();
+      return sortByCreatedAtDesc(all.filter((s) => s.featured));
+    }
     if (process.env.NODE_ENV === 'development') console.error('Admin: Error fetching featured services', error);
     return [];
   }
@@ -346,6 +417,32 @@ export const getAdminTestimonials = async (): Promise<Testimonial[]> => {
     });
   } catch (error) {
     console.error('Admin: Error fetching testimonials', error);
+    return [];
+  }
+};
+
+export const getTestimonialsByPropertyIdAdmin = async (
+  propertyId: string
+): Promise<Testimonial[]> => {
+  try {
+    const snapshot = await adminDb
+      .collection('testimonials')
+      .where('propertyId', '==', propertyId)
+      .get();
+    return snapshot.docs
+      .map((doc) => {
+        const d = doc.data();
+        return {
+          ...d,
+          id: doc.id,
+          createdAt: safeTimestampToDate(d.createdAt),
+        } as Testimonial;
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin: Error fetching testimonials by property', error);
+    }
     return [];
   }
 };

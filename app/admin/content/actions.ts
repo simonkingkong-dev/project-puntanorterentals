@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
 import { getSiteContentAdmin } from "@/lib/firebase-admin-queries";
+import { isMissingFirestoreIndexError } from "@/lib/firestore-query-utils";
 
 const SITE_CONTENT_COLLECTION = "siteContent";
 
@@ -24,12 +25,25 @@ export async function updateSiteContentAdmin(
   type: ContentType = "text"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const snapshot = await adminDb
-      .collection(SITE_CONTENT_COLLECTION)
-      .where("section", "==", section)
-      .where("key", "==", key)
-      .limit(1)
-      .get();
+    let snapshot;
+    try {
+      snapshot = await adminDb
+        .collection(SITE_CONTENT_COLLECTION)
+        .where("section", "==", section)
+        .where("key", "==", key)
+        .limit(1)
+        .get();
+    } catch (error) {
+      if (!isMissingFirestoreIndexError(error)) throw error;
+      const allInSection = await adminDb
+        .collection(SITE_CONTENT_COLLECTION)
+        .where("section", "==", section)
+        .get();
+      snapshot = {
+        empty: !allInSection.docs.some((doc) => doc.data().key === key),
+        docs: allInSection.docs.filter((doc) => doc.data().key === key).slice(0, 1),
+      };
+    }
 
     const data = {
       section,

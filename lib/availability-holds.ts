@@ -1,6 +1,7 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase-admin";
 import { generateDateRange } from "@/lib/utils/date";
+import { isMissingFirestoreIndexError } from "@/lib/firestore-query-utils";
 
 function safeToDate(value: unknown): Date {
   if (value == null) return new Date(0);
@@ -15,6 +16,27 @@ export type HoldOverlapOptions = {
   excludeClientToken?: string;
 };
 
+async function getPendingHeldReservations(propertyId: string) {
+  try {
+    return await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .where("datesHeld", "==", true)
+      .get();
+  } catch (error) {
+    if (!isMissingFirestoreIndexError(error)) throw error;
+    const snapshot = await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .get();
+    return {
+      docs: snapshot.docs.filter((doc) => doc.data().datesHeld === true),
+    };
+  }
+}
+
 /**
  * True if another guest has an active payment hold (datesHeld) on overlapping nights.
  * Own cart/reservation can be excluded so holds do not block the payer's verification.
@@ -28,12 +50,7 @@ export async function hasOverlappingActiveHold(
   const now = new Date();
   const requestedDates = new Set(generateDateRange(checkIn, checkOut));
 
-  const snapshot = await adminDb
-    .collection("reservations")
-    .where("propertyId", "==", propertyId)
-    .where("status", "==", "pending")
-    .where("datesHeld", "==", true)
-    .get();
+  const snapshot = await getPendingHeldReservations(propertyId);
 
   for (const doc of snapshot.docs) {
     if (options?.excludeReservationId && doc.id === options.excludeReservationId) continue;

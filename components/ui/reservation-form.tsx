@@ -25,6 +25,8 @@ import {
   getIncludedGuests,
 } from '@/lib/pricing-guests';
 import { computeLodgingTaxesUsd } from '@/lib/lodging-taxes';
+import { computeLodgingDisplayPricing } from '@/lib/lodging-display-pricing';
+import { sumNightlyRatesUsd } from '@/lib/property-nightly-total';
 
 function dateRangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
@@ -116,7 +118,8 @@ export default function ReservationForm({
 
   const hasFullRange = Boolean(selectedDates?.checkIn && selectedDates?.checkOut);
   const nights = hasFullRange && selectedDates ? calculateNights(selectedDates.checkIn!, selectedDates.checkOut!) : 0;
-  const pricePerNight = pricePerNightDisplay ?? property.pricePerNight;
+  /** Siempre USD para tarifas Hostfully / Firestore (no usar `pricePerNightDisplay`, que ya está en MXN/EUR). */
+  const pricePerNightUsd = property.pricePerNight ?? 0;
 
   const selectedCheckInTime = selectedDates?.checkIn?.getTime();
   const selectedCheckOutTime = selectedDates?.checkOut?.getTime();
@@ -152,27 +155,16 @@ export default function ReservationForm({
           setHostfullyNightlyTotal(null);
           return;
         }
-        let total = 0;
-        const breakdown: Array<{ date: string; amount: number }> = [];
-        const cursor = new Date(
-          selectedCheckInDate.getFullYear(),
-          selectedCheckInDate.getMonth(),
-          selectedCheckInDate.getDate()
+        const { totalUsd, breakdown } = sumNightlyRatesUsd(
+          selectedCheckInDate,
+          selectedCheckOutDate,
+          rates,
+          pricePerNightUsd
         );
-        const end = new Date(
-          selectedCheckOutDate.getFullYear(),
-          selectedCheckOutDate.getMonth(),
-          selectedCheckOutDate.getDate()
+        setHostfullyNightlyTotal(totalUsd);
+        setNightlyBreakdown(
+          breakdown.map((line) => ({ date: line.date, amount: line.amountUsd }))
         );
-        while (cursor < end) {
-          const key = toDateStr(cursor);
-          const amount = Number(rates[key]) > 0 ? Number(rates[key]) : pricePerNight;
-          total += amount;
-          breakdown.push({ date: key, amount });
-          cursor.setDate(cursor.getDate() + 1);
-        }
-        setHostfullyNightlyTotal(Math.round(total));
-        setNightlyBreakdown(breakdown);
       })
       .catch(() => {
         if (!cancelled) {
@@ -183,8 +175,16 @@ export default function ReservationForm({
     return () => {
       cancelled = true;
     };
-  }, [property.id, property.hostfullyPropertyId, selectedCheckInTime, selectedCheckOutTime, pricePerNight, selectedCheckInDate, selectedCheckOutDate]);
-  const nightlySubtotalUsd = hostfullyNightlyTotal ?? nights * (property.pricePerNight ?? 0);
+  }, [
+    property.id,
+    property.hostfullyPropertyId,
+    selectedCheckInTime,
+    selectedCheckOutTime,
+    pricePerNightUsd,
+    selectedCheckInDate,
+    selectedCheckOutDate,
+  ]);
+  const nightlySubtotalUsd = hostfullyNightlyTotal ?? nights * pricePerNightUsd;
   const extraGuestFeesUsd = useMemo(
     () => computeExtraGuestFeesUsd(bookingGuests, nights, property),
     [bookingGuests, nights, property]
@@ -196,12 +196,32 @@ export default function ReservationForm({
   );
   const totalUsd = subtotalUsd + taxesUsd;
   const displayRate = getUsdDisplayMultiplier(currency, usdMxnRate, usdEurRate);
-  const nightlyDisplay = roundForDisplay(nightlySubtotalUsd * displayRate, currency);
-  const extraGuestDisplay = roundForDisplay(extraGuestFeesUsd * displayRate, currency);
-  const subtotal = roundForDisplay(subtotalUsd * displayRate, currency);
-  const ivaDisplay = roundForDisplay(ivaUsd * displayRate, currency);
-  const ishDisplay = roundForDisplay(ishUsd * displayRate, currency);
-  const total = roundForDisplay(totalUsd * displayRate, currency);
+  const displayPricing = useMemo(
+    () =>
+      computeLodgingDisplayPricing(
+        nightlySubtotalUsd,
+        extraGuestFeesUsd,
+        currency,
+        usdMxnRate,
+        usdEurRate
+      ),
+    [nightlySubtotalUsd, extraGuestFeesUsd, currency, usdMxnRate, usdEurRate]
+  );
+  const nightlyLineDisplays = useMemo(() => {
+    if (nightlyBreakdown.length === 0) return [];
+    return nightlyBreakdown.map((night) =>
+      roundForDisplay(night.amount * displayRate, currency)
+    );
+  }, [nightlyBreakdown, displayRate, currency]);
+  const nightlyDisplay =
+    nightlyLineDisplays.length > 0
+      ? nightlyLineDisplays.reduce((sum, n) => sum + n, 0)
+      : displayPricing.accommodationDisplay;
+  const extraGuestDisplay = displayPricing.extraGuestDisplay;
+  const subtotal = displayPricing.subtotalDisplay;
+  const ivaDisplay = displayPricing.ivaDisplay;
+  const ishDisplay = displayPricing.ishDisplay;
+  const total = displayPricing.totalDisplay;
 
   /**
    * Handles form submission for creating a reservation and redirects to payment on success.
@@ -477,7 +497,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           <Separator />
 
           {/* Price Breakdown */}
-          <div className="space-y-3">
+          <div className="space-y-3 max-md:pr-14">
             <h3 className="font-semibold">{t('reservation_price_summary', 'Price summary')}</h3>
             <p className="text-xs text-gray-500">
               {t('pricing_guests_included_short', 'Base rate includes {n} guests').replace(
@@ -486,9 +506,9 @@ const handleSubmit = async (e: React.FormEvent) => {
               )}
             </p>
 
-            <div className="flex justify-between text-sm">
-              <span>{t('pricing_accommodation', 'Accommodation (nights)')}</span>
-              <span>{formatPrice(nightlyDisplay, currency)}</span>
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="min-w-0">{t('pricing_accommodation', 'Accommodation (nights)')}</span>
+              <span className="shrink-0 tabular-nums text-right">{formatPrice(nightlyDisplay, currency)}</span>
             </div>
             {nights > 0 && (
               <details className="rounded-md p-2 text-sm [&[open]_.nightly-chevron]:rotate-90">
@@ -498,12 +518,20 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </summary>
                 <div className="mt-2 space-y-1">
                   {(nightlyBreakdown.length > 0
-                    ? nightlyBreakdown
-                    : Array.from({ length: nights }, (_, i) => ({ date: `${t('night_singular', 'night')} ${i + 1}`, amount: property.pricePerNight }))
+                    ? nightlyBreakdown.map((night, idx) => ({
+                        date: night.date,
+                        displayAmount: nightlyLineDisplays[idx] ?? roundForDisplay(night.amount * displayRate, currency),
+                      }))
+                    : Array.from({ length: nights }, (_, i) => ({
+                        date: `${t('night_singular', 'night')} ${i + 1}`,
+                        displayAmount: roundForDisplay(property.pricePerNight * displayRate, currency),
+                      }))
                   ).map((night, idx) => (
-                    <div key={`${night.date}-${idx}`} className="flex justify-between text-gray-600">
-                      <span>{night.date}</span>
-                      <span>{formatPrice(roundForDisplay(night.amount * displayRate, currency), currency)}</span>
+                    <div key={`${night.date}-${idx}`} className="flex justify-between gap-3 text-gray-600">
+                      <span className="min-w-0">{night.date}</span>
+                      <span className="shrink-0 tabular-nums text-right">
+                        {formatPrice(night.displayAmount, currency)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -520,32 +548,30 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <span>{formatPrice(extraGuestDisplay, currency)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>
-                {t('payment_subtotal', 'Subtotal')}
-              </span>
-              <span>{formatPrice(subtotal, currency)}</span>
+            <div className="flex justify-between gap-3 text-sm text-gray-600">
+              <span className="min-w-0">{t('payment_subtotal', 'Subtotal')}</span>
+              <span className="shrink-0 tabular-nums text-right">{formatPrice(subtotal, currency)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span>{t('payment_tax_iva', 'VAT (16%)')}</span>
-              <span>{formatPrice(ivaDisplay, currency)}</span>
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="min-w-0">{t('payment_tax_iva', 'VAT (16%)')}</span>
+              <span className="shrink-0 tabular-nums text-right">{formatPrice(ivaDisplay, currency)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span>{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
-              <span>{formatPrice(ishDisplay, currency)}</span>
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="min-w-0">{t('payment_tax_ish', 'ISH / City tax (6%)')}</span>
+              <span className="shrink-0 tabular-nums text-right">{formatPrice(ishDisplay, currency)}</span>
             </div>
             
             <Separator />
             
-            <div className="flex justify-between font-semibold text-lg">
-              <span>{t('payment_total', 'Total')}</span>
-              <span>{formatPrice(total, currency)}</span>
+            <div className="flex justify-between gap-3 font-semibold text-lg">
+              <span className="min-w-0">{t('payment_total', 'Total')}</span>
+              <span className="shrink-0 tabular-nums text-right">{formatPrice(total, currency)}</span>
             </div>
           </div>
 
           <Button 
             type="submit" 
-            className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            className="w-full h-12 max-md:mb-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             disabled={isLoading}
           >
             {isLoading ? (

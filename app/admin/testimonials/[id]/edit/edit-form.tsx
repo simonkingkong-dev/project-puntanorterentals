@@ -13,17 +13,23 @@ import { toast } from 'sonner';
 import { Testimonial } from "@/lib/types";
 // Importamos la Server Action de actualización
 import { handleUpdateTestimonial, UpdateTestimonialFormData } from "../../actions";
+import TestimonialImageField from "@/components/admin/testimonial-image-field";
+import TestimonialPropertySelect from "@/components/admin/testimonial-property-select";
+import type { Property } from "@/lib/types";
 
 type SerializableTestimonial = Omit<Testimonial, "createdAt"> & {
   createdAt: string;
 };
 
 interface TestimonialEditFormProps {
-  // Recibimos los datos desde la página ya serializados para RSC
   initialData: SerializableTestimonial;
+  properties: Pick<Property, "id" | "title">[];
 }
 
-export default function TestimonialEditForm({ initialData }: TestimonialEditFormProps) {
+export default function TestimonialEditForm({
+  initialData,
+  properties,
+}: TestimonialEditFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   
@@ -35,6 +41,7 @@ export default function TestimonialEditForm({ initialData }: TestimonialEditForm
     rating: initialData.rating,
     location: initialData.location || '',
     featured: initialData.featured,
+    propertyId: initialData.propertyId || '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,16 +118,16 @@ export default function TestimonialEditForm({ initialData }: TestimonialEditForm
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="image">URL de la Foto (Opcional)</Label>
-            <Input
-              id="image"
-              type="url"
-              value={formData.image}
-              onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-              placeholder="https://example.com/photo.jpg"
-            />
-          </div>
+          <TestimonialImageField
+            value={formData.image || ""}
+            onChange={(image) => setFormData((prev) => ({ ...prev, image }))}
+          />
+
+          <TestimonialPropertySelect
+            properties={properties}
+            value={formData.propertyId}
+            onChange={(propertyId) => setFormData((prev) => ({ ...prev, propertyId }))}
+          />
         </CardContent>
       </Card>
 

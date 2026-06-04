@@ -31,6 +31,32 @@ function CartLink({ className }: { className?: string }) {
   );
 }
 
+function LanguageSelect({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  /** En móvil: etiquetas cortas ES / EN para caber en el header. */
+  compact?: boolean;
+}) {
+  const { locale, setLocale, t } = useLocale();
+  return (
+    <select
+      value={locale}
+      onChange={(e) => setLocale(e.target.value as "es" | "en")}
+      className={cn(
+        "h-9 shrink-0 rounded-md border border-gray-200 bg-white text-sm text-gray-700",
+        compact ? "min-w-[4.25rem] px-2" : "px-2",
+        className
+      )}
+      aria-label={t("nav_select_language", "Select language")}
+    >
+      <option value="es">{compact ? "ES" : "Español"}</option>
+      <option value="en">{compact ? "EN" : "English"}</option>
+    </select>
+  );
+}
+
 function CartLinkMobile({ onClose }: { onClose: () => void }) {
   const { cartCount } = useCart();
   const { t } = useLocale();
@@ -55,7 +81,7 @@ export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { locale, setLocale, t } = useLocale();
+  const { t } = useLocale();
   const navigation = [
     { name: t('nav_home', 'Home'), href: '/', icon: Home },
     { name: t('nav_properties', 'Properties'), href: '/properties', icon: Building },
@@ -105,69 +131,53 @@ export default function Header() {
                   : "text-gray-700 hover:text-orange-600 hover:bg-gray-50"
               )}
             />
-            <select
-              value={locale}
-              onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
-              className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-              aria-label={t('nav_select_language', 'Select language')}
-            >
-              <option value="es">Español</option>
-              <option value="en">English</option>
-            </select>
+            <LanguageSelect />
           </nav>
 
-          {/* Mobile menu: solo en cliente para evitar hydration mismatch (Radix genera IDs distintos en SSR vs cliente) */}
-          {mounted ? (
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild className="md:hidden justify-self-end col-start-2">
-                <Button variant="ghost" size="icon" aria-label={t('nav_open_menu', 'Open menu')}>
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-64">
-                <SheetTitle className="sr-only">{t('nav_mobile_menu_title', 'Navigation menu')}</SheetTitle>
-                <div className="flex items-center space-x-2 mb-8">
-                  <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
-                  <div className="flex flex-col leading-none">
-                    <span className="text-xl font-bold text-gray-900 leading-none">Punta Norte</span>
-                    <span className="text-xs font-medium text-gray-600 leading-none">Rentals</span>
+          {/* Móvil: idioma visible en el header (fuera del menú lateral) */}
+          <div className="flex items-center gap-1 justify-self-end col-start-2 md:hidden">
+            <LanguageSelect compact />
+            {mounted ? (
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label={t("nav_open_menu", "Open menu")}>
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-64">
+                  <SheetTitle className="sr-only">{t('nav_mobile_menu_title', 'Navigation menu')}</SheetTitle>
+                  <div className="flex items-center space-x-2 mb-8">
+                    <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
+                    <div className="flex flex-col leading-none">
+                      <span className="text-xl font-bold text-gray-900 leading-none">Punta Norte</span>
+                      <span className="text-xs font-medium text-gray-600 leading-none">Rentals</span>
+                    </div>
                   </div>
-                </div>
-                <nav className="space-y-4">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full",
-                        pathname === item.href
-                          ? "text-orange-600 bg-orange-50"
-                          : "text-gray-700 hover:text-orange-600 hover:bg-gray-50"
-                      )}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  ))}
-                  <CartLinkMobile onClose={() => setIsOpen(false)} />
-                  <div className="px-3 pt-2">
-                    <select
-                      value={locale}
-                      onChange={(e) => setLocale((e.target.value as 'es' | 'en'))}
-                      className="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-                      aria-label="Language"
-                    >
-                      <option value="es">Español</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <div className="md:hidden h-9 w-9" aria-hidden />
-          )}
+                  <nav className="space-y-4">
+                    {navigation.map((item) => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full",
+                          pathname === item.href
+                            ? "text-orange-600 bg-orange-50"
+                            : "text-gray-700 hover:text-orange-600 hover:bg-gray-50"
+                        )}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    ))}
+                    <CartLinkMobile onClose={() => setIsOpen(false)} />
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            ) : (
+              <div className="h-9 w-9" aria-hidden />
+            )}
+          </div>
         </div>
       </div>
     </header>

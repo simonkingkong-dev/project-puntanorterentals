@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { releasePendingReservationAdmin } from '@/lib/firebase-admin-queries';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
+import { isMissingFirestoreIndexError } from '@/lib/firestore-query-utils';
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -62,11 +63,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Liberar cualquier otra reserva en hold activa del mismo huésped (límite 1 en hold).
-    const pendingSnapshot = await adminDb
-      .collection('reservations')
-      .where('guestEmail', '==', email)
-      .where('status', '==', 'pending')
-      .get();
+    let pendingSnapshot;
+    try {
+      pendingSnapshot = await adminDb
+        .collection('reservations')
+        .where('guestEmail', '==', email)
+        .where('status', '==', 'pending')
+        .get();
+    } catch (error) {
+      if (!isMissingFirestoreIndexError(error)) throw error;
+      const allForEmail = await adminDb
+        .collection('reservations')
+        .where('guestEmail', '==', email)
+        .get();
+      pendingSnapshot = {
+        docs: allForEmail.docs.filter((doc) => doc.data().status === 'pending'),
+      };
+    }
 
     const now = new Date();
     for (const doc of pendingSnapshot.docs) {

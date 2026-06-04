@@ -108,14 +108,14 @@ export default function PropertiesMapLayout({ properties }: PropertiesMapLayoutP
             {t("map_view", "View map")}
           </Button>
         </div>
-        {properties.map((property) => (
+        {properties.map((property, index) => (
           <div
             key={property.id}
             onMouseEnter={() => setHighlightedId(property.id)}
             onMouseLeave={() => setHighlightedId(null)}
             className="cursor-pointer"
           >
-            <PropertyCard property={property} />
+            <PropertyCard property={property} imagePriority={index === 0} />
           </div>
         ))}
       </div>

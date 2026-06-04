@@ -51,7 +51,9 @@ const GoogleMap = dynamic(() => import("@/components/ui/google-map"), {
 });
 
 import PropertyCuratedReviews from "@/components/ui/property-curated-reviews";
-import type { PropertyReview } from "@/lib/types";
+import PropertyBedsList from "@/components/ui/property-beds-list";
+import type { PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
+import { normalizeBeds } from "@/lib/property-beds";
 
 const HostfullyBookingEmbed = dynamic(
   () => import("@/components/ui/hostfully-booking-embed"),
@@ -121,6 +123,8 @@ function getAmenityIcon(amenity: string): LucideIcon {
 interface PropertyBodyProps {
   property: Property;
   curatedReviews: PropertyReview[];
+  platformStats?: PropertyReviewPlatformStat[];
+  propertyTestimonials?: Testimonial[];
   initialSearch?: ListingSearchSelection;
   currency: Currency;
   onCurrencyChange: (c: Currency) => void;
@@ -184,8 +188,16 @@ function Section({
 }
 
 export default function PropertyBody(props: PropertyBodyProps) {
-  const { property, curatedReviews, initialSearch, currency, onCurrencyChange, pricePerNightDisplay } =
-    props;
+  const {
+    property,
+    curatedReviews,
+    platformStats = [],
+    propertyTestimonials = [],
+    initialSearch,
+    currency,
+    onCurrencyChange,
+    pricePerNightDisplay,
+  } = props;
   const { locale, t } = useLocale();
   const initialCheckIn = initialSearch?.checkIn;
   const initialCheckOut = initialSearch?.checkOut;
@@ -217,7 +229,10 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const useHostfullyWidgets = isHostfullyBookingEngine();
 
   const hasMap = property.latitude != null && property.longitude != null;
-  const hasReviews = curatedReviews.length > 0;
+  const hasReviews =
+    curatedReviews.length > 0 ||
+    propertyTestimonials.length > 0 ||
+    platformStats.length > 0;
 
   const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) => {
     const localized = locale === "en" ? en : es;
@@ -253,6 +268,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const cancellationPolicyText = property.cancellationPolicy?.trim() || "";
   const houseRulesText = property.houseRules?.trim() || "";
   const localizedAmenities = getLocalizedPropertyAmenities(property, locale);
+  const configuredBeds = normalizeBeds(property.beds) ?? [];
 
   const propertyTabs = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -324,6 +340,11 @@ export default function PropertyBody(props: PropertyBodyProps) {
             </p>
           </Section>
         )}
+        {configuredBeds.length > 0 && (
+          <Section title={t("section_beds", "Sleeping arrangements")}>
+            <PropertyBedsList beds={configuredBeds} />
+          </Section>
+        )}
         {cancellationPolicyText && (
           <Section title={t("section_cancellation", "Cancellation policy")}>
             <p>{cancellationPolicyText}</p>
@@ -388,7 +409,11 @@ export default function PropertyBody(props: PropertyBodyProps) {
       </TabsContent>
 
       <TabsContent value="reviews" className="mt-4 space-y-6">
-        <PropertyCuratedReviews reviews={curatedReviews} />
+        <PropertyCuratedReviews
+          reviews={curatedReviews}
+          platformStats={platformStats}
+          testimonials={propertyTestimonials}
+        />
       </TabsContent>
     </Tabs>
   );
@@ -414,7 +439,10 @@ export default function PropertyBody(props: PropertyBodyProps) {
             />
           </div>
           {/* Mobile: formulario de reserva inmediatamente después del calendario */}
-          <div id="booking-section" className="lg:hidden mt-6 space-y-4">
+          <div
+            id="booking-section"
+            className="lg:hidden mt-6 space-y-4 pb-[max(7rem,env(safe-area-inset-bottom))] scroll-mt-20"
+          >
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-gray-900 mb-2">
                 {t("property_book_steps_title", "Book in 2 steps")}

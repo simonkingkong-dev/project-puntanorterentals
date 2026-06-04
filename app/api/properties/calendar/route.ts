@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPropertyByIdAdmin } from "@/lib/firebase-admin-queries";
+import { ensurePropertyAvailabilityFresh } from "@/lib/hostfully-availability-sync";
 
-/** Alineado con cron Hostfully cada 10 min — no consultar Hostfully en cada vista. */
+/** Tras sync Hostfully (~20 min), respuesta cacheable unos minutos. */
 const CALENDAR_CACHE_HEADERS = {
-  "Cache-Control": "public, max-age=600, s-maxage=600, stale-while-revalidate=120",
+  "Cache-Control": "public, max-age=120, s-maxage=120, stale-while-revalidate=60",
 };
 
 function toDateStr(d: Date): string {
@@ -15,7 +16,8 @@ function toDateStr(d: Date): string {
 
 /**
  * GET /api/properties/calendar?propertyId=...&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
- * Devuelve disponibilidad desde Firestore (sincronizada por cron Hostfully cada ~10 min).
+ * 1. Si la caché tiene >20 min (o está vacía), pull Hostfully → Firestore.
+ * 2. Devuelve disponibilidad desde Firestore (caché reciente).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +27,15 @@ export async function GET(request: NextRequest) {
 
     if (!propertyId) {
       return NextResponse.json({ error: "propertyId requerido" }, { status: 400 });
+    }
+
+    let refreshSource: "hostfully" | "cache" = "cache";
+    try {
+      refreshSource = await ensurePropertyAvailabilityFresh(propertyId);
+    } catch (syncError) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[calendar] Hostfully refresh failed, using cache", syncError);
+      }
     }
 
     const property = await getPropertyByIdAdmin(propertyId);
@@ -39,12 +50,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        source: property.hostfullyPropertyId ? "firestore_sync" : "firestore",
+        source: property.hostfullyPropertyId ? "hostfully_cache" : "firestore",
+        refreshSource,
         availability: property.availability ?? {},
         dailyRates: property.dailyRates ?? {},
+        availabilitySyncedAt: property.availabilitySyncedAt ?? null,
         startDate: start,
         endDate: end,
-        syncedVia: "cron",
       },
       { headers: CALENDAR_CACHE_HEADERS }
     );

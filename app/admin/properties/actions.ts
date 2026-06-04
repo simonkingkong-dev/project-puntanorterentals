@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase-admin";
 import { Property } from "@/lib/types";
@@ -38,17 +38,33 @@ export async function handleCreateProperty(formData: Omit<Property, 'id' | 'crea
 
 export type UpdatePropertyFormData = Partial<Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'slug' | 'availability'>>;
 
+function stripUndefined(payload: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined)
+  );
+}
+
 export async function handleUpdateProperty(propertyId: string, formData: UpdatePropertyFormData) {
   if (!propertyId) return { success: false, error: "ID requerido" };
 
   try {
-    await adminDb.collection('properties').doc(propertyId).update({
-      ...formData,
+    const docRef = adminDb.collection("properties").doc(propertyId);
+    const existingSnap = await docRef.get();
+    const slug = existingSnap.data()?.slug as string | undefined;
+
+    await docRef.update({
+      ...stripUndefined(formData as Record<string, unknown>),
       updatedAt: new Date(),
     });
 
     revalidatePath("/admin/properties");
     revalidatePath(`/admin/properties/${propertyId}/edit`);
+    revalidatePath("/properties");
+    if (slug) {
+      revalidatePath(`/properties/${slug}`);
+      revalidateTag(`property:${slug}`);
+    }
+    revalidateTag("properties");
     return { success: true };
   } catch (error) {
     console.error("Error updating property:", error);

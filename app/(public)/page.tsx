@@ -155,7 +155,7 @@ export default async function HomePage() {
     <div className="flex flex-col min-h-screen">
       <section className="relative min-h-[55vh] sm:min-h-[600px] flex items-center justify-center">
         <div className="absolute inset-0">
-          <HeroBackgroundRotator images={heroCoverImages} intervalMs={15000} />
+          <HeroBackgroundRotator images={heroCoverImages} intervalMs={8000} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent pointer-events-none" />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-white min-h-[55vh] sm:min-h-[600px] flex flex-col justify-center py-10 sm:py-12 md:py-14 pointer-events-none">
@@ -215,12 +215,12 @@ export default async function HomePage() {
             >
               <div className="relative">
                 <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3 md:gap-8">
-                  {featuredProperties.map((property) => (
+                  {featuredProperties.map((property, index) => (
                     <div
                       key={property.id}
                       className="min-w-[300px] max-w-[300px] snap-start sm:min-w-[340px] sm:max-w-[340px] lg:min-w-[360px] lg:max-w-[360px]"
                     >
-                      <PropertyCard property={property} />
+                      <PropertyCard property={property} imagePriority={index === 0} />
                     </div>
                   ))}
                 </div>

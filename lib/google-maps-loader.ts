@@ -47,8 +47,7 @@ function waitForGoogleNamespace(
 }
 
 function scriptLibrariesParam(): string {
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim();
-  return mapId ? "&libraries=marker" : "";
+  return "&libraries=marker";
 }
 
 /** Warm the Maps script (e.g. on /properties before the user opens the map). */

@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
-import { getPropertyCalendar } from "@/lib/hostfully/client";
-import { parseHostfullyCalendarDays } from "@/lib/hostfully-calendar-sync";
-
-const MONTHS_AHEAD = 24;
+import { syncAllPropertiesAvailabilityFromHostfully } from "@/lib/hostfully-availability-sync";
 
 /**
  * POST /api/cron/sync-hostfully-availability
- * Sincroniza solo **disponibilidad** desde Hostfully (cada ~10 min).
- * Los precios (`dailyRates`) se actualizan en `/api/cron/sync-hostfully-prices` (1×/día).
+ * Pull Hostfully → Firestore (recomendado cada ~20 min vía Cloud Scheduler).
+ * La app también refresca sola si la caché tiene más de 20 min al abrir calendario/búsqueda.
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -17,69 +13,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const persist = process.env.HOSTFULLY_PERSIST_AVAILABILITY !== "false";
-  if (!persist) {
-    return NextResponse.json({
-      success: true,
-      skipped: true,
-      updated: 0,
-      total: 0,
-      reason: "HOSTFULLY_PERSIST_AVAILABILITY=false",
-    });
-  }
-
   try {
-    const today = new Date();
-    const end = new Date(today);
-    end.setMonth(end.getMonth() + MONTHS_AHEAD);
-    const startStr =
-      today.getFullYear() +
-      "-" +
-      String(today.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(today.getDate()).padStart(2, "0");
-    const endStr =
-      end.getFullYear() +
-      "-" +
-      String(end.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(end.getDate()).padStart(2, "0");
-
-    const snapshot = await adminDb.collection("properties").get();
-    const docs = snapshot.docs.filter(
-      (d) =>
-        d.data().hostfullyPropertyId != null &&
-        String(d.data().hostfullyPropertyId).trim() !== ""
-    );
-
-    let updated = 0;
-    const errors: string[] = [];
-
-    for (const doc of docs) {
-      const uid = doc.data().hostfullyPropertyId as string;
-      if (!uid) continue;
-      try {
-        const calendar = await getPropertyCalendar(uid, startStr, endStr);
-        const { availability } = parseHostfullyCalendarDays(calendar.dates ?? []);
-
-        await doc.ref.update({
-          availability,
-          availabilitySyncedAt: new Date(),
-          updatedAt: new Date(),
-        });
-        updated++;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push(`${doc.id}: ${msg}`);
-      }
+    const result = await syncAllPropertiesAvailabilityFromHostfully();
+    if (result.errors?.includes("HOSTFULLY_PERSIST_AVAILABILITY=false")) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        updated: 0,
+        total: 0,
+        reason: "HOSTFULLY_PERSIST_AVAILABILITY=false",
+      });
     }
 
     return NextResponse.json({
       success: true,
       scope: "availability",
-      updated,
-      total: docs.length,
-      errors: errors.length > 0 ? errors : undefined,
+      ...result,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sync failed";

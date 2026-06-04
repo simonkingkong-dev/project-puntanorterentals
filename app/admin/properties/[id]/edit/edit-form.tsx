@@ -33,7 +33,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import ImageUploader, { FileWithPreview } from "@/components/admin/image-uploader";
+import ImageUploader from "@/components/admin/image-uploader";
+import BedTypeIcon from "@/components/ui/bed-type-icon";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
 
 const commonAmenitiesByLang = {
@@ -162,12 +163,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     beds: initialData.beds ?? [],
   });
 
-  // --- CORREGIDO: Estados separados para imágenes ---
-  // Estado para las URLs de imágenes que ya están en Firebase
-  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData.images ?? []);
-  // Estado para los *archivos* nuevos que se van a subir
-  const [newImageFiles, setNewImageFiles] = useState<FileWithPreview[]>([]);
-  // ---
+  const [galleryImages, setGalleryImages] = useState<string[]>(initialData.images ?? []);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   
   const [newAmenity, setNewAmenity] = useState('');
   const activeAmenities =
@@ -220,23 +217,12 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((existingImageUrls.length + newImageFiles.length) === 0) {
+    if (galleryImages.length === 0) {
       toast.error('Agrega al menos una imagen');
       return;
     }
     setIsPending(true);
     try {
-      let finalImageUrls = [...existingImageUrls];
-
-      if (newImageFiles.length > 0) {
-        toast.info("Subiendo nuevas imágenes...");
-        const uploadPromises = newImageFiles.map(file =>
-          uploadImageToStorage(file, 'properties')
-        );
-        const newUrls = await Promise.all(uploadPromises);
-        finalImageUrls = [...existingImageUrls, ...newUrls];
-      }
-
       const {
         hostfullyCalendarWidgetId: calWidgetIdStr,
         hostfullyCalendarShowTentative: calStStr,
@@ -270,7 +256,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         titleEs: formData.titleEs?.trim() || undefined,
         titleEn: formData.titleEn?.trim() || undefined,
         title: formData.titleEs?.trim() || formData.title?.trim() || '',
-        images: finalImageUrls,
+        images: galleryImages,
+        beds: formData.beds ?? [],
         hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
         hostfullyLeadWidgetUuid: formData.hostfullyLeadWidgetUuid?.trim() || undefined,
         hostfullyLeadWidgetOptionsJson:
@@ -434,11 +421,25 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     }
   };
 
-  // --- CORREGIDO: Nueva función para borrar imágenes existentes ---
-  const handleRemoveExistingImage = (urlToRemove: string) => {
-    setExistingImageUrls(prevUrls => prevUrls.filter(url => url !== urlToRemove));
-    // Nota: Esto no borra el archivo de Firebase Storage, solo de la propiedad.
-    // Implementar la eliminación de Storage es un paso más avanzado.
+  const handleAddGalleryFiles = async (files: File[]) => {
+    setUploadingGallery(true);
+    try {
+      const urls = await Promise.all(
+        files.map((file) => uploadImageToStorage(file, "properties"))
+      );
+      setGalleryImages((prev) => [...prev, ...urls]);
+      toast.success(
+        urls.length === 1 ? "Imagen subida" : `${urls.length} imágenes subidas`
+      );
+    } catch {
+      toast.error("Error al subir las imágenes");
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const handleRemoveGalleryImage = (urlToRemove: string) => {
+    setGalleryImages((prev) => prev.filter((url) => url !== urlToRemove));
   };
 
   const contentFields = [
@@ -640,6 +641,9 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
 
             {(formData.beds ?? []).map((bed, idx) => (
               <div key={idx} className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-muted text-gray-700">
+                  <BedTypeIcon type={bed} className="h-5 w-5" />
+                </span>
                 <span className="w-8 text-sm text-muted-foreground text-right">{idx + 1}.</span>
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -1085,11 +1089,12 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         </CardHeader>
         <CardContent>
           <ImageUploader
-            files={newImageFiles}
-            onFilesChange={setNewImageFiles}
-            existingImages={existingImageUrls}
-            onRemoveExistingImage={handleRemoveExistingImage}
-            folder="properties" 
+            images={galleryImages}
+            onImagesChange={setGalleryImages}
+            onRemoveImage={handleRemoveGalleryImage}
+            onAddFiles={handleAddGalleryFiles}
+            uploading={uploadingGallery}
+            folder="properties"
           />
         </CardContent>
        </Card>

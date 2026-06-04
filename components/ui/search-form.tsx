@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Users, Search, ChevronDown, X } from 'lucide-react';
 import {
-  addDays,
   differenceInCalendarDays,
   format,
   startOfDay,
@@ -111,10 +110,6 @@ export default function SearchForm() {
     return format(checkOutParsed, 'd MMM yyyy', { locale: dateFnsLocale });
   }, [checkOutParsed, dateFnsLocale]);
 
-  const checkOutMinSelectable = checkInParsed
-    ? addDays(startOfDay(checkInParsed), 1)
-    : null;
-
   const handleCheckInSelect = (d: Date | undefined) => {
     if (!d) {
       setSearchParams((prev) => ({ ...prev, checkIn: '', checkOut: '' }));
@@ -166,6 +161,13 @@ export default function SearchForm() {
     setSearchParams((prev) => ({ ...prev, guests: '' }));
   };
 
+  const searchCalendarClassNames = {
+    day_selected:
+      'bg-orange-500 text-white hover:bg-orange-600 focus:bg-orange-600 font-semibold',
+    day_today: 'bg-orange-100 text-orange-900 font-semibold',
+    day_disabled: 'text-gray-400 opacity-50',
+  };
+
   const checkInCalendar = (
     <Calendar
       mode="single"
@@ -175,6 +177,7 @@ export default function SearchForm() {
       numberOfMonths={isMobile ? 1 : 1}
       defaultMonth={checkInParsed ?? new Date()}
       disabled={{ before: startOfDay(new Date()) }}
+      classNames={searchCalendarClassNames}
       initialFocus
     />
   );
@@ -187,11 +190,24 @@ export default function SearchForm() {
       onSelect={handleCheckOutSelect}
       numberOfMonths={isMobile ? 1 : 1}
       defaultMonth={checkOutParsed ?? checkInParsed ?? new Date()}
-      disabled={
-        checkOutMinSelectable
-          ? { before: checkOutMinSelectable }
-          : () => true
-      }
+      disabled={(date) => {
+        const d = startOfDay(date);
+        if (d < startOfDay(new Date())) return true;
+        if (!checkInParsed) return true;
+        return d.getTime() <= startOfDay(checkInParsed).getTime();
+      }}
+      modifiers={{
+        check_in_anchor: checkInParsed ? [startOfDay(checkInParsed)] : [],
+      }}
+      modifiersClassNames={{
+        check_in_anchor:
+          '!bg-orange-500 !text-white hover:!bg-orange-600 focus:!bg-orange-600 font-semibold !opacity-100',
+      }}
+      classNames={{
+        ...searchCalendarClassNames,
+        day_disabled:
+          'text-gray-400 opacity-50 aria-[selected=false]:opacity-50 [&.rdp-day_check_in_anchor]:!opacity-100',
+      }}
       initialFocus
     />
   );

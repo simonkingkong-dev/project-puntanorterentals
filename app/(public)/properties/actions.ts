@@ -5,6 +5,7 @@ import { Reservation } from "@/lib/types";
 import { generateDateRange } from "@/lib/utils/date";
 import { checkHostfullyAvailability } from "@/lib/hostfully/client";
 import { hasOverlappingActiveHold } from "@/lib/availability-holds";
+import { isMissingFirestoreIndexError } from "@/lib/firestore-query-utils";
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -26,6 +27,30 @@ function dateRangesOverlap(
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
 }
 
+async function getSameGuestPendingReservations(
+  propertyId: string,
+  existingClientToken: string
+) {
+  try {
+    return await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .where("clientToken", "==", existingClientToken)
+      .get();
+  } catch (error) {
+    if (!isMissingFirestoreIndexError(error)) throw error;
+    const snapshot = await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .get();
+    return {
+      docs: snapshot.docs.filter((doc) => doc.data().clientToken === existingClientToken),
+    };
+  }
+}
+
 /** Libera reservas pendientes del mismo huésped (mismo clientToken) para la misma propiedad con fechas superpuestas. */
 async function releaseSameGuestOverlappingPending(
   propertyId: string,
@@ -34,12 +59,10 @@ async function releaseSameGuestOverlappingPending(
   existingClientToken: string
 ) {
   const { releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
-  const snapshot = await adminDb
-    .collection("reservations")
-    .where("propertyId", "==", propertyId)
-    .where("status", "==", "pending")
-    .where("clientToken", "==", existingClientToken)
-    .get();
+  const snapshot = await getSameGuestPendingReservations(
+    propertyId,
+    existingClientToken
+  );
 
   for (const doc of snapshot.docs) {
     const d = doc.data();
@@ -102,16 +125,32 @@ export async function handleCreatePublicReservation(
 }
 
 /** Libera reservas pendientes expiradas que tenían las fechas bloqueadas (hold), para que las fechas queden libres de nuevo. */
+async function getPendingHeldReservationsForProperty(propertyId: string) {
+  try {
+    return await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .where("datesHeld", "==", true)
+      .get();
+  } catch (error) {
+    if (!isMissingFirestoreIndexError(error)) throw error;
+    const snapshot = await adminDb
+      .collection("reservations")
+      .where("propertyId", "==", propertyId)
+      .where("status", "==", "pending")
+      .get();
+    return {
+      docs: snapshot.docs.filter((doc) => doc.data().datesHeld === true),
+    };
+  }
+}
+
 async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: string[]) {
   const { getPropertyByIdAdmin, releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
   const now = new Date();
   const dateSet = new Set(dateStrings);
-  const snapshot = await adminDb
-    .collection("reservations")
-    .where("propertyId", "==", propertyId)
-    .where("status", "==", "pending")
-    .where("datesHeld", "==", true)
-    .get();
+  const snapshot = await getPendingHeldReservationsForProperty(propertyId);
 
   for (const doc of snapshot.docs) {
     const data = doc.data();

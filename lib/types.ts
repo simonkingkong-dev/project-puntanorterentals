@@ -113,7 +113,7 @@ export interface Property {
   dailyRates?: Record<string, number>;
   /** Mínimo entre noches disponibles futuras (cron de precios 1×/día). Para "Desde" en tarjetas. */
   lowestAvailableNightlyRate?: number | null;
-  /** Última sync de disponibilidad (cron ~10 min). */
+  /** Última sync de disponibilidad desde Hostfully (~20 min). */
   availabilitySyncedAt?: Date;
   /** Última sync de precios (cron 1×/día). */
   pricesSyncedAt?: Date;
@@ -142,6 +142,19 @@ export interface PropertyReview {
   sourceUrl?: string;
   status: "draft" | "published";
   sortOrder: number;
+  createdAt: Date;
+  extractedBy?: "ai" | "manual";
+}
+
+/** Promedio y cantidad de opiniones de una plataforma (captura del resumen, p. ej. Google). */
+export interface PropertyReviewPlatformStat {
+  id: string;
+  propertyId: string;
+  channel: PropertyReviewChannel;
+  averageRating: number;
+  reviewCount: number;
+  screenshotUrl: string;
+  status: "draft" | "published";
   createdAt: Date;
   extractedBy?: "ai" | "manual";
 }
@@ -225,6 +238,8 @@ export interface Testimonial {
   rating: number;
   location?: string;
   featured: boolean;
+  /** Si se define, el testimonio también aparece en la ficha de esa propiedad. */
+  propertyId?: string;
   createdAt: Date;
 }
 

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTestimonialByIdAdmin } from "@/lib/firebase-admin-queries";
+import { getAdminProperties, getTestimonialByIdAdmin } from "@/lib/firebase-admin-queries";
 import TestimonialEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -16,6 +16,7 @@ export default async function EditTestimonialPage({ params }: EditTestimonialPag
   const { id } = await params;
   
   const testimonial = await getTestimonialByIdAdmin(id);
+  const properties = await getAdminProperties();
 
   if (!testimonial) {
     notFound();
@@ -44,7 +45,13 @@ export default async function EditTestimonialPage({ params }: EditTestimonialPag
           </div>
         </div>
 
-        <TestimonialEditForm initialData={serializableTestimonial} />
+        <TestimonialEditForm
+          initialData={serializableTestimonial}
+          properties={properties.map((property) => ({
+            id: property.id,
+            title: property.title,
+          }))}
+        />
       </div>
   );
 }

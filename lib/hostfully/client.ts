@@ -124,7 +124,8 @@ function isHostfullyDayAvailable(day: Record<string, unknown>): boolean {
   return false;
 }
 
-function extractCalendarDays(
+/** Extrae días con disponibilidad desde cualquier forma de respuesta del calendario Hostfully. */
+export function extractCalendarDaysFromHostfullyCalendar(
   calendar: Record<string, unknown>
 ): Array<{ date: string; available: boolean }> {
   const directArrayKeys = [
@@ -256,7 +257,7 @@ export async function checkHostfullyAvailability(
       end
     );
 
-    const dates = extractCalendarDays(calendar as Record<string, unknown>);
+    const dates = extractCalendarDaysFromHostfullyCalendar(calendar as Record<string, unknown>);
     if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
       const unavailableCount = dates.filter((d) => d.available === false).length;
       console.log("[Hostfully checkAvailability]", {
@@ -444,7 +445,7 @@ export async function getBlockedDates(
     endDate
   );
   if (!calendar || typeof calendar !== "object") return [];
-  return extractCalendarDays(calendar as Record<string, unknown>);
+  return extractCalendarDaysFromHostfullyCalendar(calendar as Record<string, unknown>);
 }
 /**
  * Crea un lead de tipo BOOKING en Hostfully para bloquear calendario.

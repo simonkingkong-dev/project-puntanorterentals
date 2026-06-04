@@ -785,6 +785,10 @@ export async function syncHostfullyProperties(): Promise<{
             ...propData,
             ...mergedText,
             hostfullyPropertyId: uid,
+            availability: existing.availability ?? {},
+            dailyRates: existing.dailyRates ?? {},
+            lowestAvailableNightlyRate: existing.lowestAvailableNightlyRate ?? null,
+            beds: existing.beds,
             updatedAt: now,
           };
 

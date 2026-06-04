@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Check, Calendar, Users, Mail, Loader2, CreditCard } from 'lucide-react';
+import { Check, Calendar, Users, Mail, Loader2, CreditCard, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Reservation } from '@/lib/types';
@@ -15,6 +15,14 @@ const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
 
 type ReservationWithTitle = Reservation & { propertyTitle?: string };
+
+function servicesOfferStorageKey(
+  paymentIntentId: string | null,
+  reservationId: string | null,
+  reservationDocId: string
+): string {
+  return `payment-services-offer-seen:${paymentIntentId ?? reservationId ?? reservationDocId}`;
+}
 
 /** Siempre muestra código de moneda (MXN, USD, EUR) para evitar confusión con el símbolo $. */
 function formatMoney(amount: number, currency: string): string {
@@ -58,6 +66,8 @@ function SuccessContent() {
   const [polling, setPolling] = useState(false);
   /** true = mostramos la reserva pero con mensaje "procesando" (webhook aún no corrió, p. ej. en local) */
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  /** false = mostrar pantalla de confirmación con detalles de la reserva */
+  const [showServicesOffer, setShowServicesOffer] = useState(true);
   /** Importe y moneda reales según Stripe (GET dedicado; evita depender solo del JSON de la reserva). */
   const [chargeFromStripe, setChargeFromStripe] = useState<{
     paidCurrency: string;
@@ -189,6 +199,31 @@ function SuccessContent() {
     };
   }, [paymentIntentId, reservationId, t]);
 
+  useEffect(() => {
+    if (!reservationData) return;
+    const key = servicesOfferStorageKey(
+      paymentIntentId,
+      reservationId,
+      reservationData.id
+    );
+    if (sessionStorage.getItem(key) === '1') {
+      setShowServicesOffer(false);
+    }
+  }, [reservationData, paymentIntentId, reservationId]);
+
+  const markServicesOfferSeen = () => {
+    if (!reservationData) return;
+    sessionStorage.setItem(
+      servicesOfferStorageKey(paymentIntentId, reservationId, reservationData.id),
+      '1'
+    );
+  };
+
+  const dismissServicesOffer = () => {
+    markServicesOfferSeen();
+    setShowServicesOffer(false);
+  };
+
   // Estado de Carga (inicial o polling)
   if (loading) {
     return (
@@ -241,6 +276,48 @@ function SuccessContent() {
     Number.isFinite(reservationData.totalAmount);
   const showUsdReferenceOnly =
     !waitStripeForTotal && !hasPaidDisplay && Number.isFinite(reservationData.totalAmount);
+
+  if (showServicesOffer) {
+    return (
+      <div className="max-w-xl mx-auto">
+        <Card className="text-center border-orange-200 bg-gradient-to-b from-orange-50 to-white shadow-lg">
+          <CardContent className="pt-10 pb-8 px-6 sm:px-10">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mx-auto mb-6">
+              <Check className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+              {t('payment_success_services_title', 'Booking confirmed!')}
+            </h2>
+            <p className="text-gray-600 leading-relaxed mb-8 max-w-md mx-auto">
+              {t(
+                'payment_success_services_body',
+                'Your stay in Isla Mujeres is all set. Browse our activities and services to enhance your trip.'
+              )}
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                asChild
+                className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
+              >
+                <Link href="/services" onClick={markServicesOfferSeen}>
+                  <Compass className="w-4 h-4 mr-2" />
+                  {t('payment_success_services_cta', 'Browse activities & services')}
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12"
+                onClick={dismissServicesOffer}
+              >
+                {t('payment_success_services_skip', 'Continue to my confirmation')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Estado de Éxito (datos cargados por payment_intent o por reservationId)
   return (

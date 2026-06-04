@@ -18,6 +18,8 @@ import { listingSearchQueryFromURLSearchParams } from '@/lib/listing-search-para
 
 interface PropertyCardProps {
   property: PropertyListItem;
+  /** Primera imagen above-the-fold (LCP): carga prioritaria. */
+  imagePriority?: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ interface PropertyCardProps {
  * image if not available), and a redirect link is generated using the property slug.
  * @returns {JSX.Element} A JSX.Element rendering a styled property card with dynamically loaded content.
  */
-export default function PropertyCard({ property }: PropertyCardProps) {
+export default function PropertyCard({ property, imagePriority = false }: PropertyCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const listingQs = listingSearchQueryFromURLSearchParams(searchParams);
@@ -89,6 +91,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             className="object-cover md:group-hover:scale-105 md:transition-transform md:duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             quality={70}
+            priority={imagePriority}
             unoptimized={remoteImageShouldBypassOptimization(images[currentImageIndex])}
           />
           {images.length > 1 && (
