@@ -16,12 +16,15 @@ env:
       - BUILD
       - RUNTIME
 
-  # Map ID (Cloud Console → Map Management) para Advanced Markers en producción.
-  - variable: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
-    secret: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
-    availability:
-      - BUILD
-      - RUNTIME
+  # Map ID (opcional hasta crear el secreto en Secret Manager):
+  # 1) firebase apphosting:secrets:set NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+  # 2) firebase apphosting:secrets:grantaccess NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+  # 3) Descomenta el bloque siguiente y redespliega.
+  # - variable: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+  #   secret: NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+  #   availability:
+  #     - BUILD
+  #     - RUNTIME
 
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
