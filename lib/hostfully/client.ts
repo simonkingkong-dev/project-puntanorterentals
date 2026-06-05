@@ -210,11 +210,45 @@ export interface HostfullyProperty {
 
 export interface HostfullyLeadPaymentParams {
   leadUid: string;
+  /** UID del order en Hostfully; si no se pasa, se obtiene del lead. */
+  orderUid?: string;
   amount: number;
   currency?: string;
   paidAt?: Date;
   externalPaymentId?: string;
   note?: string;
+}
+
+function extractOrderUidFromHostfullyRecord(
+  record: Record<string, unknown> | null | undefined
+): string | undefined {
+  if (!record) return undefined;
+  const order = record.order;
+  const candidates: unknown[] = [
+    record.orderUid,
+    typeof order === "object" && order != null && !Array.isArray(order)
+      ? (order as Record<string, unknown>).uid
+      : undefined,
+    typeof order === "object" && order != null && !Array.isArray(order)
+      ? (order as Record<string, unknown>).orderUid
+      : undefined,
+  ];
+  for (const c of candidates) {
+    const s = toOptionalString(c);
+    if (s) return s;
+  }
+  return undefined;
+}
+
+/** Obtiene un lead por UID (incluye orderUid cuando la API lo expone). */
+export async function getHostfullyLeadByUid(
+  leadUid: string
+): Promise<Record<string, unknown>> {
+  const data = await hostfullyFetch<Record<string, unknown>>(
+    `/leads/${encodeURIComponent(leadUid.trim())}`
+  );
+  const lead = (data?.lead ?? data) as Record<string, unknown>;
+  return lead && typeof lead === "object" ? lead : {};
 }
 
 // --- Funciones de la API ---
@@ -297,8 +331,8 @@ export async function checkHostfullyAvailability(
 }
 
 /**
- * Registra un pago/abono sobre un lead en Hostfully.
- * La API varía entre cuentas/versiones; intentamos rutas/payloads comunes.
+ * Registra un pago sobre el order vinculado a un lead en Hostfully.
+ * @see https://dev.hostfully.com/reference/create — POST /transactions
  */
 export async function registerHostfullyLeadPayment(
   params: HostfullyLeadPaymentParams
@@ -310,46 +344,85 @@ export async function registerHostfullyLeadPayment(
     return { synced: false, error: "amount inválido" };
   }
 
-  const paidAtIso = (params.paidAt ?? new Date()).toISOString();
-  const currency = (params.currency ?? "USD").toUpperCase();
+  const notes =
+    params.note ??
+    (params.externalPaymentId ? `Pago Stripe ${params.externalPaymentId}` : undefined);
 
-  const payloadVariants: Array<Record<string, unknown>> = [
+  let orderUid = params.orderUid?.trim() || undefined;
+  if (!orderUid) {
+    try {
+      const lead = await getHostfullyLeadByUid(leadUid);
+      orderUid = extractOrderUidFromHostfullyRecord(lead);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { synced: false, error: `No se pudo obtener orderUid del lead: ${msg}` };
+    }
+  }
+  if (!orderUid) {
+    return { synced: false, error: "orderUid no encontrado en el lead de Hostfully" };
+  }
+
+  const transactionPayloads: Array<Record<string, unknown>> = [
     {
+      orderUid,
+      type: "SALE",
+      status: "SUCCESS",
+      fullPayment: true,
+      manual: true,
+      notes,
+    },
+    {
+      orderUid,
+      type: "SALE",
+      status: "SUCCESS",
       amount,
-      currency,
-      paidAt: paidAtIso,
-      externalPaymentId: params.externalPaymentId,
-      note: params.note,
+      manual: false,
+      transactionId: params.externalPaymentId,
+      notes,
     },
     {
-      payment: {
-        amount,
-        currency,
-        paidAt: paidAtIso,
-        externalPaymentId: params.externalPaymentId,
-        note: params.note,
-      },
-    },
-    {
-      transaction: {
-        amount,
-        currency,
-        date: paidAtIso,
-        reference: params.externalPaymentId,
-        note: params.note,
-      },
+      orderUid,
+      type: "SALE",
+      status: "SUCCESS",
+      amount,
+      manual: true,
+      notes,
     },
   ];
 
-  const pathVariants = [
+  let lastErr = "Hostfully payment sync failed";
+  for (const body of transactionPayloads) {
+    try {
+      await hostfullyFetch<Record<string, unknown>>("/transactions", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return { synced: true, path: "/transactions" };
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e);
+      if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
+        console.warn("[Hostfully payment sync] Variante /transactions rechazada", {
+          body,
+          error: lastErr,
+        });
+      }
+    }
+  }
+
+  // Compatibilidad con cuentas/API antiguas
+  const paidAtIso = (params.paidAt ?? new Date()).toISOString();
+  const currency = (params.currency ?? "USD").toUpperCase();
+  const legacyPayloads: Array<Record<string, unknown>> = [
+    { amount, currency, paidAt: paidAtIso, externalPaymentId: params.externalPaymentId, note: notes },
+    { payment: { amount, currency, paidAt: paidAtIso, externalPaymentId: params.externalPaymentId, note: notes } },
+  ];
+  const legacyPaths = [
     `/leads/${encodeURIComponent(leadUid)}/payments`,
     `/leads/${encodeURIComponent(leadUid)}/payment`,
     `/leads/${encodeURIComponent(leadUid)}/transactions`,
   ];
-
-  let lastErr = "Hostfully payment sync failed";
-  for (const path of pathVariants) {
-    for (const body of payloadVariants) {
+  for (const path of legacyPaths) {
+    for (const body of legacyPayloads) {
       try {
         await hostfullyFetch<Record<string, unknown>>(path, {
           method: "POST",
@@ -358,9 +431,6 @@ export async function registerHostfullyLeadPayment(
         return { synced: true, path };
       } catch (e) {
         lastErr = e instanceof Error ? e.message : String(e);
-        if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
-          console.warn("[Hostfully payment sync] Variante rechazada", { path, error: lastErr });
-        }
       }
     }
   }

@@ -17,6 +17,10 @@ export interface SyncBookingToHostfullyParams {
   guestFirstName?: string;
   guestLastName?: string;
   guestEmail?: string;
+  guestPhone?: string;
+  /** Total cobrado en el sitio (USD, con impuestos). Se incluye en notas del lead. */
+  totalAmountUsd?: number;
+  guests?: number;
 }
 
 export type SyncBookingResult =
@@ -72,12 +76,20 @@ export async function trySyncBookingToHostfully(
         .slice(1)
         .join(' ') ||
       'Punta Norte';
-    const guestInformation = {
+    const guestPhone = (params.guestPhone ?? '').trim();
+    const guestInformation: Record<string, unknown> = {
       firstName,
       lastName,
       email: params.guestEmail,
       fullName: normalizedName || `${firstName} ${lastName}`,
     };
+    if (guestPhone) {
+      guestInformation.phoneNumber = guestPhone;
+    }
+    const guests = Number(params.guests);
+    if (Number.isFinite(guests) && guests > 0) {
+      guestInformation.adultCount = guests;
+    }
 
     const payload: Record<string, unknown> = {
       type: 'BOOKING',
@@ -88,16 +100,22 @@ export async function trySyncBookingToHostfully(
       checkOutLocalDateTime: toLocalDateTime(params.checkOut),
       guestInformation,
       externalReservationId: params.reservationId,
+      channel: 'HOSTFULLY',
       // Backward-compat sin interferir con el esquema principal.
       checkInDate: toDateStr(params.checkIn),
       checkOutDate: toDateStr(params.checkOut),
     };
+    const totalUsd = Number(params.totalAmountUsd);
+    if (Number.isFinite(totalUsd) && totalUsd > 0) {
+      payload.notes = `Reserva web Punta Norte — total cobrado ${totalUsd} USD (incl. IVA/ISH).`;
+    }
     if (process.env.NODE_ENV === 'development' && isHostfullyDebugEnabled()) {
       console.log('[Hostfully] Creando lead con payload estable', {
         propertyUid: payload.propertyUid,
         checkInLocalDateTime: payload.checkInLocalDateTime,
         checkOutLocalDateTime: payload.checkOutLocalDateTime,
         hasGuestEmail: Boolean(params.guestEmail),
+        hasGuestPhone: Boolean(guestPhone),
       });
     }
     const hostfullyLead = await createHostfullyBookingLead(payload);

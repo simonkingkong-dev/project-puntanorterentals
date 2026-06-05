@@ -96,6 +96,9 @@ export async function POST(request: Request) {
             guestFirstName: data.guestFirstName,
             guestLastName: data.guestLastName,
             guestEmail: data.guestEmail,
+            guestPhone: data.guestPhone,
+            totalAmountUsd: Number(data.totalAmount) || undefined,
+            guests: Number(data.guests) || undefined,
           });
           if (!syncResult.synced) {
             console.error('[Hostfully] Sync falló en webhook:', syncResult.error);
@@ -116,7 +119,9 @@ export async function POST(request: Request) {
               currency: paymentIntent.currency?.toUpperCase() || 'USD',
               paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
               externalPaymentId: paymentIntent.id,
-              note: `Pago Stripe ${paymentIntent.id}`,
+              note: `Pago Stripe ${paymentIntent.id} — ${
+                (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100
+              } ${(paymentIntent.currency ?? 'usd').toUpperCase()}`,
             });
             if (!paymentSync.synced) {
               console.error('[Hostfully] No se pudo registrar pago del lead (webhook):', paymentSync.error);

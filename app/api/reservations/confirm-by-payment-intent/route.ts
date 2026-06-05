@@ -184,6 +184,9 @@ export async function POST(request: NextRequest) {
       guestFirstName: updated.guestFirstName,
       guestLastName: updated.guestLastName,
       guestEmail: updated.guestEmail,
+      guestPhone: updated.guestPhone,
+      totalAmountUsd: Number(updated.totalAmount) || undefined,
+      guests: Number(updated.guests) || undefined,
     });
     if (!syncResult.synced) {
       console.error('[Hostfully] Sync falló tras confirmar reserva:', syncResult.error);
@@ -204,7 +207,9 @@ export async function POST(request: NextRequest) {
         currency: paymentIntent.currency?.toUpperCase() || 'USD',
         paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
         externalPaymentId: paymentIntent.id,
-        note: `Pago Stripe ${paymentIntent.id}`,
+        note: `Pago Stripe ${paymentIntent.id} — ${
+          (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100
+        } ${(paymentIntent.currency ?? 'usd').toUpperCase()}`,
       });
       if (!paymentSync.synced) {
         console.error('[Hostfully] No se pudo registrar pago del lead:', paymentSync.error);
