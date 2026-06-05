@@ -10,6 +10,7 @@ import PropertyReviewStatsSummary from "@/components/ui/property-review-stats-su
 interface PropertyCuratedReviewsProps {
   reviews: PropertyReview[];
   platformStats?: PropertyReviewPlatformStat[];
+  globalAggregate?: { averageRating: number; reviewCount: number } | null;
   testimonials?: Testimonial[];
 }
 
@@ -60,11 +61,17 @@ function TestimonialReviewCard({ testimonial }: { testimonial: Testimonial }) {
 export default function PropertyCuratedReviews({
   reviews,
   platformStats = [],
+  globalAggregate = null,
   testimonials = [],
 }: PropertyCuratedReviewsProps) {
   const { locale, t } = useLocale();
 
-  if (reviews.length === 0 && testimonials.length === 0 && platformStats.length === 0) {
+  if (
+    reviews.length === 0 &&
+    testimonials.length === 0 &&
+    platformStats.length === 0 &&
+    !globalAggregate
+  ) {
     return (
       <p className="text-gray-500 text-sm">
         {t("reviews_empty_curated", "No hay reseñas publicadas para esta propiedad.")}
@@ -74,7 +81,10 @@ export default function PropertyCuratedReviews({
 
   return (
     <div className="space-y-6">
-      <PropertyReviewStatsSummary platformStats={platformStats} />
+      <PropertyReviewStatsSummary
+        platformStats={platformStats}
+        globalAggregate={globalAggregate}
+      />
 
       {reviews.length > 0 || testimonials.length > 0 ? (
         <div className="space-y-4">

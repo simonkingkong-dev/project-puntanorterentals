@@ -170,6 +170,36 @@ export async function deletePropertyReview(reviewId: string, propertyId: string)
   return { success: true };
 }
 
+export async function createPropertyReviewPlatformStatManual(
+  propertyId: string,
+  data: {
+    channel: PropertyReviewChannel;
+    averageRating: number;
+    reviewCount: number;
+  }
+): Promise<{ success: boolean; statId?: string; error?: string }> {
+  if (!propertyId) return { success: false, error: "ID de propiedad requerido" };
+  if (!isChannel(data.channel)) return { success: false, error: "Canal inválido" };
+
+  const propertySnap = await adminDb.collection("properties").doc(propertyId).get();
+  if (!propertySnap.exists) return { success: false, error: "Propiedad no encontrada" };
+
+  const ref = await adminDb.collection("property_review_stats").add({
+    propertyId,
+    channel: data.channel,
+    averageRating: normalizePlatformAverageRating(data.averageRating),
+    reviewCount: Math.max(0, Math.round(data.reviewCount)),
+    screenshotUrl: "",
+    status: "draft",
+    extractedBy: "manual",
+    createdAt: new Date(),
+  });
+
+  revalidatePath(`/admin/properties/${propertyId}/reviews`);
+  await revalidatePropertyPublicPage(propertyId);
+  return { success: true, statId: ref.id };
+}
+
 export async function uploadAndExtractPropertyReviewStats(
   propertyId: string,
   formData: FormData

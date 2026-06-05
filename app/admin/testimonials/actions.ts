@@ -1,10 +1,35 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
-import { Testimonial } from "@/lib/types";
+import { BUSINESS_REVIEW_PLATFORM_STATS_DOC } from "@/lib/business-review-platform-stats";
+import { normalizePlatformAverageRating } from "@/lib/review-platform-stats";
+import type { PropertyReviewChannel, Testimonial } from "@/lib/types";
+
+const REVIEW_CHANNELS: PropertyReviewChannel[] = [
+  "airbnb",
+  "booking",
+  "google",
+  "vrbo",
+  "tripadvisor",
+  "other",
+];
+
+function isReviewChannel(v: string): v is PropertyReviewChannel {
+  return (REVIEW_CHANNELS as string[]).includes(v);
+}
+
+async function revalidateAllPropertyPublicPages() {
+  const snapshot = await adminDb.collection("properties").get();
+  for (const doc of snapshot.docs) {
+    const slug = doc.data()?.slug;
+    if (slug) revalidatePath(`/properties/${slug}`);
+  }
+  revalidatePath("/");
+  revalidateTag("guest-ratings", "max");
+}
 
 type TestimonialWriteData = Omit<Testimonial, "id" | "createdAt">;
 
@@ -16,6 +41,7 @@ function normalizePropertyId(propertyId?: string): string | undefined {
 async function revalidateTestimonialPaths(propertyIds: Array<string | undefined>) {
   revalidatePath("/admin/testimonials");
   revalidatePath("/");
+  await revalidateAllPropertyPublicPages();
 
   const uniqueIds = Array.from(new Set(propertyIds.filter(Boolean))) as string[];
   await Promise.all(
@@ -51,6 +77,157 @@ function buildUpdatePayload(formData: UpdateTestimonialFormData) {
   }
 
   return payload;
+}
+
+export async function saveBusinessReviewPlatformStat(data: {
+  channel: PropertyReviewChannel;
+  averageRating: number;
+  reviewCount: number;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!isReviewChannel(data.channel)) return { success: false, error: "Canal inválido" };
+
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const existing = (snap.data()?.stats ?? {}) as Record<string, { status?: string }>;
+
+  await docRef.set(
+    {
+      stats: {
+        ...existing,
+        [data.channel]: {
+          channel: data.channel,
+          averageRating: normalizePlatformAverageRating(data.averageRating),
+          reviewCount: Math.max(0, Math.round(data.reviewCount)),
+          screenshotUrl: "",
+          status: existing[data.channel]?.status ?? "draft",
+          updatedAt: new Date(),
+        },
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
+}
+
+export async function publishBusinessReviewPlatformStat(channel: PropertyReviewChannel) {
+  if (!isReviewChannel(channel)) return { success: false, error: "Canal inválido" };
+
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const stats = (snap.data()?.stats ?? {}) as Record<string, Record<string, unknown>>;
+  const row = stats[channel];
+  if (!row) return { success: false, error: "Guarda el canal antes de publicar" };
+
+  await docRef.set(
+    {
+      stats: {
+        ...stats,
+        [channel]: { ...row, status: "published", updatedAt: new Date() },
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
+}
+
+export async function unpublishBusinessReviewPlatformStat(channel: PropertyReviewChannel) {
+  if (!isReviewChannel(channel)) return { success: false, error: "Canal inválido" };
+
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const stats = (snap.data()?.stats ?? {}) as Record<string, Record<string, unknown>>;
+  const row = stats[channel];
+  if (!row) return { success: false, error: "No encontrado" };
+
+  await docRef.set(
+    {
+      stats: {
+        ...stats,
+        [channel]: { ...row, status: "draft", updatedAt: new Date() },
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
+}
+
+export async function saveGlobalReviewAggregate(data: {
+  averageRating: number;
+  reviewCount: number;
+}): Promise<{ success: boolean; error?: string }> {
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const currentStatus =
+    (snap.data()?.aggregateOverride as { status?: string } | undefined)?.status ?? "draft";
+
+  await docRef.set(
+    {
+      aggregateOverride: {
+        averageRating: normalizePlatformAverageRating(data.averageRating),
+        reviewCount: Math.max(0, Math.round(data.reviewCount)),
+        status: currentStatus,
+        updatedAt: new Date(),
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
+}
+
+export async function publishGlobalReviewAggregate() {
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const current = snap.data()?.aggregateOverride as Record<string, unknown> | undefined;
+  if (!current) return { success: false, error: "Guarda el acumulado antes de publicar" };
+
+  await docRef.set(
+    {
+      aggregateOverride: {
+        ...current,
+        status: "published",
+        updatedAt: new Date(),
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
+}
+
+export async function unpublishGlobalReviewAggregate() {
+  const docRef = adminDb.collection("site_settings").doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC);
+  const snap = await docRef.get();
+  const current = snap.data()?.aggregateOverride as Record<string, unknown> | undefined;
+  if (!current) return { success: false, error: "No hay acumulado guardado" };
+
+  await docRef.set(
+    {
+      aggregateOverride: {
+        ...current,
+        status: "draft",
+        updatedAt: new Date(),
+      },
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/testimonials");
+  await revalidateAllPropertyPublicPages();
+  return { success: true };
 }
 
 // --- CREAR ---

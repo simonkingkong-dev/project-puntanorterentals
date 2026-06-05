@@ -18,6 +18,7 @@ import {
 import { PROPERTY_REVIEW_CHANNELS } from "@/lib/review-channels";
 import type { PropertyReview, PropertyReviewChannel, PropertyReviewPlatformStat } from "@/lib/types";
 import {
+  createPropertyReviewPlatformStatManual,
   deletePropertyReview,
   deletePropertyReviewPlatformStat,
   publishPropertyReview,
@@ -48,12 +49,16 @@ export default function ReviewsClient({
 }: ReviewsClientProps) {
   const [reviews, setReviews] = useState(initialReviews);
   const [platformStats, setPlatformStats] = useState(initialPlatformStats);
+  const [manualStatChannel, setManualStatChannel] = useState<PropertyReviewChannel>("airbnb");
+  const [manualStatRating, setManualStatRating] = useState(5);
+  const [manualStatCount, setManualStatCount] = useState(0);
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [pendingStats, setPendingStats] = useState<PendingStatUpload[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadingStats, setUploadingStats] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingStatId, setSavingStatId] = useState<string | null>(null);
+  const [creatingManualStat, setCreatingManualStat] = useState(false);
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return;
@@ -178,15 +183,97 @@ export default function ReviewsClient({
     }
   };
 
+  const createManualPlatformStat = async () => {
+    setCreatingManualStat(true);
+    try {
+      const result = await createPropertyReviewPlatformStatManual(propertyId, {
+        channel: manualStatChannel,
+        averageRating: manualStatRating,
+        reviewCount: manualStatCount,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? "Error al crear");
+        return;
+      }
+      toast.success("Promedio creado en borrador. Revisa abajo y publícalo.");
+      window.location.reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error inesperado");
+    } finally {
+      setCreatingManualStat(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
+      <p className="text-sm text-muted-foreground rounded-lg border bg-muted/30 p-4">
+        Los promedios <strong>globales</strong> (Google, Airbnb, Booking y acumulado) se gestionan en{" "}
+        <a href="/admin/testimonials" className="text-orange-700 font-medium underline">
+          Admin → Testimonios
+        </a>
+        . Aquí solo los de esta propiedad si difieren del global.
+      </p>
+
       <section className="rounded-lg border bg-white p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Promedios por plataforma</h2>
+        <h2 className="text-lg font-semibold">Promedios por plataforma (esta propiedad)</h2>
         <p className="text-sm text-muted-foreground">
-          Sube capturas del resumen de calificación (promedio y cantidad de opiniones) de Google,
-          Airbnb, Booking.com, etc. Si publicas varias plataformas, en la ficha se suman las
-          opiniones y se calcula un promedio ponderado.
+          Sube capturas o añade datos a mano solo si esta unidad tiene cifras distintas al global.
         </p>
+        <div className="rounded-lg border border-dashed p-4 space-y-3 bg-gray-50/80">
+          <p className="text-sm font-medium">Añadir promedio manual (esta propiedad)</p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div>
+              <Label>Canal</Label>
+              <Select
+                value={manualStatChannel}
+                onValueChange={(v) => setManualStatChannel(v as PropertyReviewChannel)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROPERTY_REVIEW_CHANNELS.filter((c) => c.id !== "google").map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.labelEs}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Promedio (1-5)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                value={manualStatRating}
+                onChange={(e) => setManualStatRating(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Opiniones</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={manualStatCount}
+                onChange={(e) => setManualStatCount(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={creatingManualStat}
+            onClick={createManualPlatformStat}
+          >
+            {creatingManualStat ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : null}
+            Crear borrador
+          </Button>
+        </div>
         <div>
           <Label htmlFor="stat-screenshots">Screenshots de promedio</Label>
           <Input

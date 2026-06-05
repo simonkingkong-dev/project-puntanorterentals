@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
 import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
+import { getFeaturedPropertiesForList, getSiteContentBySectionAdmin, getAdminTestimonials } from "@/lib/firebase-admin-queries";
 import {
-  getFeaturedPropertiesForList,
-  getSiteContentBySectionAdmin,
-  getAdminTestimonials,
-} from "@/lib/firebase-admin-queries";
+  getPublishedBusinessReviewPlatformStatsAdmin,
+  getPublishedGlobalReviewAggregateAdmin,
+} from "@/lib/guest-ratings-queries";
+import HomeGuestRatingsSummary from "@/components/public/home-guest-ratings-summary";
 import { getServerLocale } from "@/lib/i18n/server";
 import { messages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
@@ -36,6 +37,18 @@ const getCachedTestimonials = unstable_cache(
   async () => getAdminTestimonials(),
   ["homepage-testimonials"],
   { revalidate: 300, tags: ["testimonials"] }
+);
+
+const getCachedHomeGuestRatings = unstable_cache(
+  async () => {
+    const [platformStats, globalAggregate] = await Promise.all([
+      getPublishedBusinessReviewPlatformStatsAdmin(),
+      getPublishedGlobalReviewAggregateAdmin(),
+    ]);
+    return { platformStats, globalAggregate };
+  },
+  ["homepage-guest-ratings"],
+  { revalidate: 300, tags: ["guest-ratings", "testimonials"] }
 );
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -78,11 +91,17 @@ export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
 
-  const [featuredProperties, homepageContent, testimonials] = await Promise.all([
-    getCachedFeaturedProperties(),
-    getCachedHomepageContent(),
-    getCachedTestimonials(),
-  ]);
+  const [featuredProperties, homepageContent, testimonials, guestRatings] =
+    await Promise.all([
+      getCachedFeaturedProperties(),
+      getCachedHomepageContent(),
+      getCachedTestimonials(),
+      getCachedHomeGuestRatings(),
+    ]);
+  const { platformStats: guestPlatformStats, globalAggregate: guestGlobalAggregate } =
+    guestRatings;
+  const hasGuestRatings =
+    guestPlatformStats.length > 0 || guestGlobalAggregate != null;
 
   const c = contentMap(homepageContent);
   const tx = (cmsKey: string, i18nKey: keyof (typeof messages)[Locale]) =>
@@ -288,6 +307,14 @@ export default async function HomePage() {
             </p>
           </div>
 
+          {hasGuestRatings ? (
+            <HomeGuestRatingsSummary
+              locale={locale}
+              platformStats={guestPlatformStats}
+              globalAggregate={guestGlobalAggregate}
+            />
+          ) : null}
+
           {testimonials.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {testimonials.slice(0, 6).map((t) => (
@@ -329,11 +356,11 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : !hasGuestRatings ? (
             <div className="text-center py-12 rounded-xl border border-dashed bg-background/80">
               <p className="text-muted-foreground">{L.home_testimonials_empty}</p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 

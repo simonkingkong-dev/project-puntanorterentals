@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { handleCreateTestimonial } from "../actions";
 import TestimonialImageField from "@/components/admin/testimonial-image-field";
 import TestimonialPropertySelect from "@/components/admin/testimonial-property-select";
+import TestimonialReviewImport from "@/components/admin/testimonial-review-import";
 import type { Property } from "@/lib/types";
 
 interface NewTestimonialFormProps {
@@ -88,6 +89,18 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <TestimonialReviewImport
+        onImported={(draft) =>
+          setFormData((prev) => ({
+            ...prev,
+            name: draft.name,
+            text: draft.text,
+            rating: draft.rating,
+            location: draft.location,
+          }))
+        }
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Información del Cliente</CardTitle>

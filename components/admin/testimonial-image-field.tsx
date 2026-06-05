@@ -118,7 +118,10 @@ export default function TestimonialImageField({
 
   return (
     <div className="space-y-3">
-      <Label>Foto del cliente (opcional)</Label>
+      <Label>Foto del cliente (opcional, avatar)</Label>
+      <p className="text-xs text-muted-foreground -mt-1">
+        No uses esto para la captura de la reseña: importa la reseña arriba con IA.
+      </p>
 
       {displayUrl ? (
         <div className="flex items-center gap-3">

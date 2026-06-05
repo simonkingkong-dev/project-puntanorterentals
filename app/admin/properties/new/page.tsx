@@ -176,17 +176,9 @@ export default function NewPropertyPage() {
   };
 
   const contentFields = [
-    { base: 'description', es: 'descriptionEs', en: 'descriptionEn', labelEs: 'Descripción principal', labelEn: 'Main description', rows: 5, required: true },
-    { base: 'summary', es: 'summaryEs', en: 'summaryEn', labelEs: 'Resumen', labelEn: 'Summary', rows: 3, required: false },
-    { base: 'shortDescription', es: 'shortDescriptionEs', en: 'shortDescriptionEn', labelEs: 'Descripción corta', labelEn: 'Short description', rows: 3, required: false },
-    { base: 'longDescription', es: 'longDescriptionEs', en: 'longDescriptionEn', labelEs: 'Descripción larga', labelEn: 'Long description', rows: 4, required: false },
-    { base: 'notes', es: 'notesEs', en: 'notesEn', labelEs: 'Notas', labelEn: 'Notes', rows: 3, required: false },
-    { base: 'interaction', es: 'interactionEs', en: 'interactionEn', labelEs: 'Interacción con huéspedes', labelEn: 'Guest interaction', rows: 3, required: false },
-    { base: 'neighborhood', es: 'neighborhoodEs', en: 'neighborhoodEn', labelEs: 'Vecindario', labelEn: 'Neighborhood', rows: 3, required: false },
-    { base: 'access', es: 'accessEs', en: 'accessEn', labelEs: 'Acceso', labelEn: 'Access', rows: 3, required: false },
-    { base: 'space', es: 'spaceEs', en: 'spaceEn', labelEs: 'Espacio', labelEn: 'Space', rows: 3, required: false },
-    { base: 'transit', es: 'transitEs', en: 'transitEn', labelEs: 'Transporte', labelEn: 'Transit', rows: 3, required: false },
-    { base: 'houseManual', es: 'houseManualEs', en: 'houseManualEn', labelEs: 'Manual de la casa', labelEn: 'House manual', rows: 3, required: false },
+    { base: 'description', es: 'descriptionEs', en: 'descriptionEn', labelEs: 'Descripción principal', labelEn: 'Main description', rows: 4, required: true },
+    { base: 'space', es: 'spaceEs', en: 'spaceEn', labelEs: 'Detalles únicos', labelEn: 'Unique details', rows: 4, required: false },
+    { base: 'notes', es: 'notesEs', en: 'notesEn', labelEs: 'Notas especiales (opcional)', labelEn: 'Special notes (optional)', rows: 2, required: false },
   ] as const;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -511,7 +503,7 @@ export default function NewPropertyPage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
+                      Wi‑Fi, A/C, ubicación, playas y ferry se muestran solos en la ficha. Escribe solo lo único de esta propiedad.
                     </p>
                   </div>
 

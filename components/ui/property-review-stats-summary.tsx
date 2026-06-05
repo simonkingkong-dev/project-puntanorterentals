@@ -13,6 +13,8 @@ import { useLocale } from "@/components/providers/locale-provider";
 
 interface PropertyReviewStatsSummaryProps {
   platformStats: PropertyReviewPlatformStat[];
+  /** Si está publicado en Testimonios, sustituye el acumulado calculado. */
+  globalAggregate?: { averageRating: number; reviewCount: number } | null;
 }
 
 function RatingStars({ rating }: { rating: number }) {
@@ -31,16 +33,28 @@ function RatingStars({ rating }: { rating: number }) {
 
 export default function PropertyReviewStatsSummary({
   platformStats,
+  globalAggregate = null,
 }: PropertyReviewStatsSummaryProps) {
   const { locale, t } = useLocale();
 
-  if (platformStats.length === 0) return null;
+  if (platformStats.length === 0 && !globalAggregate) return null;
 
-  const aggregate = computeAggregateReviewStats(platformStats);
+  const computed = computeAggregateReviewStats(platformStats);
+  const aggregate = globalAggregate
+    ? {
+        averageRating: globalAggregate.averageRating,
+        totalReviews: globalAggregate.reviewCount,
+        platformCount: computed?.platformCount ?? platformStats.length,
+      }
+    : computed;
+
+  const showHeadline =
+    aggregate &&
+    (globalAggregate != null || (computed != null && computed.platformCount > 1));
 
   return (
     <div className="rounded-xl border bg-white p-5 space-y-4">
-      {aggregate && aggregate.platformCount > 1 ? (
+      {showHeadline && aggregate ? (
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 border-b">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-gray-900">
@@ -78,16 +92,18 @@ export default function PropertyReviewStatsSummary({
             key={stat.id}
             className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border bg-gray-50 p-3"
           >
-            <div className="relative w-full sm:w-28 h-16 shrink-0 rounded overflow-hidden border bg-white">
-              <Image
-                src={stat.screenshotUrl}
-                alt=""
-                fill
-                className="object-contain object-center"
-                sizes="112px"
-                unoptimized
-              />
-            </div>
+            {stat.screenshotUrl?.trim() ? (
+              <div className="relative w-full sm:w-28 h-16 shrink-0 rounded overflow-hidden border bg-white">
+                <Image
+                  src={stat.screenshotUrl}
+                  alt=""
+                  fill
+                  className="object-contain object-center"
+                  sizes="112px"
+                  unoptimized
+                />
+              </div>
+            ) : null}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">
                 {getReviewChannelLabel(stat.channel, locale)}

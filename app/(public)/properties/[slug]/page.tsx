@@ -8,6 +8,7 @@ import PropertyPageContent from '@/components/property-page-content';
 import {
   getPropertyBySlugAdmin,
   getPublishedPropertyReviewsAdmin,
+  getPublishedGlobalReviewAggregateAdmin,
   getPublishedPropertyReviewStatsAdmin,
   getTestimonialsByPropertyIdAdmin,
 } from '@/lib/firebase-admin-queries';
@@ -103,11 +104,13 @@ export default async function PropertyPage({
     notFound();
   }
 
-  const [curatedReviews, propertyTestimonials, platformStats] = await Promise.all([
-    getPublishedPropertyReviewsAdmin(property.id),
-    getTestimonialsByPropertyIdAdmin(property.id),
-    getPublishedPropertyReviewStatsAdmin(property.id),
-  ]);
+  const [curatedReviews, propertyTestimonials, platformStats, globalReviewAggregate] =
+    await Promise.all([
+      getPublishedPropertyReviewsAdmin(property.id),
+      getTestimonialsByPropertyIdAdmin(property.id),
+      getPublishedPropertyReviewStatsAdmin(property.id),
+      getPublishedGlobalReviewAggregateAdmin(),
+    ]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
@@ -156,6 +159,7 @@ export default async function PropertyPage({
           property={property}
           curatedReviews={curatedReviews}
           platformStats={platformStats}
+          globalReviewAggregate={globalReviewAggregate}
           propertyTestimonials={propertyTestimonials}
           initialSearch={listingSearchSelection}
         />

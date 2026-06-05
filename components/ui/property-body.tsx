@@ -41,7 +41,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencySelect, type Currency } from "@/components/ui/currency-select";
 import { isHostfullyBookingEngine } from "@/lib/booking-engine";
 import { useLocale } from "@/components/providers/locale-provider";
-import { getLocalizedPropertyAmenities } from "@/lib/property-localization";
+import {
+  getLocalizedCancellationPolicy,
+  getLocalizedPropertyAmenities,
+} from "@/lib/property-localization";
 import { getIncludedGuests } from "@/lib/pricing-guests";
 import type { ListingSearchSelection } from "@/lib/listing-search-params";
 
@@ -52,8 +55,11 @@ const GoogleMap = dynamic(() => import("@/components/ui/google-map"), {
 
 import PropertyCuratedReviews from "@/components/ui/property-curated-reviews";
 import PropertyBedsList from "@/components/ui/property-beds-list";
+import { PropertyHighlightBulletList } from "@/components/ui/property-stay-highlights";
+import { getPropertyStayHighlights } from "@/lib/property-stay-highlights";
 import type { PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
 import { normalizeBeds } from "@/lib/property-beds";
+import { formatPropertyTypeDisplay } from "@/lib/property-type-options";
 
 const HostfullyBookingEmbed = dynamic(
   () => import("@/components/ui/hostfully-booking-embed"),
@@ -124,6 +130,7 @@ interface PropertyBodyProps {
   property: Property;
   curatedReviews: PropertyReview[];
   platformStats?: PropertyReviewPlatformStat[];
+  globalReviewAggregate?: { averageRating: number; reviewCount: number } | null;
   propertyTestimonials?: Testimonial[];
   initialSearch?: ListingSearchSelection;
   currency: Currency;
@@ -192,6 +199,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
     property,
     curatedReviews,
     platformStats = [],
+    globalReviewAggregate = null,
     propertyTestimonials = [],
     initialSearch,
     currency,
@@ -236,7 +244,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
 
   const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) => {
     const localized = locale === "en" ? en : es;
-    if (typeof localized === "string") {
+    if (typeof localized === "string" && localized.trim()) {
       return localized.trim();
     }
     return base?.trim() || "";
@@ -252,23 +260,26 @@ export default function PropertyBody(props: PropertyBodyProps) {
         </p>
       ));
 
-  const summaryText =
-    pickLocalized(property.summary, property.summaryEs, property.summaryEn) ||
-    pickLocalized(property.shortDescription, property.shortDescriptionEs, property.shortDescriptionEn) ||
-    pickLocalized(property.longDescription, property.longDescriptionEs, property.longDescriptionEn);
   const descriptionText = pickLocalized(property.description, property.descriptionEs, property.descriptionEn);
-  const interactionText = pickLocalized(property.interaction, property.interactionEs, property.interactionEn);
-  const neighborhoodText = pickLocalized(property.neighborhood, property.neighborhoodEs, property.neighborhoodEn);
-  const accessText = pickLocalized(property.access, property.accessEs, property.accessEn);
   const spaceText = pickLocalized(property.space, property.spaceEs, property.spaceEn);
-  const transitText = pickLocalized(property.transit, property.transitEs, property.transitEn);
-  const houseManualOrNotes =
-    pickLocalized(property.houseManual, property.houseManualEs, property.houseManualEn) ||
-    pickLocalized(property.notes, property.notesEs, property.notesEn);
-  const cancellationPolicyText = property.cancellationPolicy?.trim() || "";
+  const notesText = pickLocalized(property.notes, property.notesEs, property.notesEn);
+  const cancellationPolicyText = getLocalizedCancellationPolicy(
+    property.cancellationPolicy,
+    locale,
+    t
+  );
   const houseRulesText = property.houseRules?.trim() || "";
   const localizedAmenities = getLocalizedPropertyAmenities(property, locale);
   const configuredBeds = normalizeBeds(property.beds) ?? [];
+  const propertyTypeLabel = formatPropertyTypeDisplay(
+    property.propertyType,
+    property.roomType,
+    locale === "en" ? "en" : "es"
+  );
+  const stayHighlights = getPropertyStayHighlights(
+    property,
+    locale === "en" ? "en" : "es"
+  );
 
   const propertyTabs = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -280,53 +291,29 @@ export default function PropertyBody(props: PropertyBodyProps) {
       </TabsList>
 
       <TabsContent value="overview" className="mt-4 space-y-4">
-        {summaryText && (
-          <Section title={t("section_summary", "Summary")}>
-            <p>{summaryText}</p>
-          </Section>
-        )}
-        {(property.propertyType || property.roomType) && (
-          <Section title={t("section_property_type", "Property type")}>
-            <p>
-              {[property.propertyType, property.roomType].filter(Boolean).join(" · ")}
-            </p>
-          </Section>
-        )}
         {descriptionText && (
           <Section title={t("section_description", "Description")}>
             {renderParagraphs(descriptionText)}
           </Section>
         )}
-        {interactionText && (
-          <Section title={t("section_interaction", "Interaction")}>
-            {renderParagraphs(interactionText)}
-          </Section>
-        )}
-        {neighborhoodText && (
-          <Section title={t("section_neighborhood", "Neighborhood")}>
-            {renderParagraphs(neighborhoodText)}
-          </Section>
-        )}
-        {accessText && (
-          <Section title={t("section_access", "Access")}>
-            {renderParagraphs(accessText)}
+        {propertyTypeLabel && (
+          <Section title={t("section_property_type", "Property type")}>
+            <p>{propertyTypeLabel}</p>
           </Section>
         )}
         {spaceText && (
-          <Section title={t("section_space", "Space")}>
+          <Section title={t("property_unique_details", "About this place")}>
             {renderParagraphs(spaceText)}
           </Section>
         )}
-        {transitText && (
-          <Section title={t("section_transit", "Getting around")}>
-            {renderParagraphs(transitText)}
+        {notesText && (
+          <Section title={t("property_special_notes", "Important notes")}>
+            {renderParagraphs(notesText)}
           </Section>
         )}
-        {houseManualOrNotes && (
-          <Section title={t("section_house_manual", "House manual / notes")}>
-            {renderParagraphs(houseManualOrNotes)}
-          </Section>
-        )}
+        <Section title={t("property_location_title", "Location")}>
+          <PropertyHighlightBulletList items={stayHighlights.location} />
+        </Section>
         {(property.checkInTime || property.checkOutTime) && (
           <Section title={t("section_schedules", "Schedules")}>
             <p>
@@ -345,14 +332,20 @@ export default function PropertyBody(props: PropertyBodyProps) {
             <PropertyBedsList beds={configuredBeds} />
           </Section>
         )}
-        {cancellationPolicyText && (
-          <Section title={t("section_cancellation", "Cancellation policy")}>
-            <p>{cancellationPolicyText}</p>
-          </Section>
-        )}
         {houseRulesText && (
           <Section title={t("section_house_rules", "House rules")}>
             <p>{houseRulesText}</p>
+          </Section>
+        )}
+        <Section title={t("property_included_title", "Included in your stay")}>
+          <PropertyHighlightBulletList items={stayHighlights.included} />
+        </Section>
+        <Section title={t("property_stay_info_title", "Good to know")}>
+          <PropertyHighlightBulletList items={stayHighlights.stayInfo} />
+        </Section>
+        {cancellationPolicyText && (
+          <Section title={t("section_cancellation", "Cancellation policy")}>
+            <p>{cancellationPolicyText}</p>
           </Section>
         )}
       </TabsContent>
@@ -412,6 +405,7 @@ export default function PropertyBody(props: PropertyBodyProps) {
         <PropertyCuratedReviews
           reviews={curatedReviews}
           platformStats={platformStats}
+          globalAggregate={globalReviewAggregate}
           testimonials={propertyTestimonials}
         />
       </TabsContent>

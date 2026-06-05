@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPropertyByIdAdmin, getPropertyReviewStatsForAdmin, getPropertyReviewsForAdmin } from "@/lib/firebase-admin-queries";
+import {
+  getPropertyByIdAdmin,
+  getPropertyReviewStatsForAdmin,
+  getPropertyReviewsForAdmin,
+} from "@/lib/firebase-admin-queries";
 import ReviewsClient from "./reviews-client";
 
 interface PageProps {

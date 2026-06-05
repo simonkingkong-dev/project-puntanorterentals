@@ -35,6 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import ImageUploader from "@/components/admin/image-uploader";
 import BedsCountEditor from "@/components/admin/beds-count-editor";
+import {
+  PROPERTY_TYPE_ADMIN_OPTIONS,
+  ROOM_TYPE_ADMIN_OPTIONS,
+} from "@/lib/property-type-options";
 import { uploadImageToStorage } from "@/lib/firebase/storage";
 
 const commonAmenitiesByLang = {
@@ -161,6 +165,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     latitude: initialData.latitude,
     longitude: initialData.longitude,
     beds: initialData.beds ?? [],
+    propertyType: initialData.propertyType ?? '',
+    roomType: initialData.roomType ?? '',
   });
 
   const [galleryImages, setGalleryImages] = useState<string[]>(initialData.images ?? []);
@@ -443,17 +449,40 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
   };
 
   const contentFields = [
-    { base: 'description', es: 'descriptionEs', en: 'descriptionEn', labelEs: 'Descripción principal', labelEn: 'Main description', rows: 5, required: true },
-    { base: 'summary', es: 'summaryEs', en: 'summaryEn', labelEs: 'Resumen', labelEn: 'Summary', rows: 3, required: false },
-    { base: 'shortDescription', es: 'shortDescriptionEs', en: 'shortDescriptionEn', labelEs: 'Descripción corta', labelEn: 'Short description', rows: 3, required: false },
-    { base: 'longDescription', es: 'longDescriptionEs', en: 'longDescriptionEn', labelEs: 'Descripción larga', labelEn: 'Long description', rows: 4, required: false },
-    { base: 'notes', es: 'notesEs', en: 'notesEn', labelEs: 'Notas', labelEn: 'Notes', rows: 3, required: false },
-    { base: 'interaction', es: 'interactionEs', en: 'interactionEn', labelEs: 'Interacción con huéspedes', labelEn: 'Guest interaction', rows: 3, required: false },
-    { base: 'neighborhood', es: 'neighborhoodEs', en: 'neighborhoodEn', labelEs: 'Vecindario', labelEn: 'Neighborhood', rows: 3, required: false },
-    { base: 'access', es: 'accessEs', en: 'accessEn', labelEs: 'Acceso', labelEn: 'Access', rows: 3, required: false },
-    { base: 'space', es: 'spaceEs', en: 'spaceEn', labelEs: 'Espacio', labelEn: 'Space', rows: 3, required: false },
-    { base: 'transit', es: 'transitEs', en: 'transitEn', labelEs: 'Transporte', labelEn: 'Transit', rows: 3, required: false },
-    { base: 'houseManual', es: 'houseManualEs', en: 'houseManualEn', labelEs: 'Manual de la casa', labelEn: 'House manual', rows: 3, required: false },
+    {
+      base: "description",
+      es: "descriptionEs",
+      en: "descriptionEn",
+      labelEs: "Descripción principal",
+      labelEn: "Main description",
+      rows: 4,
+      required: true,
+      hintEs:
+        "Frase de presentación única de este alojamiento. Lo común (Wi‑Fi, A/C, ubicación, ferry) se muestra automáticamente en el sitio.",
+      hintEn: "Unique intro for this listing. Shared details (Wi‑Fi, A/C, location, ferry) are shown automatically on the site.",
+    },
+    {
+      base: "space",
+      es: "spaceEs",
+      en: "spaceEn",
+      labelEs: "Detalles únicos",
+      labelEn: "Unique details",
+      rows: 4,
+      required: false,
+      hintEs: "Camas, capacidad, cocina exclusiva vs compartida, balcón, m², etc. Solo lo que diferencia esta unidad.",
+      hintEn: "Beds, capacity, exclusive vs shared kitchen, balcony, size, etc. Only what makes this unit different.",
+    },
+    {
+      base: "notes",
+      es: "notesEs",
+      en: "notesEn",
+      labelEs: "Notas especiales (opcional)",
+      labelEn: "Special notes (optional)",
+      rows: 2,
+      required: false,
+      hintEs: "Solo si hay algo extra: sin cocina completa, estacionamiento, acceso a planta, etc.",
+      hintEn: "Only if needed: no full kitchen, parking, floor access, etc.",
+    },
   ] as const;
 
   return (
@@ -525,6 +554,76 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
             <div className="space-y-2">
               <Label htmlFor="location">Ubicación *</Label>
               <Input id="location" value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="propertyType">Tipo de propiedad</Label>
+              <select
+                id="propertyType"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={
+                  PROPERTY_TYPE_ADMIN_OPTIONS.some((o) => o.value === formData.propertyType)
+                    ? formData.propertyType
+                    : formData.propertyType
+                      ? "__custom__"
+                      : ""
+                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "__custom__") return;
+                  setFormData((prev) => ({ ...prev, propertyType: v }));
+                }}
+              >
+                <option value="">— Seleccionar —</option>
+                {PROPERTY_TYPE_ADMIN_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+                <option value="__custom__">Personalizado…</option>
+              </select>
+              <Input
+                placeholder="Ej: Apartamento, Estudio, Casa completa"
+                value={formData.propertyType ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, propertyType: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roomType">Clasificación / subtipo</Label>
+              <select
+                id="roomType"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={
+                  ROOM_TYPE_ADMIN_OPTIONS.some((o) => o.value === formData.roomType)
+                    ? formData.roomType
+                    : formData.roomType
+                      ? "__custom__"
+                      : ""
+                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "__custom__") return;
+                  setFormData((prev) => ({ ...prev, roomType: v }));
+                }}
+              >
+                <option value="">— Seleccionar —</option>
+                {ROOM_TYPE_ADMIN_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+                <option value="__custom__">Personalizado…</option>
+              </select>
+              <Input
+                placeholder="Ej: Departamento completo, Habitación en casa compartida"
+                value={formData.roomType ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, roomType: e.target.value }))
+                }
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1003,7 +1102,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. El frontend mostrará automáticamente el idioma seleccionado por el visitante.
+              Editas textos en {contentLang === 'es' ? 'Español' : 'English'}. Wi‑Fi, A/C, ubicación, playas, ferry y horarios se muestran solos en la ficha (no hace falta repetirlos aquí).
             </p>
           </div>
 
@@ -1014,6 +1113,11 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
                   {contentLang === 'es' ? field.labelEs : field.labelEn}
                   {field.required ? ' *' : ''}
                 </Label>
+                {'hintEs' in field && (
+                  <p className="text-xs text-muted-foreground">
+                    {contentLang === 'es' ? field.hintEs : field.hintEn}
+                  </p>
+                )}
                 <Textarea
                   id={`${field.base}-${contentLang}`}
                   rows={field.rows}

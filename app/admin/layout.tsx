@@ -1,6 +1,14 @@
 import { ReactNode } from 'react';
-import AdminLayoutClient from './layout-client';
+import dynamic from 'next/dynamic';
 import { isAdminAuthenticated } from '@/lib/auth/admin/admin';
+
+const AdminLayoutClient = dynamic(() => import('./layout-client'), {
+  loading: () => (
+    <div className="flex h-screen items-center justify-center bg-gray-50 text-sm text-gray-600">
+      Cargando panel…
+    </div>
+  ),
+});
 
 interface AdminLayoutProps {
   children: ReactNode;

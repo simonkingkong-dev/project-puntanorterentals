@@ -21,6 +21,13 @@ import {
   sortBySortOrder,
 } from "@/lib/firestore-query-utils";
 import { ensureAllPropertiesAvailabilityFresh } from "@/lib/hostfully-availability-sync";
+import {
+  BUSINESS_REVIEW_PLATFORM_STATS_DOC,
+  businessStatToPlatformStat,
+  mergePropertyAndBusinessPlatformStats,
+  type BusinessReviewPlatformStatsDoc,
+  type GlobalReviewAggregateOverride,
+} from "@/lib/business-review-platform-stats";
 
 /** Converts Firestore Timestamp, Date, or ISO string to Date. Returns epoch for missing/invalid to avoid Invalid Date. */
 function safeTimestampToDate(value: unknown): Date {
@@ -318,21 +325,135 @@ function mapPropertyReviewPlatformStatDoc(doc: QueryDocumentSnapshot): PropertyR
   } as PropertyReviewPlatformStat;
 }
 
+function mapGlobalReviewAggregateOverride(
+  raw: GlobalReviewAggregateOverride | undefined
+): GlobalReviewAggregateOverride | null {
+  if (!raw) return null;
+  return {
+    averageRating: raw.averageRating,
+    reviewCount: raw.reviewCount,
+    status: raw.status,
+    updatedAt: safeTimestampToDate(raw.updatedAt),
+  };
+}
+
+export const getGlobalReviewAggregateForAdmin =
+  async (): Promise<GlobalReviewAggregateOverride | null> => {
+    try {
+      const snap = await adminDb
+        .collection("site_settings")
+        .doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC)
+        .get();
+      if (!snap.exists) return null;
+      const data = snap.data() as BusinessReviewPlatformStatsDoc;
+      return mapGlobalReviewAggregateOverride(data.aggregateOverride);
+    } catch (error) {
+      console.error("Admin: Error fetching global review aggregate", error);
+      return null;
+    }
+  };
+
+export const getPublishedGlobalReviewAggregateAdmin = async (): Promise<{
+  averageRating: number;
+  reviewCount: number;
+} | null> => {
+  const aggregate = await getGlobalReviewAggregateForAdmin();
+  if (
+    !aggregate ||
+    aggregate.status !== "published" ||
+    aggregate.reviewCount <= 0 ||
+    aggregate.averageRating <= 0
+  ) {
+    return null;
+  }
+  return {
+    averageRating: aggregate.averageRating,
+    reviewCount: aggregate.reviewCount,
+  };
+};
+
+export const getPublishedBusinessReviewPlatformStatsAdmin =
+  async (): Promise<PropertyReviewPlatformStat[]> => {
+    try {
+      const snap = await adminDb
+        .collection("site_settings")
+        .doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC)
+        .get();
+      if (!snap.exists) return [];
+      const data = snap.data() as BusinessReviewPlatformStatsDoc;
+      const stats = data.stats ?? {};
+      return Object.entries(stats)
+        .map(([channel, record]) => {
+          if (!record || record.status !== "published") return null;
+          return businessStatToPlatformStat(
+            channel as PropertyReviewPlatformStat["channel"],
+            {
+              ...record,
+              updatedAt: safeTimestampToDate(record.updatedAt),
+            }
+          );
+        })
+        .filter((s): s is PropertyReviewPlatformStat => s !== null)
+        .sort((a, b) => a.channel.localeCompare(b.channel));
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Admin: Error fetching business review stats", error);
+      }
+      return [];
+    }
+  };
+
+export const getBusinessReviewPlatformStatsForAdmin =
+  async (): Promise<PropertyReviewPlatformStat[]> => {
+    try {
+      const snap = await adminDb
+        .collection("site_settings")
+        .doc(BUSINESS_REVIEW_PLATFORM_STATS_DOC)
+        .get();
+      if (!snap.exists) return [];
+      const data = snap.data() as BusinessReviewPlatformStatsDoc;
+      const stats = data.stats ?? {};
+      return Object.entries(stats)
+        .map(([channel, record]) => {
+          if (!record) return null;
+          return businessStatToPlatformStat(
+            channel as PropertyReviewPlatformStat["channel"],
+            {
+              ...record,
+              updatedAt: safeTimestampToDate(record.updatedAt),
+            }
+          );
+        })
+        .filter((s): s is PropertyReviewPlatformStat => s !== null)
+        .sort((a, b) => a.channel.localeCompare(b.channel));
+    } catch (error) {
+      console.error("Admin: Error fetching business review stats", error);
+      return [];
+    }
+  };
+
 export const getPublishedPropertyReviewStatsAdmin = async (
   propertyId: string
 ): Promise<PropertyReviewPlatformStat[]> => {
   try {
-    const snapshot = await adminDb
-      .collection('property_review_stats')
-      .where('propertyId', '==', propertyId)
-      .get();
-    return snapshot.docs
+    const [propertySnap, businessStats] = await Promise.all([
+      adminDb
+        .collection("property_review_stats")
+        .where("propertyId", "==", propertyId)
+        .get(),
+      getPublishedBusinessReviewPlatformStatsAdmin(),
+    ]);
+    const propertyStats = propertySnap.docs
       .map(mapPropertyReviewPlatformStatDoc)
-      .filter((stat) => stat.status === 'published')
-      .sort((a, b) => a.channel.localeCompare(b.channel));
+      .filter((stat) => stat.status === "published");
+    return mergePropertyAndBusinessPlatformStats(
+      propertyId,
+      propertyStats,
+      businessStats
+    );
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Admin: Error fetching published review stats', error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Admin: Error fetching published review stats", error);
     }
     return [];
   }

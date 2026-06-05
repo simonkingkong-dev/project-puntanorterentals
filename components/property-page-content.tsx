@@ -21,6 +21,7 @@ interface PropertyPageContentProps {
   property: Property;
   curatedReviews: PropertyReview[];
   platformStats?: PropertyReviewPlatformStat[];
+  globalReviewAggregate?: { averageRating: number; reviewCount: number } | null;
   propertyTestimonials?: Testimonial[];
   initialSearch?: ListingSearchSelection;
 }
@@ -29,6 +30,7 @@ export default function PropertyPageContent({
   property,
   curatedReviews,
   platformStats = [],
+  globalReviewAggregate = null,
   propertyTestimonials = [],
   initialSearch,
 }: PropertyPageContentProps) {
@@ -106,6 +108,7 @@ export default function PropertyPageContent({
         property={property}
         curatedReviews={curatedReviews}
         platformStats={platformStats}
+        globalReviewAggregate={globalReviewAggregate}
         propertyTestimonials={propertyTestimonials}
         initialSearch={initialSearch}
         currency={currency}
