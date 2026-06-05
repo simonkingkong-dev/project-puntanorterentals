@@ -10,6 +10,7 @@ import { PROPERTY_REVIEW_CHANNELS } from "@/lib/review-channels";
 import {
   GLOBAL_REVIEW_PLATFORM_CHANNELS,
   type GlobalReviewAggregateOverride,
+  type GlobalReviewPlatformChannel,
 } from "@/lib/business-review-platform-stats";
 import { computeAggregateReviewStats } from "@/lib/review-platform-stats";
 import type { PropertyReviewChannel, PropertyReviewPlatformStat } from "@/lib/types";
@@ -49,7 +50,9 @@ export default function GlobalReviewStatsForm({
   initialPlatformStats,
   initialAggregate,
 }: GlobalReviewStatsFormProps) {
-  const [channelDrafts, setChannelDrafts] = useState<Record<PropertyReviewChannel, ChannelDraft>>(
+  const [channelDrafts, setChannelDrafts] = useState<
+    Record<GlobalReviewPlatformChannel, ChannelDraft>
+  >(
     () => ({
       google: getChannelDraft(initialPlatformStats, "google"),
       airbnb: getChannelDraft(initialPlatformStats, "airbnb"),
@@ -63,17 +66,17 @@ export default function GlobalReviewStatsForm({
   const [aggregateStatus, setAggregateStatus] = useState<"draft" | "published" | undefined>(
     initialAggregate?.status
   );
-  const [savingChannel, setSavingChannel] = useState<PropertyReviewChannel | null>(null);
+  const [savingChannel, setSavingChannel] = useState<GlobalReviewPlatformChannel | null>(null);
   const [savingAggregate, setSavingAggregate] = useState(false);
 
-  const publishedForPreview = useMemo(
-    () =>
-      GLOBAL_REVIEW_PLATFORM_CHANNELS.map((channel) => {
-        const draft = channelDrafts[channel];
-        if (draft.status !== "published" || draft.reviewCount <= 0 || draft.averageRating <= 0) {
-          return null;
-        }
-        return {
+  const publishedForPreview = useMemo((): PropertyReviewPlatformStat[] => {
+    return GLOBAL_REVIEW_PLATFORM_CHANNELS.flatMap((channel) => {
+      const draft = channelDrafts[channel];
+      if (draft.status !== "published" || draft.reviewCount <= 0 || draft.averageRating <= 0) {
+        return [];
+      }
+      return [
+        {
           id: `business-${channel}`,
           propertyId: "",
           channel,
@@ -82,21 +85,24 @@ export default function GlobalReviewStatsForm({
           screenshotUrl: "",
           status: "published" as const,
           createdAt: new Date(),
-        };
-      }).filter((s): s is PropertyReviewPlatformStat => s !== null),
-    [channelDrafts]
-  );
+        },
+      ];
+    });
+  }, [channelDrafts]);
 
   const computedAggregate = computeAggregateReviewStats(publishedForPreview);
 
-  const updateChannelDraft = (channel: PropertyReviewChannel, patch: Partial<ChannelDraft>) => {
+  const updateChannelDraft = (
+    channel: GlobalReviewPlatformChannel,
+    patch: Partial<ChannelDraft>
+  ) => {
     setChannelDrafts((prev) => ({
       ...prev,
       [channel]: { ...prev[channel], ...patch },
     }));
   };
 
-  const saveChannel = async (channel: PropertyReviewChannel) => {
+  const saveChannel = async (channel: GlobalReviewPlatformChannel) => {
     const draft = channelDrafts[channel];
     setSavingChannel(channel);
     try {
@@ -117,7 +123,7 @@ export default function GlobalReviewStatsForm({
     }
   };
 
-  const publishChannel = async (channel: PropertyReviewChannel) => {
+  const publishChannel = async (channel: GlobalReviewPlatformChannel) => {
     await saveChannel(channel);
     const result = await publishBusinessReviewPlatformStat(channel);
     if (!result.success) {

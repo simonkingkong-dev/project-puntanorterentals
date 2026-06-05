@@ -24,11 +24,13 @@ export type BusinessReviewPlatformStatsDoc = {
 };
 
 /** Canales que se gestionan como promedios globales en Testimonios. */
-export const GLOBAL_REVIEW_PLATFORM_CHANNELS: PropertyReviewChannel[] = [
+export const GLOBAL_REVIEW_PLATFORM_CHANNELS = [
   "google",
   "airbnb",
   "booking",
-];
+] as const satisfies readonly PropertyReviewChannel[];
+
+export type GlobalReviewPlatformChannel = (typeof GLOBAL_REVIEW_PLATFORM_CHANNELS)[number];
 
 export function businessStatToPlatformStat(
   channel: PropertyReviewChannel,
