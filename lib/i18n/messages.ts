@@ -77,6 +77,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Propiedades que coinciden con tu búsqueda",
     properties_empty_search_title: "No se encontraron propiedades",
     properties_empty_search_subtitle: "Intenta ajustar tus filtros de búsqueda.",
+    properties_results_found_one: "Encontramos 1 opción con tus filtros.",
+    properties_results_found: "Encontramos {count} opciones con tus filtros.",
     properties_empty_title: "Aún no hay propiedades cargadas",
     properties_empty_subtitle:
       "Vuelve pronto o carga propiedades desde el panel de administración.",
@@ -525,6 +527,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     properties_subtitle_results: "Properties matching your search",
     properties_empty_search_title: "No properties found",
     properties_empty_search_subtitle: "Try adjusting your search filters.",
+    properties_results_found_one: "We found 1 option matching your filters.",
+    properties_results_found: "We found {count} options matching your filters.",
     properties_empty_title: "No properties yet",
     properties_empty_subtitle:
       "Check back soon or add properties from the admin panel.",

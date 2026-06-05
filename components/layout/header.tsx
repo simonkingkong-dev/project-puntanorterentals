@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
 import { useLocale } from '@/components/providers/locale-provider';
 
+const SITE_ISOTIPO = '/isotipo-compass-01.png?v=2';
+
 function CartLink({ className }: { className?: string }) {
   const { cartCount } = useCart();
   const { t } = useLocale();
@@ -99,7 +101,15 @@ export default function Header() {
             className="flex items-center space-x-2 justify-self-start min-w-0"
             aria-label={`Punta Norte Rentals - ${t('nav_home', 'Home')}`}
           >
-            <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} priority />
+            <Image
+              src={SITE_ISOTIPO}
+              alt="Punta Norte Rentals"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain bg-transparent"
+              priority
+              unoptimized
+            />
             <div className="flex flex-col leading-none">
               <span className="text-lg font-bold text-gray-900 leading-none">Punta Norte</span>
               <span className="text-sm font-medium text-gray-500 leading-none">Rentals</span>
@@ -147,7 +157,14 @@ export default function Header() {
                 <SheetContent side="right" className="w-64">
                   <SheetTitle className="sr-only">{t('nav_mobile_menu_title', 'Navigation menu')}</SheetTitle>
                   <div className="flex items-center space-x-2 mb-8">
-                    <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
+                    <Image
+                      src={SITE_ISOTIPO}
+                      alt="Punta Norte Rentals"
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 object-contain bg-transparent"
+                      unoptimized
+                    />
                     <div className="flex flex-col leading-none">
                       <span className="text-xl font-bold text-gray-900 leading-none">Punta Norte</span>
                       <span className="text-xs font-medium text-gray-600 leading-none">Rentals</span>

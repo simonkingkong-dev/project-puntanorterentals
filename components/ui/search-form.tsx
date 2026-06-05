@@ -42,12 +42,18 @@ function formatDateOnly(d: Date): string {
   return `${y}-${month}-${day}`;
 }
 
-export default function SearchForm() {
+export default function SearchForm({
+  defaultCollapsed = false,
+  resultsMessage = null,
+}: {
+  defaultCollapsed?: boolean;
+  resultsMessage?: string | null;
+}) {
   const router = useRouter();
   const urlSearchParams = useSearchParams();
   const { locale, t } = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : esLocale;
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => !defaultCollapsed);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -65,6 +71,10 @@ export default function SearchForm() {
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
   }, []);
+
+  useEffect(() => {
+    setIsOpen(!defaultCollapsed);
+  }, [defaultCollapsed]);
 
   const urlKey = urlSearchParams.toString();
   useEffect(() => {
@@ -274,6 +284,12 @@ export default function SearchForm() {
           }`}
         />
       </button>
+
+      {!isOpen && resultsMessage ? (
+        <p className="px-6 sm:px-7 pb-3 text-sm text-gray-700 leading-relaxed">
+          {resultsMessage}
+        </p>
+      ) : null}
 
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${

@@ -15,6 +15,10 @@ const nextConfig = {
         pathname: '/logo.png',
         search: '?v=2',
       },
+      {
+        pathname: '/isotipo-compass-01.png',
+        search: '?v=2',
+      },
     ],
     remotePatterns: [
       {

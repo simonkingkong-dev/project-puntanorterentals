@@ -55,16 +55,40 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
   const title =
     locale === "en"
-      ? "Punta Norte Rentals - Vacation Rentals in Mexico"
-      : "Punta Norte Rentals - Propiedades Vacacionales en México";
+      ? "Vacation Rentals in Isla Mujeres | Punta Norte Rentals"
+      : "Rentas Vacacionales en Isla Mujeres | Punta Norte Rentals";
   const description =
     locale === "en"
-      ? "Vacation homes and apartments in Punta Norte, Mexico. Direct booking with live availability, secure Stripe payments, and personalized support."
-      : "Casas y departamentos vacacionales en Punta Norte, México. Reserva directa con disponibilidad en tiempo real, pagos seguros con Stripe y atención personalizada.";
+      ? "Apartments and studios for rent in Isla Mujeres, Mexico. Near Playa Norte, Punta Norte, and Hidalgo pedestrian street. From $44 USD/night. Direct booking, no fees."
+      : "Apartamentos y estudios en renta en Isla Mujeres, México. Cerca de Playa Norte, Punta Norte y la peatonal Hidalgo. Desde $44 USD/noche. Reserva directa, sin comisiones.";
   const keywords =
     locale === "en"
-      ? ["Punta Norte vacation rental", "Mexico beach house", "vacation rental Mexico", "vacation homes", "Mexico vacation apartment"]
-      : ["renta vacacional Punta Norte", "casa playa México", "vacation rental Mexico", "propiedades vacacionales", "departamento vacacional México"];
+      ? [
+          "vacation rentals Isla Mujeres",
+          "Punta Norte rentals",
+          "apartments near Playa Norte",
+          "studio Isla Mujeres",
+          "family apartment Isla Mujeres",
+          "vacation rental near Hidalgo street",
+          "Isla Mujeres accommodation",
+          "Mexico Caribbean vacation rental",
+          "Quintana Roo vacation apartments",
+          "beachfront rental Isla Mujeres",
+        ]
+      : [
+          "rentas en Isla Mujeres",
+          "rentas en Punta Norte",
+          "rentas en zona céntrica Isla Mujeres",
+          "estudio en Isla Mujeres",
+          "estudio cerca de peatonal Hidalgo",
+          "apartamentos cerca de Playa Norte",
+          "apartamentos familiares Isla Mujeres",
+          "renta vacacional Isla Mujeres",
+          "departamento en Isla Mujeres",
+          "alquiler vacacional Quintana Roo",
+          "La Casa Naranja Isla Mujeres",
+          "renta Punta Norte Isla Mujeres",
+        ];
 
   return {
     title,

@@ -37,3 +37,6 @@ next-env.d.ts
 
 # Added by ggshield
 .cache_ggshield
+
+# Claude local settings (may contain machine-specific permissions)
+.claude/settings.local.json

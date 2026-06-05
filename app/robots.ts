@@ -13,6 +13,15 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: ['/admin/', '/api/'],
       },
+      // AI search engine bots — allow explicitly for GEO (Generative Engine Optimization)
+      { userAgent: 'GPTBot', allow: '/' },
+      { userAgent: 'ChatGPT-User', allow: '/' },
+      { userAgent: 'PerplexityBot', allow: '/' },
+      { userAgent: 'ClaudeBot', allow: '/' },
+      { userAgent: 'anthropic-ai', allow: '/' },
+      { userAgent: 'Bingbot', allow: '/' },
+      { userAgent: 'BingPreview', allow: '/' },
     ],
+    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://puntanorterentals.com'}/sitemap.xml`,
   };
 }

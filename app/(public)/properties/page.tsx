@@ -12,6 +12,8 @@ import { SearchParams } from '@/lib/types';
 import type { PropertyListItem } from '@/lib/property-list-item';
 import PropertiesMapLayout from '@/components/ui/properties-map-layout';
 import { getServerLocale, tServer } from '@/lib/i18n/server';
+import { messages } from '@/lib/i18n/messages';
+import type { Locale } from '@/lib/i18n/messages';
 import { contentMap, pickSiteContent } from '@/lib/site-content-localization';
 import { listingSearchHasAnyActiveFilters } from '@/lib/listing-search-params';
 
@@ -30,16 +32,30 @@ const getCachedPropertiesPageContent = unstable_cache(
 );
 
 export async function generateMetadata(): Promise<Metadata> {
-  const title = await tServer('nav_properties');
-  const description = await tServer('properties_subtitle_all');
+  const locale = await getServerLocale();
+  const title =
+    locale === 'en'
+      ? 'All Vacation Rentals in Isla Mujeres'
+      : 'Todas las Rentas Vacacionales en Isla Mujeres';
+  const description =
+    locale === 'en'
+      ? 'Browse studios, apartments, and vacation homes in Isla Mujeres. Near Playa Norte, Punta Norte, and Hidalgo street. Groups, couples, and families welcome. From $44 USD/night.'
+      : 'Explora estudios, apartamentos y casas vacacionales en Isla Mujeres. Cerca de Playa Norte, Punta Norte y la peatonal Hidalgo. Para grupos, parejas y familias. Desde $44 USD/noche.';
+  const keywords =
+    locale === 'en'
+      ? ['vacation rentals Isla Mujeres', 'studios Isla Mujeres', 'family apartments Isla Mujeres', 'near Playa Norte', 'Punta Norte rentals', 'Quintana Roo vacation']
+      : ['rentas vacacionales Isla Mujeres', 'estudios Isla Mujeres', 'apartamentos familiares Isla Mujeres', 'cerca de Playa Norte', 'rentas Punta Norte', 'renta zona céntrica Isla Mujeres'];
 
   return {
     title,
     description,
+    keywords,
     openGraph: {
       title: `${title} | Punta Norte Rentals`,
       description,
+      images: [{ url: '/og-image.png', width: 1200, height: 630, alt: title }],
     },
+    alternates: { canonical: '/properties' },
   };
 }
 
@@ -47,67 +63,35 @@ interface PropertiesPageProps {
   searchParams: Promise<SearchParams>;
 }
 
-function PropertySkeleton() {
-  return (
-    <div className="space-y-3">
-      <Skeleton className="h-64 w-full" />
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-4 w-1/2" />
-      <Skeleton className="h-4 w-full" />
-      <div className="flex justify-between">
-        <Skeleton className="h-4 w-1/3" />
-        <Skeleton className="h-4 w-1/4" />
-      </div>
-    </div>
-  );
-}
-
-async function PropertiesList({ searchParams }: { searchParams: SearchParams }) {
-  const params = searchParams ?? {};
-  let properties: PropertyListItem[];
-  const hasSearchParams = listingSearchHasAnyActiveFilters(params);
-
+async function loadPropertiesForPage(
+  params: SearchParams,
+  hasFilters: boolean
+): Promise<PropertyListItem[]> {
   try {
-    if (hasSearchParams) {
-      const paramsForSearch: SearchParams = {
-        ...params,
-        guests: params.guests ? Number(params.guests) : undefined,
-      };
-      properties = await searchPropertiesForList(paramsForSearch);
-    } else {
-      properties = await getCachedProperties();
+    if (hasFilters) {
+      return await searchPropertiesForList(params);
     }
+    return await getCachedProperties();
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error("[Properties]", error);
+      console.error('[Properties]', error);
     }
-    properties = [];
+    return [];
   }
+}
 
-  if (!Array.isArray(properties) || properties.length === 0) {
-    const emptyTitle = await tServer(
-      hasSearchParams ? 'properties_empty_search_title' : 'properties_empty_title',
-      hasSearchParams ? 'No properties found' : 'No properties yet'
-    );
-    const emptySubtitle = await tServer(
-      hasSearchParams ? 'properties_empty_search_subtitle' : 'properties_empty_subtitle',
-      hasSearchParams
-        ? 'Try adjusting your search filters.'
-        : 'Come back soon or load properties from the admin panel.'
-    );
-    return (
-      <div className="text-center py-12 col-span-1 md:col-span-2 lg:col-span-3">
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          {emptyTitle}
-        </h3>
-        <p className="text-gray-600">
-          {emptySubtitle}
-        </p>
-      </div>
-    );
-  }
-
-  return <PropertiesMapLayout properties={properties} />;
+function buildResultsMessage(
+  locale: Locale,
+  hasFilters: boolean,
+  count: number,
+  emptyTitle: string,
+  emptySubtitle: string
+): string | null {
+  if (!hasFilters) return null;
+  if (count === 0) return `${emptyTitle}. ${emptySubtitle}`;
+  const L = messages[locale];
+  if (count === 1) return L.properties_results_found_one;
+  return L.properties_results_found.replace('{count}', String(count));
 }
 
 export default async function PropertiesPage({ searchParams }: PropertiesPageProps) {
@@ -121,6 +105,8 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
     guests: params.guests ? Number(params.guests) : undefined,
   };
 
+  const properties = await loadPropertiesForPage(numericSearchParams, hasFilters);
+
   const pageTitle = await tServer(
     hasFilters ? 'properties_title_results' : 'properties_title_all',
     hasFilters ? 'Search Results' : 'All Properties'
@@ -129,43 +115,63 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
     hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all',
     hasFilters ? 'Properties matching your search' : 'Browse our curated collection of premium vacation stays.'
   );
+  const emptyTitle = await tServer(
+    'properties_empty_search_title',
+    'No properties found'
+  );
+  const emptySubtitle = await tServer(
+    'properties_empty_search_subtitle',
+    'Try adjusting your search filters.'
+  );
   const titleKey = hasFilters ? 'properties_title_results' : 'properties_title_all';
   const subtitleKey = hasFilters ? 'properties_subtitle_results' : 'properties_subtitle_all';
   const finalTitle = pickSiteContent(c, titleKey, locale, pageTitle);
   const finalSubtitle = pickSiteContent(c, subtitleKey, locale, pageSubtitle);
+  const resultsMessage = buildResultsMessage(
+    locale,
+    hasFilters,
+    properties.length,
+    emptyTitle,
+    emptySubtitle
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               {finalTitle}
             </h1>
-            <p className="text-lg text-gray-600">
-              {finalSubtitle}
-            </p>
+            <p className="text-lg text-gray-600">{finalSubtitle}</p>
           </div>
           <Suspense fallback={<Skeleton className="h-56 w-full max-w-4xl mx-auto rounded-xl" />}>
-            <SearchForm />
+            <SearchForm
+              defaultCollapsed={hasFilters}
+              resultsMessage={resultsMessage}
+            />
           </Suspense>
         </div>
       </div>
 
-      {/* Properties + Map */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-1">
-        <Suspense
-          fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.from({ length: 6 }, (_, i) => (
-                <PropertySkeleton key={i} />
-              ))}
+        {properties.length === 0 ? (
+          hasFilters ? null : (
+            <div className="text-center py-12 col-span-1 md:col-span-2 lg:col-span-3">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {await tServer('properties_empty_title', 'No properties yet')}
+              </h3>
+              <p className="text-gray-600">
+                {await tServer(
+                  'properties_empty_subtitle',
+                  'Come back soon or load properties from the admin panel.'
+                )}
+              </p>
             </div>
-          }
-        >
-          <PropertiesList searchParams={numericSearchParams} />
-        </Suspense>
+          )
+        ) : (
+          <PropertiesMapLayout properties={properties} />
+        )}
       </div>
     </div>
   );
