@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PhoneCountryCodeSelect } from '@/components/ui/phone-country-code-select';
 import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
@@ -103,18 +104,9 @@ export default function ReservationForm({
     guestPhone: '',
     phoneCountryCode: defaultCountryShort,
   });
-  const [countrySearch, setCountrySearch] = useState('');
   const [hostfullyNightlyTotal, setHostfullyNightlyTotal] = useState<number | null>(null);
   const [nightlyBreakdown, setNightlyBreakdown] = useState<Array<{ date: string; amount: number }>>([]);
 
-  const filteredCountryCodes = useMemo(() => {
-    const search = countrySearch.trim().toLowerCase();
-    if (!search) return COUNTRY_CODES;
-    return COUNTRY_CODES.filter(({ country, code, short: shortCode }) => {
-      const haystack = `${country} ${code} ${shortCode}`.toLowerCase();
-      return haystack.includes(search);
-    });
-  }, [countrySearch]);
 
   const hasFullRange = Boolean(selectedDates?.checkIn && selectedDates?.checkOut);
   const nights = hasFullRange && selectedDates ? calculateNights(selectedDates.checkIn!, selectedDates.checkOut!) : 0;
@@ -434,30 +426,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                 {t('reservation_phone_legend', 'Phone *')}
               </legend>
               <div className="flex gap-2">
-                <Select
+                <PhoneCountryCodeSelect
+                  id="guestPhone-country"
                   value={formData.phoneCountryCode}
-                  onValueChange={(value) => setFormData({ ...formData, phoneCountryCode: value })}
-                  aria-label={t('reservation_phone_country_aria', 'Country code')}
-                >
-                  <SelectTrigger id="guestPhone-country" className="w-[140px] shrink-0">
-                    <SelectValue placeholder="Code" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="px-2 pb-1">
-                      <Input
-                        placeholder={t('reservation_phone_search', 'Search country…')}
-                        className="h-8 text-xs"
-                        value={countrySearch}
-                        onChange={(e) => setCountrySearch(e.target.value)}
-                      />
-                    </div>
-                    {filteredCountryCodes.map(({ code, short: shortCode, country }) => (
-                      <SelectItem key={shortCode} value={shortCode}>
-                        {code} {shortCode} — {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(shortCode) =>
+                    setFormData({ ...formData, phoneCountryCode: shortCode })
+                  }
+                  placeholder={t('reservation_phone_country_placeholder', 'Country')}
+                  searchPlaceholder={t('reservation_phone_search', 'Search country…')}
+                  emptyLabel={t('reservation_phone_empty', 'No country found.')}
+                  ariaLabel={t('reservation_phone_country_aria', 'Country code')}
+                />
                 <Input
                   id="guestPhone"
                   type="tel"

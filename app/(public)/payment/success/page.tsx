@@ -10,6 +10,7 @@ import { Reservation } from '@/lib/types';
 import { format } from 'date-fns';
 import { es as esLocale, enUS } from 'date-fns/locale';
 import { useLocale } from '@/components/providers/locale-provider';
+import type { Locale } from '@/lib/i18n/messages';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
@@ -54,8 +55,13 @@ function formatMoney(amount: number, currency: string): string {
   }).format(amount);
 }
 
-function SuccessContent() {
-  const { t, locale } = useLocale();
+function SuccessContent({
+  t,
+  locale,
+}: {
+  t: (key: string, fallback?: string) => string;
+  locale: Locale;
+}) {
   const dateFnsLocale = locale === 'en' ? enUS : esLocale;
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
@@ -288,12 +294,26 @@ function SuccessContent() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
               {t('payment_success_services_title', 'Booking confirmed!')}
             </h2>
-            <p className="text-gray-600 leading-relaxed mb-8 max-w-md mx-auto">
-              {t(
-                'payment_success_services_body',
-                'Your stay in Isla Mujeres is all set. Browse our activities and services to enhance your trip.'
-              )}
-            </p>
+            <div className="mb-8 max-w-md mx-auto space-y-3">
+              <p className="text-gray-600 leading-relaxed">
+                {t(
+                  'payment_success_services_intro',
+                  'Your stay in Isla Mujeres is all set.'
+                )}
+              </p>
+              <p className="text-lg sm:text-xl font-bold leading-snug text-gray-900">
+                {t(
+                  'payment_success_services_highlight',
+                  'Browse our activities and services to enhance your trip:'
+                )}
+              </p>
+              <p className="text-base sm:text-lg leading-relaxed text-gray-700">
+                {t(
+                  'payment_success_services_examples',
+                  'tours, transfers, ocean experiences, and more.'
+                )}
+              </p>
+            </div>
             <div className="flex flex-col gap-3">
               <Button
                 asChild
@@ -458,17 +478,19 @@ function SuccessContent() {
 }
 
 export default function PaymentSuccessPage() {
+  const { t, locale } = useLocale();
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Envolvemos en Suspense para que useSearchParams funcione */}
+        {/* useSearchParams requiere Suspense; useLocale va fuera para conservar el contexto en SSR */}
         <Suspense fallback={
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-12 h-12 animate-spin text-gray-400 mb-4" />
-            <p className="text-lg text-gray-600">Cargando...</p>
+            <p className="text-lg text-gray-600">{t('success_loading', 'Loading confirmation…')}</p>
           </div>
         }>
-          <SuccessContent />
+          <SuccessContent t={t} locale={locale} />
         </Suspense>
       </div>
     </div>

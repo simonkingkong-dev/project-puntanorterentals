@@ -166,7 +166,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     reservation_email: "Correo electrónico *",
     reservation_phone_legend: "Teléfono *",
     reservation_phone_country_aria: "Código de país",
+    reservation_phone_country_placeholder: "País",
     reservation_phone_search: "Buscar país…",
+    reservation_phone_empty: "No se encontró el país.",
     reservation_phone_number_aria: "Número de teléfono",
     reservation_guests_label: "Número de huéspedes *",
     reservation_price_summary: "Resumen de precios",
@@ -212,8 +214,12 @@ export const messages: Record<Locale, Record<string, string>> = {
       "Importe en USD guardado en la reserva; si pagaste en otra moneda, revisa el recibo de Stripe.",
     success_base_usd: "Importe base de la reserva (USD):",
     payment_success_services_title: "¡Reserva confirmada!",
-    payment_success_services_body:
-      "Tu estancia en Isla Mujeres ya está asegurada. Explora nuestro catálogo de actividades y servicios para complementar tu viaje: tours, traslados, experiencias en el mar y más.",
+    payment_success_services_intro:
+      "Tu estancia en Isla Mujeres ya está asegurada.",
+    payment_success_services_highlight:
+      "Explora nuestro catálogo de actividades y servicios para complementar tu viaje:",
+    payment_success_services_examples:
+      "tours, traslados, experiencias en el mar y más.",
     payment_success_services_cta: "Ver actividades y servicios",
     payment_success_services_skip: "Continuar a mi confirmación",
     payment_reservation_summary: "Resumen de reserva",
@@ -334,6 +340,13 @@ export const messages: Record<Locale, Record<string, string>> = {
     page_services_empty: "Estamos preparando nuestras experiencias. Vuelve pronto.",
     page_services_book: "Reservar experiencia",
     page_services_featured: "Destacado",
+    rezdy_embed_section_label: "Reservas de tours con socio",
+    rezdy_iframe_title: "Reservar tours y actividades",
+    rezdy_mobile_title: "Tours y actividades en el mar",
+    rezdy_mobile_body:
+      "Para reservar snorkel, buceo y experiencias con nuestro socio, continúa en la página segura de reservas.",
+    rezdy_mobile_cta: "Continuar a reservar",
+    rezdy_mobile_note: "Serás redirigido al sistema de reservas de nuestro proveedor.",
     not_found_title: "Página no encontrada",
     not_found_body:
       "No encontramos lo que buscas. La página pudo moverse o el enlace no es válido.",
@@ -513,8 +526,12 @@ export const messages: Record<Locale, Record<string, string>> = {
     explore_more_properties: "Explore more properties",
     discover_experiences: "Discover experiences",
     payment_success_services_title: "Booking confirmed!",
-    payment_success_services_body:
-      "Your stay in Isla Mujeres is all set. Browse our activities and services to enhance your trip—tours, transfers, ocean experiences, and more.",
+    payment_success_services_intro:
+      "Your stay in Isla Mujeres is all set.",
+    payment_success_services_highlight:
+      "Browse our activities and services to enhance your trip:",
+    payment_success_services_examples:
+      "tours, transfers, ocean experiences, and more.",
     payment_success_services_cta: "Browse activities & services",
     payment_success_services_skip: "Continue to my confirmation",
     back_home: "Back to home",
@@ -615,7 +632,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     reservation_email: "Email *",
     reservation_phone_legend: "Phone *",
     reservation_phone_country_aria: "Country code",
+    reservation_phone_country_placeholder: "Country",
     reservation_phone_search: "Search country…",
+    reservation_phone_empty: "No country found.",
     reservation_phone_number_aria: "Phone number",
     reservation_guests_label: "Number of guests *",
     reservation_price_summary: "Price summary",
@@ -778,6 +797,13 @@ export const messages: Record<Locale, Record<string, string>> = {
     page_services_empty: "We are preparing our experiences. Check back soon.",
     page_services_book: "Book experience",
     page_services_featured: "Featured",
+    rezdy_embed_section_label: "Partner tour bookings",
+    rezdy_iframe_title: "Book tours and activities",
+    rezdy_mobile_title: "Ocean tours & activities",
+    rezdy_mobile_body:
+      "To book snorkeling, diving, and experiences with our partner, continue on their secure booking page.",
+    rezdy_mobile_cta: "Continue to book",
+    rezdy_mobile_note: "You will be redirected to our provider's booking system.",
     not_found_title: "Page not found",
     not_found_body:
       "We could not find what you are looking for. The page may have moved or the link is incorrect.",
