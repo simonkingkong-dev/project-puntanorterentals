@@ -1,7 +1,8 @@
 /**
  * Variantes de payload para POST /transactions.
- * Primero se intenta SALE con amount explícito (Stripe); fullPayment al final
- * (cobra el balance residual del order — útil tras quoteOverrides correctos).
+ * Primero SALE con amount explícito (Stripe); fullPayment al final.
+ * En todos los intentos se envía transactionId = PaymentIntent id de Stripe
+ * cuando está disponible, además de ir en notes.
  */
 export function buildHostfullyTransactionPayloads(
   orderUid: string,
@@ -12,6 +13,8 @@ export function buildHostfullyTransactionPayloads(
     params.note ??
     (params.externalPaymentId ? `Pago Stripe ${params.externalPaymentId}` : undefined);
 
+  const stripeId = params.externalPaymentId?.trim() || undefined;
+
   return [
     {
       orderUid,
@@ -19,6 +22,7 @@ export function buildHostfullyTransactionPayloads(
       status: 'SUCCESS',
       amount,
       manual: true,
+      ...(stripeId ? { transactionId: stripeId } : {}),
       notes,
     },
     {
@@ -27,7 +31,7 @@ export function buildHostfullyTransactionPayloads(
       status: 'SUCCESS',
       amount,
       manual: false,
-      transactionId: params.externalPaymentId,
+      ...(stripeId ? { transactionId: stripeId } : {}),
       notes,
     },
     {
@@ -36,6 +40,7 @@ export function buildHostfullyTransactionPayloads(
       status: 'SUCCESS',
       fullPayment: true,
       manual: true,
+      ...(stripeId ? { transactionId: stripeId } : {}),
       notes,
     },
   ];
