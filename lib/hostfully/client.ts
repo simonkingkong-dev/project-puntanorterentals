@@ -8,6 +8,8 @@
  * - HOSTFULLY_BASE_URL opcional (default: sandbox para desarrollo)
  */
 
+import { buildHostfullyTransactionPayloads } from "@/lib/hostfully/transaction-payloads";
+
 const DEFAULT_BASE_URL = "https://sandbox.hostfully.com/api/v3.2";
 
 function getBaseUrl(): string {
@@ -362,33 +364,11 @@ export async function registerHostfullyLeadPayment(
     return { synced: false, error: "orderUid no encontrado en el lead de Hostfully" };
   }
 
-  const transactionPayloads: Array<Record<string, unknown>> = [
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      fullPayment: true,
-      manual: true,
-      notes,
-    },
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      amount,
-      manual: false,
-      transactionId: params.externalPaymentId,
-      notes,
-    },
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      amount,
-      manual: true,
-      notes,
-    },
-  ];
+  const transactionPayloads = buildHostfullyTransactionPayloads(orderUid, {
+    amount,
+    externalPaymentId: params.externalPaymentId,
+    note: notes,
+  });
 
   let lastErr = "Hostfully payment sync failed";
   for (const body of transactionPayloads) {

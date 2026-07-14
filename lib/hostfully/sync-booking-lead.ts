@@ -4,6 +4,7 @@
  */
 import { getPropertyByIdAdmin } from '@/lib/firebase-admin-queries';
 import { createHostfullyBookingLead } from '@/lib/hostfully/client';
+import { buildHostfullyQuoteOverrides } from '@/lib/hostfully/quote-overrides';
 
 function isHostfullyDebugEnabled(): boolean {
   return process.env.HOSTFULLY_DEBUG === 'true';
@@ -18,7 +19,7 @@ export interface SyncBookingToHostfullyParams {
   guestLastName?: string;
   guestEmail?: string;
   guestPhone?: string;
-  /** Total cobrado en el sitio (USD, con impuestos). Se incluye en notas del lead. */
+  /** Total cobrado en el sitio (USD, con impuestos). Se envía en quoteOverrides y notas. */
   totalAmountUsd?: number;
   guests?: number;
 }
@@ -107,6 +108,10 @@ export async function trySyncBookingToHostfully(
     };
     const totalUsd = Number(params.totalAmountUsd);
     if (Number.isFinite(totalUsd) && totalUsd > 0) {
+      const quoteOverrides = buildHostfullyQuoteOverrides(totalUsd);
+      if (quoteOverrides) {
+        payload.quoteOverrides = quoteOverrides;
+      }
       payload.notes = `Reserva web Punta Norte — total cobrado ${totalUsd} USD (incl. IVA/ISH).`;
     }
     if (process.env.NODE_ENV === 'development' && isHostfullyDebugEnabled()) {
