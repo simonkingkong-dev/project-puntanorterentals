@@ -36,7 +36,14 @@ export default async function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Image src="/logo.png?v=2" alt="Punta Norte Rentals" width={48} height={48} />
+              <Image
+                src="/isotipo-compass-01.png?v=2"
+                alt="Punta Norte Rentals"
+                width={48}
+                height={48}
+                className="h-12 w-12 object-contain bg-transparent"
+                unoptimized
+              />
               <div className="flex flex-col leading-none">
                 <span className="text-lg font-bold leading-none">Punta Norte</span>
                 <span className="text-sm font-light leading-none">Rentals</span>

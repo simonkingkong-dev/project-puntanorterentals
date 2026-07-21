@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home } from 'lucide-react';
+import Image from 'next/image';
 
 /**
  * Versión estática del footer para usar en error boundary y otros componentes cliente.
@@ -13,9 +13,14 @@ export default function FooterStatic() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-              <Home className="w-4 h-4 text-white" />
-            </div>
+            <Image
+              src="/isotipo-compass-01.png?v=2"
+              alt="Punta Norte Rentals"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain bg-transparent"
+              unoptimized
+            />
             <span className="text-lg font-bold">Punta Norte Rentals</span>
           </div>
           <div className="flex gap-6">

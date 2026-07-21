@@ -45,7 +45,7 @@ const contentSections: ContentSection[] = [
         key: 'hero_title',
         label: 'Título Principal',
         type: 'text',
-        placeholder: 'Descubre Tu Escape Perfecto'
+        placeholder: 'Descubra Su Escape Ideal'
       },
       {
         key: 'hero_subtitle',
@@ -69,7 +69,7 @@ const contentSections: ContentSection[] = [
         key: 'featured_properties_subtitle',
         label: 'Subtítulo Propiedades Destacadas',
         type: 'textarea',
-        placeholder: 'Selecciona entre nuestras propiedades más populares...'
+        placeholder: 'Seleccione entre nuestras propiedades más populares...'
       },
       {
         key: 'features_title',
@@ -93,13 +93,13 @@ const contentSections: ContentSection[] = [
         key: 'cta_title',
         label: 'Título Call to Action',
         type: 'text',
-        placeholder: '¿Listo Para Tu Próxima Aventura?'
+        placeholder: '¿Está Listo Para Su Próxima Aventura?'
       },
       {
         key: 'cta_subtitle',
         label: 'Subtítulo Call to Action',
         type: 'textarea',
-        placeholder: 'Descubre propiedades increíbles y comienza a planificar...'
+        placeholder: 'Descubra propiedades increíbles y comience a planificar...'
       }
     ]
   },
@@ -240,7 +240,7 @@ const contentSections: ContentSection[] = [
       { key: 'properties_title_all', label: 'Título (sin filtros)', type: 'text', placeholder: 'Todas las propiedades' },
       { key: 'properties_subtitle_all', label: 'Subtítulo (sin filtros)', type: 'textarea', placeholder: 'Explora nuestra colección de propiedades.' },
       { key: 'properties_title_results', label: 'Título (con filtros)', type: 'text', placeholder: 'Resultados de búsqueda' },
-      { key: 'properties_subtitle_results', label: 'Subtítulo (con filtros)', type: 'textarea', placeholder: 'Propiedades que coinciden con tu búsqueda.' }
+      { key: 'properties_subtitle_results', label: 'Subtítulo (con filtros)', type: 'textarea', placeholder: 'Propiedades que coinciden con su búsqueda.' }
     ]
   }
 ];

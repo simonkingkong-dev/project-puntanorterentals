@@ -39,21 +39,21 @@ export async function sendConfirmationEmail(reservation: Reservation) {
     await transport.sendMail({
       from: `"Punta Norte Rentals" <${process.env.SMTP_USER}>`,
       to: guestEmail,
-      subject: "¡Tu reserva está confirmada! 🌴",
+      subject: "Su reserva está confirmada — Punta Norte Rentals",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #f97316;">¡Gracias por tu reserva, ${guestName}!</h1>
-          <p>Estamos emocionados de recibirte. Aquí están los detalles de tu estancia:</p>
+          <h1 style="color: #f97316;">Gracias por su reserva, ${guestName}</h1>
+          <p>Hemos recibido su pago. A continuación encontrará los detalles de su estancia:</p>
           
           <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>ID de Reserva:</strong> ${id}</p>
-            <p><strong>Check-in:</strong> ${formattedCheckIn}</p>
-            <p><strong>Check-out:</strong> ${formattedCheckOut}</p>
-            <p><strong>Total Pagado:</strong> $${totalAmount} USD</p>
+            <p><strong>ID de reserva:</strong> ${id}</p>
+            <p><strong>Entrada (check-in):</strong> ${formattedCheckIn}</p>
+            <p><strong>Salida (check-out):</strong> ${formattedCheckOut}</p>
+            <p><strong>Total pagado:</strong> $${totalAmount} USD</p>
           </div>
 
-          <p>Si tienes alguna pregunta, responde a este correo.</p>
-          <p>¡Nos vemos pronto!</p>
+          <p>Si tiene alguna consulta, responda a este correo y con gusto le atenderemos.</p>
+          <p>Le esperamos en Isla Mujeres.</p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
           <small style="color: #666;">Punta Norte Rentals</small>
         </div>

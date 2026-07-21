@@ -25,6 +25,7 @@ import { useLocale } from '@/components/providers/locale-provider';
 import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { parseCurrency, writeStoredListingCurrency } from '@/lib/parse-currency';
 import { cn } from '@/lib/utils';
+import { isCheckInDateDisabledForWebBooking } from '@/lib/booking-policy';
 
 function parseDateOnly(value: string): Date | undefined {
   if (!value) return undefined;
@@ -191,7 +192,7 @@ export default function SearchForm({
       onSelect={handleCheckInSelect}
       numberOfMonths={isMobile ? 1 : 1}
       defaultMonth={checkInParsed ?? new Date()}
-      disabled={{ before: startOfDay(new Date()) }}
+      disabled={(date) => isCheckInDateDisabledForWebBooking(date)}
       classNames={searchCalendarClassNames}
       initialFocus
     />

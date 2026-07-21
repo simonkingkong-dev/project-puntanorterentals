@@ -6,6 +6,7 @@ import { generateDateRange } from "@/lib/utils/date";
 import { checkHostfullyAvailability } from "@/lib/hostfully/client";
 import { hasOverlappingActiveHold } from "@/lib/availability-holds";
 import { isMissingFirestoreIndexError } from "@/lib/firestore-query-utils";
+import { validateWebCheckInLeadTime } from "@/lib/booking-policy";
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -195,6 +196,11 @@ export async function checkPropertyAvailability(
     const { getPropertyByIdAdmin } = await import("@/lib/firebase-admin-queries");
     const property = await getPropertyByIdAdmin(propertyId);
     if (!property) return { available: false, error: "Propiedad no encontrada" };
+
+    const leadTime = validateWebCheckInLeadTime(new Date(checkIn));
+    if (!leadTime.allowed) {
+      return { available: false, error: leadTime.error };
+    }
 
     const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
     await releaseExpiredHoldsForDates(propertyId, dateStrings);

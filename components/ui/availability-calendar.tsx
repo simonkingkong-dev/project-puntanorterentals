@@ -5,10 +5,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Property } from '@/lib/types';
 import { Day, type DayProps } from 'react-day-picker';
-import { format, isBefore, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 'date-fns';
+import { format, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 'date-fns';
 import { es as esLocale, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { generateDateRange, getFirstBlockedNight } from '@/lib/utils/date';
+import { isCheckInDateDisabledForWebBooking } from '@/lib/booking-policy';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { useLocale } from '@/components/providers/locale-provider';
@@ -196,8 +197,7 @@ export default function AvailabilityCalendar({
   const isDateDisabled = useCallback(
     (date: Date): boolean => {
       const dateString = format(date, 'yyyy-MM-dd');
-      const isPast = isBefore(date, startOfDay(new Date()));
-      if (isPast) return true;
+      if (isCheckInDateDisabledForWebBooking(date)) return true;
       const isCheckoutCandidate =
         rangeFrom != null && startOfDay(date).getTime() > startOfDay(rangeFrom).getTime();
 

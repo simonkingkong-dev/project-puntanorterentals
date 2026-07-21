@@ -175,12 +175,12 @@ export default async function HomePage() {
           {
             question: "¿Cómo reservar una propiedad en Punta Norte Rentals?",
             answer:
-              "Selecciona tu propiedad, elige las fechas en el calendario de disponibilidad en tiempo real, completa tus datos y realiza el pago seguro con Stripe. Recibirás confirmación por email.",
+              "Seleccione la propiedad, elija las fechas en el calendario de disponibilidad en tiempo real, complete sus datos y realice el pago seguro con Stripe. Recibirá la confirmación por correo electrónico.",
           },
           {
             question: "¿Cuál es la política de cancelación?",
             answer:
-              "Cada propiedad tiene su propia política de cancelación especificada en la página de detalle. Puedes modificar tu reserva desde el panel de reservas con tu token de acceso.",
+              "Cada propiedad indica su política de cancelación en la página de detalle. Puede modificar su reserva desde el panel de reservas con su enlace de acceso.",
           },
           {
             question: "¿Dónde están ubicadas las propiedades de Punta Norte Rentals?",

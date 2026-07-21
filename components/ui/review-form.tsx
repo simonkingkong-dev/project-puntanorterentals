@@ -24,7 +24,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
     e.preventDefault();
 
     if (rating === 0) {
-      toast.error('Por favor selecciona una calificación');
+      toast.error('Por favor, seleccione una calificación');
       return;
     }
 
@@ -46,7 +46,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
       setSubmitted(true);
       toast.success('¡Reseña enviada! Será publicada tras revisión.');
     } catch {
-      toast.error('Error de conexión. Intenta de nuevo.');
+      toast.error('Error de conexión. Intente de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
   if (submitted) {
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-        <p className="text-green-800 font-medium">¡Gracias por tu reseña!</p>
+        <p className="text-green-800 font-medium">Gracias por su reseña</p>
         <p className="text-green-700 text-sm mt-1">
           Será publicada después de ser revisada por nuestro equipo.
         </p>
@@ -65,7 +65,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-gray-50 p-6">
-      <h4 className="font-semibold text-gray-900">Deja tu reseña</h4>
+      <h4 className="font-semibold text-gray-900">Deje su reseña</h4>
 
       {/* Star rating */}
       <div>
@@ -95,7 +95,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
 
       <div>
         <Label htmlFor="review-author" className="text-sm text-gray-700">
-          Tu nombre
+          Su nombre
         </Label>
         <Input
           id="review-author"
@@ -115,7 +115,7 @@ export default function ReviewForm({ propertyId }: ReviewFormProps) {
           id="review-text"
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="Cuéntanos tu experiencia..."
+          placeholder="Comparta su experiencia..."
           required
           minLength={10}
           maxLength={1000}

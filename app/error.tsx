@@ -32,7 +32,7 @@ export default function Error({
       <div className="space-y-6 max-w-md">
         <h1 className="text-2xl font-bold text-gray-900">Algo salió mal</h1>
         <p className="text-muted-foreground">
-          Ha ocurrido un error inesperado. Puedes intentar de nuevo o volver al inicio.
+          Ha ocurrido un error inesperado. Puede intentar de nuevo o volver al inicio.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Button onClick={reset} variant="outline" className="w-full sm:w-auto">

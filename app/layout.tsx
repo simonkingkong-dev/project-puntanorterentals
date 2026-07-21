@@ -226,7 +226,7 @@ export default async function RootLayout({
                 name: '¿Cómo reservo una renta vacacional en Isla Mujeres?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Podés reservar directamente en puntanorterentals.com sin comisiones adicionales. Aceptamos USD, MXN y EUR. La disponibilidad se muestra en tiempo real.',
+                  text: 'Puede reservar directamente en puntanorterentals.com sin comisiones adicionales. Aceptamos USD, MXN y EUR. La disponibilidad se muestra en tiempo real.',
                 },
               },
               {

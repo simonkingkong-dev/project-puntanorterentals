@@ -36,13 +36,13 @@ function formatTimeLeft(seconds: number): string {
 
 function stripeErrorMessage(error: { type?: string; code?: string; message?: string }): string {
   const msg = error.message || '';
-  if (error.code === 'card_declined') return 'Tu tarjeta fue rechazada. Revisa los datos o prueba con otro método de pago.';
-  if (error.code === 'expired_card') return 'La tarjeta ha caducado. Usa otra tarjeta.';
+  if (error.code === 'card_declined') return 'Su tarjeta fue rechazada. Revise los datos o pruebe con otro método de pago.';
+  if (error.code === 'expired_card') return 'La tarjeta ha caducado. Utilice otra tarjeta.';
   if (error.code === 'incorrect_cvc') return 'El código de seguridad (CVC) no es correcto.';
   if (error.code === 'insufficient_funds') return 'Fondos insuficientes en la tarjeta.';
-  if (error.code === 'authentication_required') return 'Tu banco requiere verificar el pago. Intenta de nuevo.';
-  if (msg.toLowerCase().includes('declined')) return 'El pago fue rechazado. Verifica los datos o usa otro método.';
-  return msg || 'No se pudo completar el pago. Intenta de nuevo.';
+  if (error.code === 'authentication_required') return 'Su banco requiere verificar el pago. Intente de nuevo.';
+  if (msg.toLowerCase().includes('declined')) return 'El pago fue rechazado. Verifique los datos o utilice otro método.';
+  return msg || 'No se pudo completar el pago. Intente de nuevo.';
 }
 
 /**
@@ -299,7 +299,7 @@ function PaymentContent() {
           .then(({ ok, av }) => {
             if (!ok || !av.available) {
               throw new Error(
-                av.error || 'Las fechas ya no están disponibles. Vuelve al carrito y elige otras fechas.'
+                av.error || 'Las fechas ya no están disponibles. Vuelva al carrito y elija otras fechas.'
               );
             }
           })

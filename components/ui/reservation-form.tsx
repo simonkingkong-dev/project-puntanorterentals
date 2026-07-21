@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
+import { validateWebCheckInLeadTime } from '@/lib/booking-policy';
 import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
@@ -228,6 +229,17 @@ const handleSubmit = async (e: React.FormEvent) => {
     
     if (!hasFullRange || !selectedDates?.checkIn || !selectedDates?.checkOut) {
       toast.error(t('toast_select_dates', 'Please select your stay dates'));
+      return;
+    }
+
+    const leadTime = validateWebCheckInLeadTime(selectedDates.checkIn);
+    if (!leadTime.allowed) {
+      toast.error(
+        t(
+          'toast_last_minute_cutoff',
+          'Same-day online bookings close at 9:00 PM Isla Mujeres time—six hours after the 3:00 PM check-in.'
+        )
+      );
       return;
     }
 
