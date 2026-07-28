@@ -243,7 +243,13 @@ function PaymentContent() {
       fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountVal, currency: currency.toLowerCase(), reservationId, modification: true }),
+        body: JSON.stringify({
+          amount: amountVal,
+          currency: currency.toLowerCase(),
+          reservationId,
+          modification: true,
+          token: tokenParam ?? undefined,
+        }),
       })
         .then((res) => res.json())
         .then((data) => {
@@ -382,6 +388,7 @@ function PaymentContent() {
         currency: currency.toLowerCase(),
         reservationId,
         modification,
+        token: modification ? tokenParam ?? undefined : undefined,
       }),
     })
       .then((res) => res.json())
@@ -392,7 +399,7 @@ function PaymentContent() {
       .catch((err) => {
         toast.error(err?.message || 'No se pudo actualizar la moneda de pago');
       });
-  }, [currency, reservationId, amount, modification, loading]);
+  }, [currency, reservationId, amount, modification, loading, tokenParam]);
 
   const paymentCountdownActive = secondsLeft != null && secondsLeft > 0;
   useEffect(() => {

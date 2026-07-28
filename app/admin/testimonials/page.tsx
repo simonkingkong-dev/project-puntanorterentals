@@ -11,6 +11,7 @@ import {
   getGlobalReviewAggregateForAdmin,
 } from '@/lib/firebase-admin-queries';
 import GlobalReviewStatsForm from '@/components/admin/global-review-stats-form';
+import RevyoosSyncPanel from '@/components/admin/revyoos-sync-panel';
 import DeleteTestimonialButton from './delete-testimonials-button';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ export default async function AdminTestimonialsPage() {
       getGlobalReviewAggregateForAdmin(),
     ]);
   const propertyTitleById = new Map(properties.map((property) => [property.id, property.title]));
+  const propertyTitleByIdObj = Object.fromEntries(propertyTitleById);
 
   return (
       <div className="space-y-6">
@@ -56,6 +58,8 @@ export default async function AdminTestimonialsPage() {
           initialPlatformStats={businessPlatformStats}
           initialAggregate={globalAggregate}
         />
+
+        <RevyoosSyncPanel propertyTitleById={propertyTitleByIdObj} />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { getNightsBetween, getFirstBlockedNight } from '@/lib/utils/date';
+import { getMinNights, validateMinNights } from '@/lib/booking-policy';
+import { getEffectiveAvailability } from '@/lib/property-hierarchy';
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
@@ -55,6 +57,17 @@ export async function POST(
     const confirmedAt = data.confirmedAt?.toDate?.() ?? new Date(data.confirmedAt);
     const isWithinTwoHours = Date.now() - confirmedAt.getTime() <= TWO_HOURS_MS;
 
+    // También dentro de las 2h: sin esto se podría acortar la estancia por debajo del mínimo.
+    const propSnap = await adminDb.collection('properties').doc(propertyId).get();
+    const stay = validateMinNights(
+      newCheckIn,
+      newCheckOut,
+      getMinNights({ minNights: propSnap.data()?.minNights })
+    );
+    if (!stay.allowed) {
+      return NextResponse.json({ error: stay.error }, { status: 400 });
+    }
+
     if (!isWithinTwoHours) {
       if (newCheckIn.getTime() < oldCheckIn.getTime()) {
         return NextResponse.json(
@@ -76,8 +89,9 @@ export async function POST(
       }
       if (newCheckOut.getTime() > oldCheckOut.getTime()) {
         const extraNights = getNightsBetween(oldCheckOut, newCheckOut);
-        const propSnap = await adminDb.collection('properties').doc(propertyId).get();
-        const availability = (propSnap.exists ? (propSnap.data()?.availability as Record<string, boolean>) : {}) ?? {};
+        // Efectiva, no la propia: extender la casa completa a noches donde una unidad
+        // ya está reservada debe rechazarse.
+        const availability = await getEffectiveAvailability(propertyId);
         const firstBlocked = getFirstBlockedNight(extraNights, availability);
         if (firstBlocked) {
           return NextResponse.json(

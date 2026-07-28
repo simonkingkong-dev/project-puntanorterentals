@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getPropertyByIdAdmin } from "@/lib/firebase-admin-queries"; 
-import PropertyEditForm from "./edit-form"; 
+import { getPropertyByIdAdmin, getAdminProperties } from "@/lib/firebase-admin-queries";
+import PropertyEditForm from "./edit-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -13,14 +13,24 @@ interface EditPropertyPageProps {
 
 export default async function EditPropertyPage({ params }: EditPropertyPageProps) {
   const { id } = await params;
-  
+
   // 1. Obtenemos los datos de la propiedad específica
-  const property = await getPropertyByIdAdmin(id);
+  const [property, allProperties] = await Promise.all([
+    getPropertyByIdAdmin(id),
+    getAdminProperties(),
+  ]);
 
   // 2. Si no existe, mostramos un 404
   if (!property) {
     notFound();
   }
+
+  // Para el selector de propiedad padre: sólo id/título/padre (payload mínimo al cliente).
+  const propertyOptions = allProperties.map((p) => ({
+    id: p.id,
+    title: p.internalName?.trim() || p.title,
+    parentPropertyId: p.parentPropertyId ?? null,
+  }));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -42,7 +52,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
         </div>
 
         {/* 3. Pasamos los datos cargados al formulario (Client Component) */}
-        <PropertyEditForm initialData={property} />
+        <PropertyEditForm initialData={property} allProperties={propertyOptions} />
       </div>
   );
 }

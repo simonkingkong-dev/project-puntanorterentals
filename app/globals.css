@@ -83,3 +83,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Carrusel horizontal infinito de reseñas (home). El contenido se duplica una vez
+   en el componente; -50% desplaza exactamente una copia, cerrando el loop. */
+@keyframes revyoos-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.revyoos-marquee-track {
+  animation: revyoos-marquee-scroll var(--revyoos-marquee-duration, 70s) linear infinite;
+}
+
+.revyoos-marquee-viewport:hover .revyoos-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revyoos-marquee-track {
+    animation: none;
+  }
+}

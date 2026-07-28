@@ -40,8 +40,8 @@ env:
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     availability:
-    - BUILD
-    - RUNTIME
+      - BUILD
+      - RUNTIME
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
     availability:
@@ -79,6 +79,16 @@ env:
     availability:
       - RUNTIME
 
+  # Gemini (análisis de capturas de reseñas en el panel de admin).
+  # Sin esto, importar testimonios desde captura falla en producción.
+  # 1) firebase apphosting:secrets:set GEMINI_API_KEY
+  # 2) firebase apphosting:secrets:grantaccess GEMINI_API_KEY
+  # 3) Descomenta el bloque siguiente y redespliega.
+  # - variable: GEMINI_API_KEY
+  #   secret: GEMINI_API_KEY
+  #   availability:
+  #     - RUNTIME
+
   # Email (SMTP)
   - variable: SMTP_HOST
     secret: SMTP_HOST
@@ -96,3 +106,5 @@ env:
     secret: SMTP_PASS
     availability:
       - RUNTIME
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY

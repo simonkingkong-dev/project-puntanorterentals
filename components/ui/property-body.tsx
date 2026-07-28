@@ -57,7 +57,7 @@ import PropertyCuratedReviews from "@/components/ui/property-curated-reviews";
 import PropertyBedsList from "@/components/ui/property-beds-list";
 import { PropertyHighlightBulletList } from "@/components/ui/property-stay-highlights";
 import { getPropertyStayHighlights } from "@/lib/property-stay-highlights";
-import type { PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
+import type { PropertyReview, PropertyReviewPlatformStat, RevyoosReview, Testimonial } from "@/lib/types";
 import { normalizeBeds } from "@/lib/property-beds";
 import { formatPropertyTypeDisplay } from "@/lib/property-type-options";
 
@@ -132,6 +132,8 @@ interface PropertyBodyProps {
   platformStats?: PropertyReviewPlatformStat[];
   globalReviewAggregate?: { averageRating: number; reviewCount: number } | null;
   propertyTestimonials?: Testimonial[];
+  revyoosReviews?: RevyoosReview[];
+  revyoosReviewsTotal?: number;
   initialSearch?: ListingSearchSelection;
   currency: Currency;
   onCurrencyChange: (c: Currency) => void;
@@ -201,6 +203,8 @@ export default function PropertyBody(props: PropertyBodyProps) {
     platformStats = [],
     globalReviewAggregate = null,
     propertyTestimonials = [],
+    revyoosReviews = [],
+    revyoosReviewsTotal = 0,
     initialSearch,
     currency,
     onCurrencyChange,
@@ -240,7 +244,8 @@ export default function PropertyBody(props: PropertyBodyProps) {
   const hasReviews =
     curatedReviews.length > 0 ||
     propertyTestimonials.length > 0 ||
-    platformStats.length > 0;
+    platformStats.length > 0 ||
+    revyoosReviewsTotal > 0;
 
   const pickLocalized = (base: string | undefined, es: string | undefined, en: string | undefined) => {
     const localized = locale === "en" ? en : es;
@@ -407,6 +412,9 @@ export default function PropertyBody(props: PropertyBodyProps) {
           platformStats={platformStats}
           globalAggregate={globalReviewAggregate}
           testimonials={propertyTestimonials}
+          propertyId={property.id}
+          revyoosReviews={revyoosReviews}
+          revyoosReviewsTotal={revyoosReviewsTotal}
         />
       </TabsContent>
     </Tabs>

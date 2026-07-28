@@ -159,7 +159,13 @@ export async function POST(request: NextRequest) {
       createdAt: updated.createdAt?.toDate?.() ?? new Date(updated.createdAt),
     } as Reservation;
 
-    const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut);
+    // Post-pago: mismas precauciones que el webhook — esta reserva ya está 'confirmed'
+    // y se encontraría a sí misma; un falso negativo aquí rechaza un pago ya cobrado.
+    const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut, {
+      excludeReservationId: reservationSnap.id,
+      includePendingHolds: false,
+      enforceStayRules: false,
+    });
     if (!availability.available) {
       return NextResponse.json(
         { error: availability.error || 'Las fechas ya no están disponibles' },

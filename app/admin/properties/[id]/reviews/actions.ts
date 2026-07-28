@@ -89,7 +89,10 @@ export async function uploadAndExtractPropertyReviews(
 
     let extracted;
     try {
-      extracted = await extractReviewFromScreenshot(screenshotUrl);
+      extracted = await extractReviewFromScreenshot({
+        buffer,
+        mime: file.type || "image/jpeg",
+      });
     } catch {
       extracted = {
         author: "Huésped",
@@ -236,7 +239,10 @@ export async function uploadAndExtractPropertyReviewStats(
 
     let extracted;
     try {
-      extracted = await extractPlatformStatsFromScreenshot(screenshotUrl);
+      extracted = await extractPlatformStatsFromScreenshot({
+        buffer,
+        mime: file.type || "image/jpeg",
+      });
     } catch {
       extracted = {
         averageRating: 5,

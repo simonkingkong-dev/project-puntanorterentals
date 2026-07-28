@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPropertyByIdAdmin } from "@/lib/firebase-admin-queries";
 import { ensurePropertyAvailabilityFresh } from "@/lib/hostfully-availability-sync";
+import {
+  getCalendarGroupIds,
+  getEffectiveAvailability,
+} from "@/lib/property-hierarchy";
 
 /** Tras sync Hostfully (~20 min), respuesta cacheable unos minutos. */
 const CALENDAR_CACHE_HEADERS = {
@@ -29,9 +33,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "propertyId requerido" }, { status: 400 });
     }
 
+    const calendarIds = await getCalendarGroupIds(propertyId);
+
     let refreshSource: "hostfully" | "cache" = "cache";
     try {
-      refreshSource = await ensurePropertyAvailabilityFresh(propertyId);
+      // Refrescar también las hijas: si una está reservada, la casa completa no se vende.
+      const results = await Promise.all(
+        calendarIds.map((id) => ensurePropertyAvailabilityFresh(id))
+      );
+      refreshSource = results.includes("hostfully") ? "hostfully" : "cache";
     } catch (syncError) {
       if (process.env.NODE_ENV === "development") {
         console.error("[calendar] Hostfully refresh failed, using cache", syncError);
@@ -43,6 +53,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Propiedad no encontrada" }, { status: 404 });
     }
 
+    // Derivada en lectura: nunca se persiste, porque el sync de Hostfully
+    // sobrescribe el mapa `availability` completo cada ~20 min.
+    const availability =
+      calendarIds.length > 1
+        ? await getEffectiveAvailability(propertyId)
+        : property.availability ?? {};
+
     const now = new Date();
     const start = startDate || toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
     const endDt = new Date(now.getFullYear(), now.getMonth() + 12, 0);
@@ -52,7 +69,8 @@ export async function GET(request: NextRequest) {
       {
         source: property.hostfullyPropertyId ? "hostfully_cache" : "firestore",
         refreshSource,
-        availability: property.availability ?? {},
+        availability,
+        minNights: property.minNights ?? 1,
         dailyRates: property.dailyRates ?? {},
         availabilitySyncedAt: property.availabilitySyncedAt ?? null,
         startDate: start,

@@ -98,6 +98,8 @@ export interface Property {
   updatedAt: Date;
   /** UID de la propiedad en Hostfully (PMS). Si existe, la disponibilidad se consulta al PMS. */
   hostfullyPropertyId?: string;
+  /** Id del "holding" en Revyoos (agregador de reseñas Airbnb/Booking/Google). Vincula esta propiedad con sus reseñas importadas. */
+  revyoosHoldingId?: string;
   /** UUID del widget Lead (2º argumento de `new Widget` en el snippet Hostfully). */
   hostfullyLeadWidgetUuid?: string;
   /** JSON del objeto de opciones del widget Lead (3º argumento de `new Widget`). */
@@ -117,6 +119,14 @@ export interface Property {
   availabilitySyncedAt?: Date;
   /** Última sync de precios (cron 1×/día). */
   pricesSyncedAt?: Date;
+  /** Noches mínimas por reserva. Si falta, el sitio usa 1. */
+  minNights?: number;
+  /**
+   * Id de la propiedad padre (la casa completa) si esta es una unidad suya.
+   * Reservar el padre bloquea sus hijas y reservar cualquier hija bloquea al padre;
+   * las hijas entre sí no se bloquean. `null` desvincula (Firestore ignora `undefined`).
+   */
+  parentPropertyId?: string | null;
 }
 
 export type { PropertyListItem } from "@/lib/property-list-item";
@@ -157,6 +167,25 @@ export interface PropertyReviewPlatformStat {
   status: "draft" | "published";
   createdAt: Date;
   extractedBy?: "ai" | "manual";
+}
+
+/** Reseña importada desde Revyoos (agregador conectado a Airbnb/Booking/Google). */
+export interface RevyoosReview {
+  id: string;
+  /** Id de la reseña en Revyoos (`_id`); clave de deduplicación en cada sync. */
+  externalId: string;
+  propertyId: string;
+  platform: PropertyReviewChannel;
+  author: string;
+  avatarUrl?: string;
+  /** Ya normalizado por Revyoos a escala 0-5. */
+  rating: number;
+  title?: string;
+  text: string;
+  ownerResponse?: string;
+  lang?: string;
+  reviewDate: Date;
+  sourceUrl?: string;
 }
 
 export interface Reservation {
@@ -240,6 +269,8 @@ export interface Testimonial {
   featured: boolean;
   /** Si se define, el testimonio también aparece en la ficha de esa propiedad. */
   propertyId?: string;
+  /** Plataforma donde el huésped dejó la reseña original. */
+  platform?: PropertyReviewChannel;
   createdAt: Date;
 }
 

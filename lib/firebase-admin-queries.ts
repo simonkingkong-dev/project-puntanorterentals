@@ -12,8 +12,10 @@ import {
   ContactInfo,
   SearchParams,
   SiteContent,
+  RevyoosReview,
 } from "@/lib/types";
 import { toPropertyListItems, type PropertyListItem } from "@/lib/property-list-item";
+import { pickRealisticReviews, ensurePlatformDiversity } from "@/lib/revyoos/realistic-sample";
 import { normalizeBeds } from "@/lib/property-beds";
 import {
   isMissingFirestoreIndexError,
@@ -21,6 +23,7 @@ import {
   sortBySortOrder,
 } from "@/lib/firestore-query-utils";
 import { ensureAllPropertiesAvailabilityFresh } from "@/lib/hostfully-availability-sync";
+import { isBlockedInGroup } from "@/lib/property-hierarchy";
 import {
   BUSINESS_REVIEW_PLATFORM_STATS_DOC,
   businessStatToPlatformStat,
@@ -164,16 +167,25 @@ export const searchPropertiesAdmin = async (params: SearchParams): Promise<Prope
       if (checkOut > checkIn) {
         // Hostfully cada ~20 min → Firestore caché. Verificación en vivo solo al pagar.
         await ensureAllPropertiesAvailabilityFresh();
-        properties = applyGuestAndLocation(await getAdminProperties());
-        properties = properties.filter((p) => {
-          let current = new Date(checkIn);
-          while (current < checkOut) {
-            const dateStr = current.toISOString().split("T")[0];
-            if (p.availability?.[dateStr] === false) return false;
-            current.setDate(current.getDate() + 1);
-          }
-          return true;
-        });
+        // La lista completa sirve para resolver la jerarquía en memoria: una unidad
+        // reservada bloquea la casa completa aunque su propio mapa la muestre libre.
+        const allProperties = await getAdminProperties();
+        properties = applyGuestAndLocation(allProperties);
+
+        const nightKeys: string[] = [];
+        const cursor = new Date(checkIn);
+        while (cursor < checkOut) {
+          nightKeys.push(
+            `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(
+              cursor.getDate()
+            ).padStart(2, "0")}`
+          );
+          cursor.setDate(cursor.getDate() + 1);
+        }
+
+        properties = properties.filter(
+          (p) => !isBlockedInGroup(p.id, nightKeys, allProperties)
+        );
       }
     }
     return properties;
@@ -431,6 +443,127 @@ export const getBusinessReviewPlatformStatsForAdmin =
       return [];
     }
   };
+
+// --- RESEÑAS IMPORTADAS DE REVYOOS (revyoos_reviews) ---
+function mapRevyoosReviewDoc(doc: QueryDocumentSnapshot): RevyoosReview {
+  const d = doc.data()!;
+  return {
+    ...d,
+    id: doc.id,
+    reviewDate: safeTimestampToDate(d.reviewDate),
+  } as RevyoosReview;
+}
+
+async function getAllRevyoosReviewsForPropertyAdmin(propertyId: string): Promise<RevyoosReview[]> {
+  try {
+    const snapshot = await adminDb
+      .collection("revyoos_reviews")
+      .where("propertyId", "==", propertyId)
+      .get();
+    return snapshot.docs
+      .map(mapRevyoosReviewDoc)
+      .filter((r) => r.text.trim().length > 0)
+      .sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Admin: Error fetching revyoos reviews", error);
+    }
+    return [];
+  }
+}
+
+/** Tope y rango de calificación objetivo para la muestra mostrada (las estadísticas agregadas siguen usando el total real, sin recortar). */
+const REVYOOS_SAMPLE_TARGET_COUNT = 30;
+const REVYOOS_SAMPLE_MIN_AVG = 4.3;
+const REVYOOS_SAMPLE_MAX_AVG = 4.7;
+
+/** Página de reseñas Revyoos de una propiedad: hasta 30, elegidas para que el
+ * promedio de la muestra caiga en un rango realista (4.3-4.7), no sólo las mejores.
+ * Ordenadas de más reciente a más antigua. */
+export const getRevyoosReviewsForPropertyAdmin = async (
+  propertyId: string,
+  options?: { limit?: number; offset?: number }
+): Promise<{ reviews: RevyoosReview[]; total: number }> => {
+  const all = await getAllRevyoosReviewsForPropertyAdmin(propertyId);
+  const sample = pickRealisticReviews(all, {
+    targetCount: REVYOOS_SAMPLE_TARGET_COUNT,
+    minAvg: REVYOOS_SAMPLE_MIN_AVG,
+    maxAvg: REVYOOS_SAMPLE_MAX_AVG,
+  }).sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
+  const offset = Math.max(0, options?.offset ?? 0);
+  const limit = options?.limit ?? sample.length;
+  return { reviews: sample.slice(offset, offset + limit), total: sample.length };
+};
+
+/** ~N reseñas mezcladas de todas las propiedades y plataformas, para el carrusel del inicio. */
+export const getRevyoosReviewsForHomepageAdmin = async (
+  count = 35
+): Promise<RevyoosReview[]> => {
+  try {
+    const snapshot = await adminDb.collection("revyoos_reviews").get();
+    const all = snapshot.docs
+      .map(mapRevyoosReviewDoc)
+      .filter((r) => r.text.trim().length > 0)
+      .sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
+
+    const rawSample = pickRealisticReviews(all, {
+      targetCount: count,
+      minAvg: REVYOOS_SAMPLE_MIN_AVG,
+      maxAvg: REVYOOS_SAMPLE_MAX_AVG,
+    });
+    // Por rating, no por plataforma: una plataforma minoritaria (Google, ~9%) puede
+    // quedar afuera por azar. Se fuerza que las tres aparezcan al menos una vez.
+    const sample = ensurePlatformDiversity(rawSample, all);
+
+    // Intercala por propiedad para que no queden varias tarjetas seguidas de la misma unidad.
+    const byProperty = new Map<string, RevyoosReview[]>();
+    for (const r of sample) {
+      const arr = byProperty.get(r.propertyId) ?? [];
+      arr.push(r);
+      byProperty.set(r.propertyId, arr);
+    }
+    const groups = Array.from(byProperty.values());
+    const interleaved: RevyoosReview[] = [];
+    let addedAny = true;
+    while (addedAny) {
+      addedAny = false;
+      for (const group of groups) {
+        const next = group.shift();
+        if (next) {
+          interleaved.push(next);
+          addedAny = true;
+        }
+      }
+    }
+    return interleaved;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Admin: Error fetching homepage revyoos reviews", error);
+    }
+    return [];
+  }
+};
+
+/** Promedio y conteo por plataforma, calculados directamente de las reseñas importadas (no requiere captura manual). */
+export const getRevyoosPlatformStatsForPropertyAdmin = async (
+  propertyId: string
+): Promise<Array<{ channel: PropertyReviewPlatformStat["channel"]; averageRating: number; reviewCount: number }>> => {
+  const all = await getAllRevyoosReviewsForPropertyAdmin(propertyId);
+  const byChannel = new Map<string, { sum: number; count: number }>();
+  for (const r of all) {
+    const entry = byChannel.get(r.platform) ?? { sum: 0, count: 0 };
+    entry.sum += r.rating;
+    entry.count += 1;
+    byChannel.set(r.platform, entry);
+  }
+  return Array.from(byChannel.entries())
+    .map(([channel, { sum, count }]) => ({
+      channel: channel as PropertyReviewPlatformStat["channel"],
+      averageRating: Math.round((sum / count) * 10) / 10,
+      reviewCount: count,
+    }))
+    .sort((a, b) => a.channel.localeCompare(b.channel));
+};
 
 export const getPublishedPropertyReviewStatsAdmin = async (
   propertyId: string

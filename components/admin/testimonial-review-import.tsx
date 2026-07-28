@@ -7,14 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { extractTestimonialFromReviewScreenshot } from "@/app/admin/testimonials/review-import-actions";
-import type { ExtractedTestimonialFields } from "@/lib/review-screenshot-extract";
+import {
+  extractTestimonialFromReviewScreenshot,
+  type TestimonialImportResult,
+} from "@/app/admin/testimonials/review-import-actions";
+import type { PropertyReviewChannel } from "@/lib/types";
 
 export type TestimonialImportDraft = {
   name: string;
   text: string;
   rating: number;
   location: string;
+  platform?: PropertyReviewChannel;
+  propertyId?: string;
+  image?: string;
 };
 
 interface TestimonialReviewImportProps {
@@ -34,12 +40,15 @@ export default function TestimonialReviewImport({ onImported }: TestimonialRevie
   }, []);
 
   const applyExtracted = useCallback(
-    (data: ExtractedTestimonialFields) => {
+    (data: TestimonialImportResult) => {
       onImported({
         name: data.name,
         text: data.text,
         rating: data.rating,
         location: data.location ?? "",
+        platform: data.platform,
+        propertyId: data.propertyId,
+        image: data.image,
       });
     },
     [onImported]
@@ -112,8 +121,8 @@ export default function TestimonialReviewImport({ onImported }: TestimonialRevie
         </CardTitle>
         <p className="text-sm text-muted-foreground font-normal">
           Toma foto o captura de pantalla de la reseña completa (Airbnb, Google, Booking, etc.).
-          La IA extrae nombre, texto, estrellas y ubicación para rellenar el testimonio. Luego
-          revisa y pulsa Crear.
+          La IA extrae nombre, texto, estrellas, ubicación y la foto de perfil (si la hay) para
+          rellenar el testimonio. Luego revisa y pulsa Crear.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

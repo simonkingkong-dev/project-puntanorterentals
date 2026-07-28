@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Property, PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
+import { Property, PropertyReview, PropertyReviewPlatformStat, RevyoosReview, Testimonial } from "@/lib/types";
 import { Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PropertyGallery from "@/components/ui/property-gallery";
@@ -23,6 +23,8 @@ interface PropertyPageContentProps {
   platformStats?: PropertyReviewPlatformStat[];
   globalReviewAggregate?: { averageRating: number; reviewCount: number } | null;
   propertyTestimonials?: Testimonial[];
+  revyoosReviews?: RevyoosReview[];
+  revyoosReviewsTotal?: number;
   initialSearch?: ListingSearchSelection;
 }
 
@@ -32,6 +34,8 @@ export default function PropertyPageContent({
   platformStats = [],
   globalReviewAggregate = null,
   propertyTestimonials = [],
+  revyoosReviews = [],
+  revyoosReviewsTotal = 0,
   initialSearch,
 }: PropertyPageContentProps) {
   const { t, locale } = useLocale();
@@ -110,6 +114,8 @@ export default function PropertyPageContent({
         platformStats={platformStats}
         globalReviewAggregate={globalReviewAggregate}
         propertyTestimonials={propertyTestimonials}
+        revyoosReviews={revyoosReviews}
+        revyoosReviewsTotal={revyoosReviewsTotal}
         initialSearch={initialSearch}
         currency={currency}
         onCurrencyChange={setCurrency}

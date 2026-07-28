@@ -9,7 +9,12 @@ import { format, startOfDay, startOfMonth, addMonths, subMonths, addDays } from 
 import { es as esLocale, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { generateDateRange, getFirstBlockedNight } from '@/lib/utils/date';
-import { isCheckInDateDisabledForWebBooking } from '@/lib/booking-policy';
+import {
+  countNightsBetween,
+  getMinNights,
+  isCheckInDateDisabledForWebBooking,
+  validateMinNights,
+} from '@/lib/booking-policy';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
 import { useLocale } from '@/components/providers/locale-provider';
@@ -176,12 +181,17 @@ export default function AvailabilityCalendar({
     [availabilityMap]
   );
 
+  const minNights = getMinNights(property);
+
   const canUseAsCheckout = useCallback(
     (checkoutDate: Date): boolean => {
       if (!rangeFrom) return false;
       const start = startOfDay(rangeFrom);
       const end = startOfDay(checkoutDate);
       if (end.getTime() <= start.getTime()) return false;
+
+      // Estancia mínima de la propiedad: las salidas más cercanas no son seleccionables.
+      if (countNightsBetween(start, end) < minNights) return false;
 
       // Todas las noches intermedias (check-in inclusive, check-out exclusive) deben estar libres.
       const cursor = new Date(start);
@@ -191,7 +201,7 @@ export default function AvailabilityCalendar({
       }
       return true;
     },
-    [rangeFrom, isNightAvailable]
+    [rangeFrom, isNightAvailable, minNights]
   );
 
   const isDateDisabled = useCallback(
@@ -242,6 +252,14 @@ export default function AvailabilityCalendar({
           toast.info('La fecha de salida debe ser posterior a la de entrada.');
           return;
         }
+        const stay = validateMinNights(fromDay, toDay, minNights);
+        if (!stay.allowed) {
+          toast.error(stay.error!);
+          setRangeFrom(undefined);
+          setHoveredDate(undefined);
+          return;
+        }
+
         // Validamos solo noches: check-out es exclusivo y puede caer en fecha no disponible.
         const dateStrings = generateDateRange(range.from, addDays(range.to, -1));
         const firstBlocked = getFirstBlockedNight(dateStrings, availabilityMap ?? {});
@@ -267,7 +285,7 @@ export default function AvailabilityCalendar({
         onDateSelect({ checkIn: range.from });
       }
     },
-    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut, availabilityMap, t]
+    [onDateSelect, selectedDates?.checkIn, selectedDates?.checkOut, availabilityMap, t, minNights]
   );
 
   /** Rango mostrado: si hay rangeFrom (selección en curso), priorizar; si no, rango confirmado */

@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     const availability = await checkPropertyAvailability(
       String(propertyId),
       checkInDate,
-      checkOutDate
+      checkOutDate,
+      { enforceStayRules: true }
     );
     if (!availability.available) {
       return NextResponse.json(

@@ -1,20 +1,31 @@
 "use client";
 
-import { Star, User } from "lucide-react";
+import { Star } from "lucide-react";
 import Image from "next/image";
-import type { PropertyReview, PropertyReviewPlatformStat, Testimonial } from "@/lib/types";
+import type { PropertyReview, PropertyReviewPlatformStat, RevyoosReview, Testimonial } from "@/lib/types";
 import { getReviewChannelLabel } from "@/lib/review-channels";
+import { getNameInitials } from "@/lib/utils";
 import { useLocale } from "@/components/providers/locale-provider";
 import PropertyReviewStatsSummary from "@/components/ui/property-review-stats-summary";
+import RevyoosReviews from "@/components/ui/revyoos-reviews";
 
 interface PropertyCuratedReviewsProps {
   reviews: PropertyReview[];
   platformStats?: PropertyReviewPlatformStat[];
   globalAggregate?: { averageRating: number; reviewCount: number } | null;
   testimonials?: Testimonial[];
+  propertyId?: string;
+  revyoosReviews?: RevyoosReview[];
+  revyoosReviewsTotal?: number;
 }
 
-function TestimonialReviewCard({ testimonial }: { testimonial: Testimonial }) {
+function TestimonialReviewCard({
+  testimonial,
+  locale,
+}: {
+  testimonial: Testimonial;
+  locale: "es" | "en";
+}) {
   return (
     <article className="p-4 rounded-lg border bg-white flex gap-4">
       {testimonial.image ? (
@@ -29,12 +40,17 @@ function TestimonialReviewCard({ testimonial }: { testimonial: Testimonial }) {
           />
         </div>
       ) : (
-        <div className="w-12 h-12 shrink-0 rounded-full bg-gray-200 flex items-center justify-center">
-          <User className="w-6 h-6 text-gray-500" />
+        <div className="w-12 h-12 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+          {getNameInitials(testimonial.name)}
         </div>
       )}
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          {testimonial.platform ? (
+            <span className="text-xs font-semibold uppercase tracking-wide text-orange-700 bg-orange-50 px-2 py-0.5 rounded">
+              {getReviewChannelLabel(testimonial.platform, locale)}
+            </span>
+          ) : null}
           <span className="font-medium text-gray-900 text-sm">{testimonial.name}</span>
           {testimonial.location ? (
             <span className="text-sm text-gray-500">{testimonial.location}</span>
@@ -63,6 +79,9 @@ export default function PropertyCuratedReviews({
   platformStats = [],
   globalAggregate = null,
   testimonials = [],
+  propertyId,
+  revyoosReviews = [],
+  revyoosReviewsTotal = 0,
 }: PropertyCuratedReviewsProps) {
   const { locale, t } = useLocale();
 
@@ -70,6 +89,7 @@ export default function PropertyCuratedReviews({
     reviews.length === 0 &&
     testimonials.length === 0 &&
     platformStats.length === 0 &&
+    revyoosReviewsTotal === 0 &&
     !globalAggregate
   ) {
     return (
@@ -85,6 +105,14 @@ export default function PropertyCuratedReviews({
         platformStats={platformStats}
         globalAggregate={globalAggregate}
       />
+
+      {propertyId && revyoosReviewsTotal > 0 ? (
+        <RevyoosReviews
+          propertyId={propertyId}
+          initialReviews={revyoosReviews}
+          total={revyoosReviewsTotal}
+        />
+      ) : null}
 
       {reviews.length > 0 || testimonials.length > 0 ? (
         <div className="space-y-4">
@@ -135,7 +163,11 @@ export default function PropertyCuratedReviews({
           ))}
 
           {testimonials.map((testimonial) => (
-            <TestimonialReviewCard key={testimonial.id} testimonial={testimonial} />
+            <TestimonialReviewCard
+              key={testimonial.id}
+              testimonial={testimonial}
+              locale={locale}
+            />
           ))}
         </div>
       ) : null}

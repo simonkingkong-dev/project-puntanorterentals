@@ -1,11 +1,58 @@
 import {
   DEFAULT_CHECK_IN_HOUR,
+  DEFAULT_MIN_NIGHTS,
   PROPERTY_TIMEZONE,
+  countNightsBetween,
+  getMinNights,
+  validateMinNights,
   validateWebCheckInLeadTime,
   isSameDayWebBookingOpen,
   isCheckInDateDisabledForWebBooking,
   WEB_LAST_MINUTE_CUTOFF_HOUR,
 } from '@/lib/booking-policy';
+
+describe('minimum nights', () => {
+  it('defaults to 1 when unset or invalid', () => {
+    expect(DEFAULT_MIN_NIGHTS).toBe(1);
+    expect(getMinNights({})).toBe(1);
+    expect(getMinNights({ minNights: 0 })).toBe(1);
+    expect(getMinNights({ minNights: -3 })).toBe(1);
+    expect(getMinNights({ minNights: Number.NaN })).toBe(1);
+  });
+
+  it('reads and floors a configured minimum', () => {
+    expect(getMinNights({ minNights: 2 })).toBe(2);
+    expect(getMinNights({ minNights: 3.7 })).toBe(3);
+  });
+
+  it('counts nights ignoring the time of day', () => {
+    // Check-in por la noche y salida por la mañana siguen siendo 2 noches.
+    const checkIn = new Date(2026, 7, 1, 23, 30);
+    const checkOut = new Date(2026, 7, 3, 6, 0);
+    expect(countNightsBetween(checkIn, checkOut)).toBe(2);
+  });
+
+  it('accepts a stay that meets the minimum', () => {
+    const result = validateMinNights(new Date(2026, 7, 1), new Date(2026, 7, 3), 2);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('rejects a stay below the minimum and says how many nights are needed', () => {
+    const result = validateMinNights(new Date(2026, 7, 1), new Date(2026, 7, 2), 2);
+    expect(result.allowed).toBe(false);
+    expect(result.error).toMatch(/mínimo de 2 noches/i);
+  });
+
+  it('rejects a check-out that is not after check-in', () => {
+    const result = validateMinNights(new Date(2026, 7, 1), new Date(2026, 7, 1), 1);
+    expect(result.allowed).toBe(false);
+    expect(result.error).toMatch(/posterior/i);
+  });
+
+  it('does not reject anything when the minimum is 1', () => {
+    expect(validateMinNights(new Date(2026, 7, 1), new Date(2026, 7, 2), 1).allowed).toBe(true);
+  });
+});
 
 describe('booking-policy', () => {
   it('exports cutoff at 21:00 (15:00 + 6h)', () => {

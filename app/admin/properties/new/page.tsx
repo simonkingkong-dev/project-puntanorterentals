@@ -21,6 +21,7 @@ import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
   DEFAULT_INCLUDED_GUESTS,
 } from '@/lib/pricing-guests';
+import { DEFAULT_MIN_NIGHTS } from '@/lib/booking-policy';
 
 const commonAmenitiesByLang = {
   es: [
@@ -111,6 +112,7 @@ export default function NewPropertyPage() {
     location: '',
     maxGuests: 2,
     pricePerNight: 100,
+    minNights: DEFAULT_MIN_NIGHTS,
     includedGuests: DEFAULT_INCLUDED_GUESTS,
     extraGuestFeePerNight: DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
     featured: false,
@@ -120,6 +122,7 @@ export default function NewPropertyPage() {
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
     hostfullyPropertyId: '',
+    revyoosHoldingId: '',
     hostfullyLeadWidgetUuid: '',
     hostfullyLeadWidgetOptionsJson: '',
     hostfullyCalendarWidgetId: '',
@@ -408,6 +411,22 @@ export default function NewPropertyPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="minNights">Noches mínimas por reserva</Label>
+                      <Input
+                        id="minNights"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={formData.minNights}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            minNights: Math.max(1, parseInt(e.target.value, 10) || 1),
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="includedGuests">Huéspedes incluidos en la tarifa</Label>
                       <Input id="includedGuests" type="number" min="1" value={formData.includedGuests} onChange={(e) => setFormData(prev => ({ ...prev, includedGuests: parseInt(e.target.value, 10) || 1 }))} />
                     </div>
@@ -557,6 +576,11 @@ export default function NewPropertyPage() {
                   <div className="space-y-2">
                     <Label htmlFor="hostfullyPropertyId">UID de Propiedad en Hostfully</Label>
                     <Input id="hostfullyPropertyId" value={formData.hostfullyPropertyId ?? ''} onChange={(e) => setFormData(prev => ({ ...prev, hostfullyPropertyId: e.target.value }))} placeholder="Ej: abc123-def456-..." />
+                  </div>
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-medium text-gray-900">Integración Revyoos (reseñas Airbnb/Booking/Google)</p>
+                    <Label htmlFor="revyoosHoldingId">Id de holding en Revyoos</Label>
+                    <Input id="revyoosHoldingId" value={formData.revyoosHoldingId ?? ''} onChange={(e) => setFormData(prev => ({ ...prev, revyoosHoldingId: e.target.value }))} placeholder="Ej: 6a67dc26b8d46b00609da57a" />
                   </div>
                   <div className="space-y-2 border-t pt-4">
                     <p className="text-sm font-medium text-gray-900">Widget Lead / reserva (leadCaptureWidget)</p>

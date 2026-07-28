@@ -53,12 +53,19 @@ async function revalidateTestimonialPaths(propertyIds: Array<string | undefined>
   );
 }
 
+function normalizePlatform(platform?: string): PropertyReviewChannel | undefined {
+  const trimmed = platform?.trim();
+  return trimmed && isReviewChannel(trimmed) ? trimmed : undefined;
+}
+
 function buildCreatePayload(formData: TestimonialWriteData) {
   const propertyId = normalizePropertyId(formData.propertyId);
-  const { propertyId: _omit, ...rest } = formData;
+  const platform = normalizePlatform(formData.platform);
+  const { propertyId: _omitId, platform: _omitPlatform, ...rest } = formData;
   return {
     ...rest,
     ...(propertyId ? { propertyId } : {}),
+    ...(platform ? { platform } : {}),
     createdAt: new Date(),
   };
 }
@@ -74,6 +81,12 @@ function buildUpdatePayload(formData: UpdateTestimonialFormData) {
     } else {
       payload.propertyId = FieldValue.delete();
     }
+  }
+
+  if ("platform" in formData) {
+    const platform = normalizePlatform(formData.platform);
+    delete payload.platform;
+    payload.platform = platform ?? FieldValue.delete();
   }
 
   return payload;

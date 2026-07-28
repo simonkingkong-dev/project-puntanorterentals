@@ -5,25 +5,28 @@ function formatPrivateKey(key: string) {
   return key.replace(/\\n/g, "\n");
 }
 
-function getProjectId(): string | undefined {
-  if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-    return process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  }
-  if (process.env.GOOGLE_CLOUD_PROJECT) {
-    return process.env.GOOGLE_CLOUD_PROJECT;
-  }
-  if (process.env.GCLOUD_PROJECT) {
-    return process.env.GCLOUD_PROJECT;
-  }
+function getWebappConfig(): { projectId?: string; storageBucket?: string } {
   const webapp = process.env.FIREBASE_WEBAPP_CONFIG;
-  if (webapp) {
-    try {
-      const parsed = JSON.parse(webapp) as { projectId?: string };
-      if (parsed.projectId) return parsed.projectId;
-    } catch {
-      // ignore malformed FIREBASE_WEBAPP_CONFIG and let validation fail below
-    }
+  if (!webapp) return {};
+  try {
+    return JSON.parse(webapp) as { projectId?: string; storageBucket?: string };
+  } catch {
+    return {};
   }
+}
+
+function getProjectId(): string | undefined {
+  if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) return process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (process.env.GOOGLE_CLOUD_PROJECT) return process.env.GOOGLE_CLOUD_PROJECT;
+  if (process.env.GCLOUD_PROJECT) return process.env.GCLOUD_PROJECT;
+  return getWebappConfig().projectId;
+}
+
+function getStorageBucket(projectId: string | undefined): string | undefined {
+  if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) return process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const fromWebapp = getWebappConfig().storageBucket;
+  if (fromWebapp) return fromWebapp;
+  if (projectId) return `${projectId}.firebasestorage.app`;
   return undefined;
 }
 
@@ -50,7 +53,7 @@ function getAdminApp() {
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
       privateKey: formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY),
     }),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+    storageBucket: getStorageBucket(projectId),
   });
 }
 

@@ -4,9 +4,17 @@ import { adminDb } from "@/lib/firebase-admin";
 import { Reservation } from "@/lib/types";
 import { generateDateRange } from "@/lib/utils/date";
 import { checkHostfullyAvailability } from "@/lib/hostfully/client";
-import { hasOverlappingActiveHold } from "@/lib/availability-holds";
+import {
+  hasOverlappingActiveHold,
+  hasOverlappingConfirmedReservation,
+} from "@/lib/availability-holds";
 import { isMissingFirestoreIndexError } from "@/lib/firestore-query-utils";
-import { validateWebCheckInLeadTime } from "@/lib/booking-policy";
+import {
+  getMinNights,
+  validateMinNights,
+  validateWebCheckInLeadTime,
+} from "@/lib/booking-policy";
+import { getBlockingPropertyIds, getCalendarGroupIds } from "@/lib/property-hierarchy";
 
 const PENDING_RESERVATION_MINUTES = 10;
 
@@ -147,25 +155,28 @@ async function getPendingHeldReservationsForProperty(propertyId: string) {
   }
 }
 
-async function releaseExpiredHoldsForDates(propertyId: string, dateStrings: string[]) {
-  const { getPropertyByIdAdmin, releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
+async function releaseExpiredHoldsForDates(propertyIds: string[], dateStrings: string[]) {
+  const { releasePendingReservationAdmin } = await import("@/lib/firebase-admin-queries");
   const now = new Date();
   const dateSet = new Set(dateStrings);
-  const snapshot = await getPendingHeldReservationsForProperty(propertyId);
 
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-    const expiresAt = data.expiresAt?.toDate?.() ?? new Date(data.expiresAt);
-    if (expiresAt >= now) continue;
-    const resCheckIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
-    const resCheckOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
-    const resDates = generateDateRange(resCheckIn, resCheckOut);
-    const overlaps = resDates.some((d) => dateSet.has(d));
-    if (overlaps) {
-      try {
-        await releasePendingReservationAdmin(doc.id);
-      } catch {
-        // ignore per-reservation errors
+  for (const propertyId of propertyIds) {
+    const snapshot = await getPendingHeldReservationsForProperty(propertyId);
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const expiresAt = data.expiresAt?.toDate?.() ?? new Date(data.expiresAt);
+      if (expiresAt >= now) continue;
+      const resCheckIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
+      const resCheckOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+      const resDates = generateDateRange(resCheckIn, resCheckOut);
+      const overlaps = resDates.some((d) => dateSet.has(d));
+      if (overlaps) {
+        try {
+          await releasePendingReservationAdmin(doc.id);
+        } catch {
+          // ignore per-reservation errors
+        }
       }
     }
   }
@@ -180,11 +191,23 @@ export type CheckPropertyAvailabilityOptions = {
   /** Excluye esta reserva del chequeo de holds (p. ej. la que está en página de pago). */
   excludeReservationId?: string;
   excludeClientToken?: string;
+  /**
+   * Aplica reglas de estancia (noches mínimas). Sólo antes del cobro.
+   * Los llamadores posteriores al pago deben dejarlo en `false`: si el dueño sube el
+   * mínimo mientras alguien paga, se cancelaría una estancia ya cobrada.
+   */
+  enforceStayRules?: boolean;
+  /** Holds de pago de otros huéspedes. `false` tras el cobro (ya no compiten). */
+  includePendingHolds?: boolean;
+  /** Considerar el grupo padre/hijo. */
+  includeRelatedProperties?: boolean;
 };
 
 /**
  * Verificación en vivo al reservar/pagar solamente.
  * Listados y calendario usan Firestore sincronizado por cron (~10 min).
+ *
+ * Falla cerrado: cualquier error (incluido Hostfully caído) devuelve no disponible.
  */
 export async function checkPropertyAvailability(
   propertyId: string,
@@ -192,6 +215,12 @@ export async function checkPropertyAvailability(
   checkOut: Date,
   options?: CheckPropertyAvailabilityOptions
 ): Promise<{ available: boolean; error?: string }> {
+  const {
+    enforceStayRules = false,
+    includePendingHolds = true,
+    includeRelatedProperties = true,
+  } = options ?? {};
+
   try {
     const { getPropertyByIdAdmin } = await import("@/lib/firebase-admin-queries");
     const property = await getPropertyByIdAdmin(propertyId);
@@ -202,46 +231,96 @@ export async function checkPropertyAvailability(
       return { available: false, error: leadTime.error };
     }
 
-    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
-    await releaseExpiredHoldsForDates(propertyId, dateStrings);
+    if (enforceStayRules) {
+      const stay = validateMinNights(
+        new Date(checkIn),
+        new Date(checkOut),
+        getMinNights(property)
+      );
+      if (!stay.allowed) return { available: false, error: stay.error };
+    }
 
-    const holdOverlap = await hasOverlappingActiveHold(
-      propertyId,
+    // Reservas nuestras: bidireccional (una reserva nombra una sola propiedad).
+    const blockingIds = includeRelatedProperties
+      ? await getBlockingPropertyIds(propertyId)
+      : [];
+    const groupIds = Array.from(new Set([propertyId, ...blockingIds]));
+
+    // Calendario Hostfully: sólo hacia arriba. El calendario del padre ya agrega a
+    // sus hijas, así que heredarlo hacia abajo bloquearía habitaciones hermanas libres.
+    const calendarIds = includeRelatedProperties
+      ? await getCalendarGroupIds(propertyId)
+      : [propertyId];
+
+    const dateStrings = generateDateRange(new Date(checkIn), new Date(checkOut));
+    await releaseExpiredHoldsForDates(groupIds, dateStrings);
+
+    if (includePendingHolds) {
+      // El token de cliente sólo exime en la propiedad que se está comprando; extenderlo
+      // al grupo dejaría a un mismo cliente retener la casa y comprar una unidad a la vez.
+      const ownHold = await hasOverlappingActiveHold(
+        [propertyId],
+        new Date(checkIn),
+        new Date(checkOut),
+        {
+          excludeReservationId: options?.excludeReservationId,
+          excludeClientToken: options?.excludeClientToken,
+        }
+      );
+      const relatedHold =
+        !ownHold && blockingIds.length > 0
+          ? await hasOverlappingActiveHold(blockingIds, new Date(checkIn), new Date(checkOut), {
+              excludeReservationId: options?.excludeReservationId,
+            })
+          : false;
+
+      if (ownHold || relatedHold) {
+        return {
+          available: false,
+          error: "Esas fechas están reservadas temporalmente por otro huésped en proceso de pago.",
+        };
+      }
+    }
+
+    const confirmedOverlap = await hasOverlappingConfirmedReservation(
+      groupIds,
       new Date(checkIn),
       new Date(checkOut),
-      {
-        excludeReservationId: options?.excludeReservationId,
-        excludeClientToken: options?.excludeClientToken,
-      }
+      { excludeReservationId: options?.excludeReservationId }
     );
-    if (holdOverlap) {
-      return {
-        available: false,
-        error: "Esas fechas están reservadas temporalmente por otro huésped en proceso de pago.",
-      };
+    if (confirmedOverlap) {
+      return { available: false, error: "Esas fechas ya están reservadas." };
     }
 
-    if (property.hostfullyPropertyId) {
-      const hostfully = await checkHostfullyAvailability(
-        property.hostfullyPropertyId,
-        new Date(checkIn),
-        new Date(checkOut)
-      );
-      if (!hostfully.available) return hostfully;
-      return { available: true };
+    const hostfullyChecks = await Promise.all(
+      calendarIds.map(async (id) => {
+        const prop = id === propertyId ? property : await getPropertyByIdAdmin(id);
+        if (!prop?.hostfullyPropertyId) return null;
+        return checkHostfullyAvailability(
+          prop.hostfullyPropertyId,
+          new Date(checkIn),
+          new Date(checkOut)
+        );
+      })
+    );
+    for (const result of hostfullyChecks) {
+      if (result && !result.available) return result;
     }
 
-    let prop = property;
-    const hasUnavailable = dateStrings.some((d) => prop.availability[d] === false);
-    if (hasUnavailable) {
-      const refreshed = await getPropertyByIdAdmin(propertyId);
-      if (!refreshed) return { available: false, error: "Propiedad no encontrada" };
-      prop = refreshed;
+    // Propiedades sin vínculo al PMS: mapa local de disponibilidad.
+    for (const id of calendarIds) {
+      const prop = id === propertyId ? property : await getPropertyByIdAdmin(id);
+      if (!prop || prop.hostfullyPropertyId) continue;
+      const blocked = dateStrings.some((d) => prop.availability?.[d] === false);
+      if (blocked) {
+        const refreshed = await getPropertyByIdAdmin(id);
+        if (!refreshed) return { available: false, error: "Propiedad no encontrada" };
+        if (dateStrings.some((d) => refreshed.availability?.[d] === false)) {
+          return { available: false };
+        }
+      }
     }
 
-    for (const d of dateStrings) {
-      if (prop.availability[d] === false) return { available: false };
-    }
     return { available: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error al verificar disponibilidad";

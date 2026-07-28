@@ -10,11 +10,20 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, Plus, X, Link2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import NextLink from 'next/link';
 import { Property } from "@/lib/types";
 import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
   DEFAULT_INCLUDED_GUESTS,
 } from "@/lib/pricing-guests";
+import { DEFAULT_MIN_NIGHTS } from "@/lib/booking-policy";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   handleBulkAppendPropertyAmenity,
   handleBulkUpdatePropertyAmenities,
@@ -67,9 +76,18 @@ const commonAmenitiesByLang = {
   ],
 };
 
+export interface PropertyHierarchyOption {
+  id: string;
+  title: string;
+  parentPropertyId: string | null;
+}
+
 interface PropertyEditFormProps {
   initialData: Property;
+  allProperties: PropertyHierarchyOption[];
 }
+
+const NO_PARENT_VALUE = "__none__";
 
 /** Campos numéricos de widgets como string en inputs HTML. */
 type PropertyEditFormState = Omit<
@@ -84,7 +102,10 @@ type PropertyEditFormState = Omit<
   hostfullyCalendarMonthsToDisplay: string;
 };
 
-export default function PropertyEditForm({ initialData }: PropertyEditFormProps) {
+export default function PropertyEditForm({
+  initialData,
+  allProperties,
+}: PropertyEditFormProps) {
   const [isPending, setIsPending] = useState(false);
   const [isAmenitiesPending, setIsAmenitiesPending] = useState(false);
   const [isBulkAmenitiesPending, setIsBulkAmenitiesPending] = useState(false);
@@ -107,6 +128,8 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     location: initialData.location,
     maxGuests: initialData.maxGuests,
     pricePerNight: initialData.pricePerNight,
+    minNights: initialData.minNights ?? DEFAULT_MIN_NIGHTS,
+    parentPropertyId: initialData.parentPropertyId ?? '',
     includedGuests: initialData.includedGuests ?? DEFAULT_INCLUDED_GUESTS,
     extraGuestFeePerNight:
       initialData.extraGuestFeePerNight ?? DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
@@ -115,6 +138,7 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
     amenitiesEs: initialData.amenitiesEs ?? initialData.amenities ?? [],
     amenitiesEn: initialData.amenitiesEn ?? [],
     hostfullyPropertyId: initialData.hostfullyPropertyId ?? '',
+    revyoosHoldingId: initialData.revyoosHoldingId ?? '',
     hostfullyLeadWidgetUuid: initialData.hostfullyLeadWidgetUuid ?? '',
     hostfullyLeadWidgetOptionsJson: initialData.hostfullyLeadWidgetOptionsJson ?? '',
     hostfullyCalendarWidgetId:
@@ -178,6 +202,20 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
       ? formData.amenitiesEs ?? formData.amenities ?? []
       : formData.amenitiesEn ?? [];
   const commonAmenities = commonAmenitiesByLang[amenityLang];
+
+  /** Ya tiene unidades a su cargo: no puede ser además unidad de otra (un solo nivel). */
+  const hasChildren = useMemo(
+    () => allProperties.some((p) => p.parentPropertyId === initialData.id),
+    [allProperties, initialData.id]
+  );
+
+  /** Candidatas a padre: ni ella misma, ni las que ya son unidad de otra. */
+  const parentOptions = useMemo(() => {
+    if (hasChildren) return [];
+    return allProperties.filter(
+      (p) => p.id !== initialData.id && !p.parentPropertyId
+    );
+  }, [allProperties, initialData.id, hasChildren]);
 
   const newAmenitiesSinceLoad = useMemo(() => {
     const baseline = initialAmenitiesByLang.current[amenityLang];
@@ -264,7 +302,11 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
         title: formData.titleEs?.trim() || formData.title?.trim() || '',
         images: galleryImages,
         beds: formData.beds ?? [],
+        minNights: Math.max(1, Math.floor(Number(formData.minNights) || DEFAULT_MIN_NIGHTS)),
+        // `null` y no `undefined`: stripUndefined descartaría el campo y nunca se desvincularía.
+        parentPropertyId: formData.parentPropertyId?.trim() || null,
         hostfullyPropertyId: formData.hostfullyPropertyId?.trim() || undefined,
+        revyoosHoldingId: formData.revyoosHoldingId?.trim() || undefined,
         hostfullyLeadWidgetUuid: formData.hostfullyLeadWidgetUuid?.trim() || undefined,
         hostfullyLeadWidgetOptionsJson:
           formData.hostfullyLeadWidgetOptionsJson?.trim() || undefined,
@@ -679,6 +721,59 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="minNights">Noches mínimas por reserva</Label>
+              <Input
+                id="minNights"
+                type="number"
+                min="1"
+                step="1"
+                value={formData.minNights ?? DEFAULT_MIN_NIGHTS}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    minNights: Math.max(1, parseInt(e.target.value, 10) || 1),
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                El huésped no podrá reservar estancias más cortas. Usa 1 para no exigir mínimo.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="parentPropertyId">Unidad de (propiedad padre)</Label>
+              <Select
+                disabled={hasChildren}
+                value={formData.parentPropertyId?.trim() ? formData.parentPropertyId : NO_PARENT_VALUE}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    parentPropertyId: v === NO_PARENT_VALUE ? '' : v,
+                  }))
+                }
+              >
+                <SelectTrigger id="parentPropertyId">
+                  <SelectValue placeholder="Propiedad independiente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PARENT_VALUE}>Propiedad independiente</SelectItem>
+                  {parentOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {hasChildren
+                  ? 'Esta propiedad es la casa completa: reservarla bloquea sus unidades, y reservar cualquier unidad la bloquea a ella.'
+                  : 'Si es una unidad dentro de una casa mayor, elige la casa. Reservar cualquiera de las dos bloqueará a la otra.'}
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="includedGuests">Huéspedes incluidos en la tarifa</Label>
@@ -970,6 +1065,22 @@ export default function PropertyEditForm({ initialData }: PropertyEditFormProps)
               value={formData.hostfullyPropertyId ?? ''}
               onChange={(e) => setFormData(prev => ({ ...prev, hostfullyPropertyId: e.target.value }))}
               placeholder="Ej: abc123-def456-..."
+            />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-sm font-medium text-gray-900">Integración Revyoos (reseñas Airbnb/Booking/Google)</p>
+            <p className="text-xs text-muted-foreground">
+              Id del &quot;holding&quot; (anuncio) en Revyoos que corresponde a esta propiedad. Se usa para
+              importar y mostrar sus reseñas reales. Sincroniza desde{' '}
+              <NextLink href="/admin/testimonials" className="underline">Testimonios</NextLink>.
+            </p>
+            <Label htmlFor="revyoosHoldingId">Id de holding en Revyoos</Label>
+            <Input
+              id="revyoosHoldingId"
+              value={formData.revyoosHoldingId ?? ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, revyoosHoldingId: e.target.value }))}
+              placeholder="Ej: 6a67dc26b8d46b00609da57a"
             />
           </div>
 

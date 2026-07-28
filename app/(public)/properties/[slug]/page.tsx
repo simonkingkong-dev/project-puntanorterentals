@@ -11,6 +11,8 @@ import {
   getPublishedGlobalReviewAggregateAdmin,
   getPublishedPropertyReviewStatsAdmin,
   getTestimonialsByPropertyIdAdmin,
+  getRevyoosReviewsForPropertyAdmin,
+  getRevyoosPlatformStatsForPropertyAdmin,
 } from '@/lib/firebase-admin-queries';
 import { getServerLocale } from '@/lib/i18n/server';
 import { messages } from '@/lib/i18n/messages';
@@ -104,13 +106,40 @@ export default async function PropertyPage({
     notFound();
   }
 
-  const [curatedReviews, propertyTestimonials, platformStats, globalReviewAggregate] =
-    await Promise.all([
-      getPublishedPropertyReviewsAdmin(property.id),
-      getTestimonialsByPropertyIdAdmin(property.id),
-      getPublishedPropertyReviewStatsAdmin(property.id),
-      getPublishedGlobalReviewAggregateAdmin(),
-    ]);
+  const [
+    curatedReviews,
+    propertyTestimonials,
+    curatedPlatformStats,
+    globalReviewAggregate,
+    revyoosPage,
+    revyoosPlatformStats,
+  ] = await Promise.all([
+    getPublishedPropertyReviewsAdmin(property.id),
+    getTestimonialsByPropertyIdAdmin(property.id),
+    getPublishedPropertyReviewStatsAdmin(property.id),
+    getPublishedGlobalReviewAggregateAdmin(),
+    getRevyoosReviewsForPropertyAdmin(property.id, { limit: 9, offset: 0 }),
+    getRevyoosPlatformStatsForPropertyAdmin(property.id),
+  ]);
+
+  // Las estadísticas curadas a mano (captura de pantalla) tienen prioridad por canal;
+  // Revyoos (real, calculado de las reseñas importadas) rellena los canales que falten.
+  const curatedChannels = new Set(curatedPlatformStats.map((s) => s.channel));
+  const platformStats = [
+    ...curatedPlatformStats,
+    ...revyoosPlatformStats
+      .filter((s) => !curatedChannels.has(s.channel))
+      .map((s) => ({
+        id: `revyoos-${property.id}-${s.channel}`,
+        propertyId: property.id,
+        channel: s.channel,
+        averageRating: s.averageRating,
+        reviewCount: s.reviewCount,
+        screenshotUrl: '',
+        status: 'published' as const,
+        createdAt: new Date(),
+      })),
+  ];
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
@@ -161,6 +190,8 @@ export default async function PropertyPage({
           platformStats={platformStats}
           globalReviewAggregate={globalReviewAggregate}
           propertyTestimonials={propertyTestimonials}
+          revyoosReviews={revyoosPage.reviews}
+          revyoosReviewsTotal={revyoosPage.total}
           initialSearch={listingSearchSelection}
         />
       </div>

@@ -9,6 +9,10 @@
     {
       "pattern": "\\.env(\\.local)?$",
       "reason": "Archivos de configuracion local del proyecto - no son secretos de produccion"
+    },
+    {
+      "pattern": "process\\.env\\.",
+      "reason": "Lectura de variables de entorno en codigo de servidor - no es un archivo .env"
     }
   ]
 }

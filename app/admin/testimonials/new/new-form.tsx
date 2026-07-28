@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,15 +13,17 @@ import { toast } from "sonner";
 import { handleCreateTestimonial } from "../actions";
 import TestimonialImageField from "@/components/admin/testimonial-image-field";
 import TestimonialPropertySelect from "@/components/admin/testimonial-property-select";
+import TestimonialPlatformSelect from "@/components/admin/testimonial-platform-select";
 import TestimonialReviewImport from "@/components/admin/testimonial-review-import";
-import type { Property } from "@/lib/types";
+import type { Property, PropertyReviewChannel } from "@/lib/types";
+import { getNameInitials } from "@/lib/utils";
 
 interface NewTestimonialFormProps {
   properties: Pick<Property, "id" | "title">[];
 }
 
 export default function NewTestimonialForm({ properties }: NewTestimonialFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     name: "",
     text: "",
@@ -30,39 +32,38 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
     location: "",
     featured: false,
     propertyId: "",
+    platform: "" as PropertyReviewChannel | "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    try {
-      if (!formData.name || !formData.text) {
-        toast.error("Por favor completa el nombre y el testimonio");
-        setIsLoading(false);
-        return;
-      }
+    if (!formData.name || !formData.text) {
+      toast.error("Por favor completa el nombre y el testimonio");
+      return;
+    }
 
-      if (formData.rating < 1 || formData.rating > 5) {
-        toast.error("La calificación debe estar entre 1 y 5 estrellas");
-        setIsLoading(false);
-        return;
-      }
+    if (formData.rating < 1 || formData.rating > 5) {
+      toast.error("La calificación debe estar entre 1 y 5 estrellas");
+      return;
+    }
 
-      const result = await handleCreateTestimonial(formData);
+    // redirect() dentro de la Server Action lanza una excepción especial de
+    // Next.js; sólo se maneja correctamente dentro de una transición, de lo
+    // contrario un try/catch normal la confunde con un error real.
+    startTransition(async () => {
+      const result = await handleCreateTestimonial({
+        ...formData,
+        platform: formData.platform || undefined,
+      });
 
       if (result && !result.success) {
         toast.error(result.error || "Error al crear el testimonio");
-        setIsLoading(false);
         return;
       }
 
       toast.success("Testimonio creado exitosamente");
-    } catch (error) {
-      console.error("Error creando el testimonio:", error);
-      toast.error("Error inesperado al crear el testimonio");
-      setIsLoading(false);
-    }
+    });
   };
 
   const renderStarRating = () => (
@@ -97,6 +98,10 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
             text: draft.text,
             rating: draft.rating,
             location: draft.location,
+            // Sólo se sobrescribe lo que la IA logró identificar.
+            platform: draft.platform ?? prev.platform,
+            propertyId: draft.propertyId ?? prev.propertyId,
+            image: draft.image ?? prev.image,
           }))
         }
       />
@@ -138,6 +143,11 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
             properties={properties}
             value={formData.propertyId}
             onChange={(propertyId) => setFormData((prev) => ({ ...prev, propertyId }))}
+          />
+
+          <TestimonialPlatformSelect
+            value={formData.platform}
+            onChange={(platform) => setFormData((prev) => ({ ...prev, platform }))}
           />
         </CardContent>
       </Card>
@@ -197,6 +207,10 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
                   alt={formData.name}
                   className="w-12 h-12 rounded-full object-cover"
                 />
+              ) : formData.name.trim() ? (
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+                  {getNameInitials(formData.name)}
+                </div>
               ) : (
                 <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-gray-600" />
@@ -229,8 +243,8 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
       </Card>
 
       <div className="flex gap-4">
-        <Button type="submit" disabled={isLoading} className="flex-1">
-          {isLoading ? (
+        <Button type="submit" disabled={isPending} className="flex-1">
+          {isPending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Creando...
@@ -242,7 +256,7 @@ export default function NewTestimonialForm({ properties }: NewTestimonialFormPro
             </>
           )}
         </Button>
-        <Button asChild variant="outline" disabled={isLoading}>
+        <Button asChild variant="outline" disabled={isPending}>
           <Link href="/admin/testimonials">Cancelar</Link>
         </Button>
       </div>

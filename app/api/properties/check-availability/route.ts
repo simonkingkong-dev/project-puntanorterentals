@@ -9,7 +9,14 @@ import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { propertyId, checkIn, checkOut, excludeReservationId, excludeClientToken } = body;
+    const {
+      propertyId,
+      checkIn,
+      checkOut,
+      excludeReservationId,
+      excludeClientToken,
+      enforceStayRules,
+    } = body;
     if (!propertyId || !checkIn || !checkOut) {
       return NextResponse.json(
         { available: false, error: 'propertyId, checkIn y checkOut son requeridos' },
@@ -25,6 +32,9 @@ export async function POST(request: NextRequest) {
           typeof excludeReservationId === 'string' ? excludeReservationId : undefined,
         excludeClientToken:
           typeof excludeClientToken === 'string' ? excludeClientToken : undefined,
+        // La re-verificación desde la página de pago manda `false`: si el dueño sube el
+        // mínimo de noches con el huésped ya pagando, no debe quedarse a medias.
+        enforceStayRules: enforceStayRules === true,
       }
     );
     return NextResponse.json(result);

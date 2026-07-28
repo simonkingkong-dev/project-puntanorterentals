@@ -110,3 +110,39 @@ export function isCheckInDateDisabledForWebBooking(
   if (dateKey === todayKey && !isSameDayWebBookingOpen(now, timeZone)) return true;
   return false;
 }
+
+/** Sin configuración explícita, cualquier estancia de una noche es válida. */
+export const DEFAULT_MIN_NIGHTS = 1;
+
+export function getMinNights(property: { minNights?: number }): number {
+  const n = Number(property?.minNights);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_MIN_NIGHTS;
+  return Math.floor(n);
+}
+
+/** Noches entre dos fechas ignorando la hora, para no perder una noche por desfases horarios. */
+export function countNightsBetween(checkIn: Date, checkOut: Date): number {
+  const start = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate());
+  const end = new Date(checkOut.getFullYear(), checkOut.getMonth(), checkOut.getDate());
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000);
+}
+
+export function validateMinNights(
+  checkIn: Date,
+  checkOut: Date,
+  minNights: number
+): { allowed: boolean; error?: string } {
+  const required = Number.isFinite(minNights) && minNights > 1 ? Math.floor(minNights) : 1;
+  const nights = countNightsBetween(checkIn, checkOut);
+
+  if (nights < 1) {
+    return { allowed: false, error: "La fecha de salida debe ser posterior a la de entrada." };
+  }
+  if (nights < required) {
+    return {
+      allowed: false,
+      error: `Esta propiedad requiere un mínimo de ${required} noches. Seleccionaste ${nights}.`,
+    };
+  }
+  return { allowed: true };
+}

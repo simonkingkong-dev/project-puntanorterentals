@@ -7,12 +7,20 @@ import { Button } from "@/components/ui/button";
 import SearchFormClient from "@/components/search-form-client";
 import PropertyCard from "@/components/ui/property-card";
 import HeroBackgroundRotator from "@/components/public/hero-background-rotator";
-import { getFeaturedPropertiesForList, getSiteContentBySectionAdmin, getAdminTestimonials } from "@/lib/firebase-admin-queries";
+import {
+  getFeaturedPropertiesForList,
+  getSiteContentBySectionAdmin,
+  getAdminTestimonials,
+  getRevyoosReviewsForHomepageAdmin,
+} from "@/lib/firebase-admin-queries";
+import RevyoosMarquee from "@/components/ui/revyoos-marquee";
 import {
   getPublishedBusinessReviewPlatformStatsAdmin,
   getPublishedGlobalReviewAggregateAdmin,
 } from "@/lib/guest-ratings-queries";
 import HomeGuestRatingsSummary from "@/components/public/home-guest-ratings-summary";
+import { getReviewChannelLabel } from "@/lib/review-channels";
+import { getNameInitials } from "@/lib/utils";
 import { getServerLocale } from "@/lib/i18n/server";
 import { messages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
@@ -49,6 +57,14 @@ const getCachedHomeGuestRatings = unstable_cache(
   },
   ["homepage-guest-ratings"],
   { revalidate: 300, tags: ["guest-ratings", "testimonials"] }
+);
+
+const HOMEPAGE_MARQUEE_REVIEW_COUNT = 35;
+
+const getCachedRevyoosMarqueeReviews = unstable_cache(
+  async () => getRevyoosReviewsForHomepageAdmin(HOMEPAGE_MARQUEE_REVIEW_COUNT),
+  ["homepage-revyoos-marquee"],
+  { revalidate: 300, tags: ["guest-ratings"] }
 );
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -115,12 +131,13 @@ export default async function HomePage() {
   const locale = await getServerLocale();
   const L = messages[locale];
 
-  const [featuredProperties, homepageContent, testimonials, guestRatings] =
+  const [featuredProperties, homepageContent, testimonials, guestRatings, revyoosMarqueeReviews] =
     await Promise.all([
       getCachedFeaturedProperties(),
       getCachedHomepageContent(),
       getCachedTestimonials(),
       getCachedHomeGuestRatings(),
+      getCachedRevyoosMarqueeReviews(),
     ]);
   const { platformStats: guestPlatformStats, globalAggregate: guestGlobalAggregate } =
     guestRatings;
@@ -331,6 +348,12 @@ export default async function HomePage() {
             </p>
           </div>
 
+          {revyoosMarqueeReviews.length > 0 ? (
+            <div className="mb-10">
+              <RevyoosMarquee reviews={revyoosMarqueeReviews} locale={locale} />
+            </div>
+          ) : null}
+
           {hasGuestRatings ? (
             <HomeGuestRatingsSummary
               locale={locale}
@@ -359,14 +382,16 @@ export default async function HomePage() {
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
-                        {t.name.charAt(0).toUpperCase()}
+                        {getNameInitials(t.name)}
                       </div>
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-gray-900 truncate">{t.name}</p>
-                      {t.location && (
-                        <p className="text-xs text-muted-foreground truncate">{t.location}</p>
-                      )}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[t.location, t.platform ? getReviewChannelLabel(t.platform, locale) : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     </div>
                     <div className="ml-auto flex gap-0.5 shrink-0">
                       {Array.from({ length: 5 }).map((_, i) => (

@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Property } from '@/lib/types';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '@/lib/country-codes';
 import { calculateNights } from '@/lib/utils/date';
-import { validateWebCheckInLeadTime } from '@/lib/booking-policy';
+import { getMinNights, validateMinNights, validateWebCheckInLeadTime } from '@/lib/booking-policy';
 import { useCart } from '@/lib/cart-context';
 import { CreditCard, Loader2, Users, Calendar, AlertCircle, ShoppingCart, ChevronRight } from 'lucide-react';
 import type { Currency } from '@/components/ui/currency-select';
@@ -243,6 +243,16 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
+    const stay = validateMinNights(
+      selectedDates.checkIn,
+      selectedDates.checkOut,
+      getMinNights(property)
+    );
+    if (!stay.allowed) {
+      toast.error(stay.error!);
+      return;
+    }
+
     if (bookingGuests > property.maxGuests) {
       toast.error(
         t('toast_max_guests', 'This property accepts up to {n} guests').replace(
@@ -276,6 +286,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           propertyId: property.id,
           checkIn: selectedDates.checkIn.toISOString(),
           checkOut: selectedDates.checkOut.toISOString(),
+          enforceStayRules: true,
         }),
       });
       const { available } = await availabilityRes.json();

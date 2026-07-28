@@ -71,7 +71,14 @@ export async function POST(request: Request) {
         } as Reservation;
 
         if (propertyId) {
-          const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut);
+          // Post-pago: excluir esta reserva (ya está 'confirmed' arriba, se encontraría
+          // a sí misma) y no aplicar reglas de estancia ni holds ajenos — un fallo aquí
+          // cancela una reserva ya cobrada, sin reembolso.
+          const availability = await checkPropertyAvailability(propertyId, checkIn, checkOut, {
+            excludeReservationId: reservationId,
+            includePendingHolds: false,
+            enforceStayRules: false,
+          });
           if (!availability.available) {
             await reservationRef.update({
               status: 'cancelled',
