@@ -15,7 +15,6 @@ import {
   RevyoosReview,
 } from "@/lib/types";
 import { toPropertyListItems, type PropertyListItem } from "@/lib/property-list-item";
-import { pickRealisticReviews, ensurePlatformDiversity } from "@/lib/revyoos/realistic-sample";
 import { normalizeBeds } from "@/lib/property-beds";
 import {
   isMissingFirestoreIndexError,
@@ -451,10 +450,15 @@ function mapRevyoosReviewDoc(doc: QueryDocumentSnapshot): RevyoosReview {
     ...d,
     id: doc.id,
     reviewDate: safeTimestampToDate(d.reviewDate),
+    // Defensivo: reseñas sincronizadas antes de que existiera curación manual no tienen estos campos.
+    status: d.status === "published" ? "published" : "draft",
+    featuredOnHome: d.featuredOnHome === true,
   } as RevyoosReview;
 }
 
-async function getAllRevyoosReviewsForPropertyAdmin(propertyId: string): Promise<RevyoosReview[]> {
+/** Todas las reseñas (con texto) de una propiedad, sin filtrar por curación. Usado tanto por
+ * las estadísticas por plataforma (que deben ser reales) como por la pantalla de gestión. */
+export async function getAllRevyoosReviewsForPropertyAdmin(propertyId: string): Promise<RevyoosReview[]> {
   try {
     const snapshot = await adminDb
       .collection("revyoos_reviews")
@@ -472,76 +476,52 @@ async function getAllRevyoosReviewsForPropertyAdmin(propertyId: string): Promise
   }
 }
 
-/** Tope y rango de calificación objetivo para la muestra mostrada (las estadísticas agregadas siguen usando el total real, sin recortar). */
-const REVYOOS_SAMPLE_TARGET_COUNT = 30;
-const REVYOOS_SAMPLE_MIN_AVG = 4.3;
-const REVYOOS_SAMPLE_MAX_AVG = 4.7;
+/** Todas las reseñas (con texto) de todas las propiedades, sin filtrar por curación. */
+export async function getAllRevyoosReviewsAdmin(): Promise<RevyoosReview[]> {
+  try {
+    const snapshot = await adminDb.collection("revyoos_reviews").get();
+    return snapshot.docs
+      .map(mapRevyoosReviewDoc)
+      .filter((r) => r.text.trim().length > 0)
+      .sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Admin: Error fetching all revyoos reviews", error);
+    }
+    return [];
+  }
+}
 
-/** Página de reseñas Revyoos de una propiedad: hasta 30, elegidas para que el
- * promedio de la muestra caiga en un rango realista (4.3-4.7), no sólo las mejores.
+function resolveDisplayText(r: RevyoosReview): RevyoosReview {
+  const override = r.displayText?.trim();
+  return override ? { ...r, text: override } : r;
+}
+
+/** Tope de sanidad para el carrusel de inicio (por si el admin destaca de más). */
+const REVYOOS_HOME_SAFETY_CAP = 100;
+
+/** Página de reseñas Revyoos de una propiedad: sólo las que el admin publicó
+ * manualmente (`/admin/testimonials/revyoos`), con el texto editado si lo hay.
  * Ordenadas de más reciente a más antigua. */
 export const getRevyoosReviewsForPropertyAdmin = async (
   propertyId: string,
   options?: { limit?: number; offset?: number }
 ): Promise<{ reviews: RevyoosReview[]; total: number }> => {
   const all = await getAllRevyoosReviewsForPropertyAdmin(propertyId);
-  const sample = pickRealisticReviews(all, {
-    targetCount: REVYOOS_SAMPLE_TARGET_COUNT,
-    minAvg: REVYOOS_SAMPLE_MIN_AVG,
-    maxAvg: REVYOOS_SAMPLE_MAX_AVG,
-  }).sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
+  const published = all.filter((r) => r.status === "published").map(resolveDisplayText);
   const offset = Math.max(0, options?.offset ?? 0);
-  const limit = options?.limit ?? sample.length;
-  return { reviews: sample.slice(offset, offset + limit), total: sample.length };
+  const limit = options?.limit ?? published.length;
+  return { reviews: published.slice(offset, offset + limit), total: published.length };
 };
 
-/** ~N reseñas mezcladas de todas las propiedades y plataformas, para el carrusel del inicio. */
-export const getRevyoosReviewsForHomepageAdmin = async (
-  count = 35
-): Promise<RevyoosReview[]> => {
-  try {
-    const snapshot = await adminDb.collection("revyoos_reviews").get();
-    const all = snapshot.docs
-      .map(mapRevyoosReviewDoc)
-      .filter((r) => r.text.trim().length > 0)
-      .sort((a, b) => b.reviewDate.getTime() - a.reviewDate.getTime());
-
-    const rawSample = pickRealisticReviews(all, {
-      targetCount: count,
-      minAvg: REVYOOS_SAMPLE_MIN_AVG,
-      maxAvg: REVYOOS_SAMPLE_MAX_AVG,
-    });
-    // Por rating, no por plataforma: una plataforma minoritaria (Google, ~9%) puede
-    // quedar afuera por azar. Se fuerza que las tres aparezcan al menos una vez.
-    const sample = ensurePlatformDiversity(rawSample, all);
-
-    // Intercala por propiedad para que no queden varias tarjetas seguidas de la misma unidad.
-    const byProperty = new Map<string, RevyoosReview[]>();
-    for (const r of sample) {
-      const arr = byProperty.get(r.propertyId) ?? [];
-      arr.push(r);
-      byProperty.set(r.propertyId, arr);
-    }
-    const groups = Array.from(byProperty.values());
-    const interleaved: RevyoosReview[] = [];
-    let addedAny = true;
-    while (addedAny) {
-      addedAny = false;
-      for (const group of groups) {
-        const next = group.shift();
-        if (next) {
-          interleaved.push(next);
-          addedAny = true;
-        }
-      }
-    }
-    return interleaved;
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Admin: Error fetching homepage revyoos reviews", error);
-    }
-    return [];
-  }
+/** Reseñas destacadas manualmente para el carrusel del inicio (`/admin/testimonials/revyoos`),
+ * con el texto editado si lo hay. Cruza todas las propiedades. */
+export const getRevyoosReviewsForHomepageAdmin = async (): Promise<RevyoosReview[]> => {
+  const all = await getAllRevyoosReviewsAdmin();
+  return all
+    .filter((r) => r.featuredOnHome)
+    .slice(0, REVYOOS_HOME_SAFETY_CAP)
+    .map(resolveDisplayText);
 };
 
 /** Promedio y conteo por plataforma, calculados directamente de las reseñas importadas (no requiere captura manual). */

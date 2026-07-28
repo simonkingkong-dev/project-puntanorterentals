@@ -59,10 +59,8 @@ const getCachedHomeGuestRatings = unstable_cache(
   { revalidate: 300, tags: ["guest-ratings", "testimonials"] }
 );
 
-const HOMEPAGE_MARQUEE_REVIEW_COUNT = 35;
-
 const getCachedRevyoosMarqueeReviews = unstable_cache(
-  async () => getRevyoosReviewsForHomepageAdmin(HOMEPAGE_MARQUEE_REVIEW_COUNT),
+  async () => getRevyoosReviewsForHomepageAdmin(),
   ["homepage-revyoos-marquee"],
   { revalidate: 300, tags: ["guest-ratings"] }
 );
@@ -141,6 +139,11 @@ export default async function HomePage() {
     ]);
   const { platformStats: guestPlatformStats, globalAggregate: guestGlobalAggregate } =
     guestRatings;
+  // unstable_cache serializa a JSON: reviewDate llega como string, no Date — hay que revivirla.
+  const revyoosMarqueeReviewsHydrated = revyoosMarqueeReviews.map((r) => ({
+    ...r,
+    reviewDate: new Date(r.reviewDate),
+  }));
   const hasGuestRatings =
     guestPlatformStats.length > 0 || guestGlobalAggregate != null;
 
@@ -348,9 +351,9 @@ export default async function HomePage() {
             </p>
           </div>
 
-          {revyoosMarqueeReviews.length > 0 ? (
+          {revyoosMarqueeReviewsHydrated.length > 0 ? (
             <div className="mb-10">
-              <RevyoosMarquee reviews={revyoosMarqueeReviews} locale={locale} />
+              <RevyoosMarquee reviews={revyoosMarqueeReviewsHydrated} locale={locale} />
             </div>
           ) : null}
 

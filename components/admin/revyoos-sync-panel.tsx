@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,19 +43,24 @@ export default function RevyoosSyncPanel({ propertyTitleById }: RevyoosSyncPanel
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button type="button" onClick={handleSync} disabled={isPending}>
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Sincronizando…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Sincronizar ahora
-            </>
-          )}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" onClick={handleSync} disabled={isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sincronizando…
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sincronizar ahora
+              </>
+            )}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/admin/testimonials/revyoos">Gestionar reseñas importadas →</Link>
+          </Button>
+        </div>
 
         {result ? (
           <div className="text-sm space-y-2">

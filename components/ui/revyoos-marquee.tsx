@@ -1,7 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es as esLocale, enUS } from "date-fns/locale";
+import RevyoosReviewDialog from "@/components/ui/revyoos-review-dialog";
 import type { RevyoosReview } from "@/lib/types";
 import { getReviewChannelLabel } from "@/lib/review-channels";
 import { getNameInitials } from "@/lib/utils";
@@ -15,11 +19,30 @@ interface RevyoosMarqueeProps {
 const SECONDS_PER_CARD = 4.4;
 const MIN_DURATION_SECONDS = 45;
 
-function MarqueeCard({ review, locale }: { review: RevyoosReview; locale: "es" | "en" }) {
+function MarqueeCard({
+  review,
+  locale,
+  onOpen,
+}: {
+  review: RevyoosReview;
+  locale: "es" | "en";
+  onOpen: (review: RevyoosReview) => void;
+}) {
   const dateFnsLocale = locale === "en" ? enUS : esLocale;
 
   return (
-    <article className="w-72 sm:w-80 shrink-0 rounded-xl border bg-white p-4 shadow-sm">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(review)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(review);
+        }
+      }}
+      className="w-72 sm:w-80 shrink-0 rounded-xl border bg-white p-4 shadow-sm text-left cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+    >
       <div className="flex items-center gap-3 mb-2">
         {review.avatarUrl ? (
           <div className="relative w-9 h-9 shrink-0 rounded-full overflow-hidden border">
@@ -50,31 +73,40 @@ function MarqueeCard({ review, locale }: { review: RevyoosReview; locale: "es" |
       </div>
       <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">{review.text}</p>
       <p className="text-xs text-gray-400 mt-2">
-        {formatDistanceToNow(review.reviewDate, { addSuffix: true, locale: dateFnsLocale })}
+        {formatDistanceToNow(new Date(review.reviewDate), { addSuffix: true, locale: dateFnsLocale })}
       </p>
     </article>
   );
 }
 
 /**
- * Carrusel horizontal infinito (loop CSS puro, sin JS): la lista se duplica una
- * vez y el keyframe recorre exactamente -50%, así que el corte es imperceptible.
+ * Carrusel horizontal infinito (loop CSS puro): la lista se duplica una vez y el
+ * keyframe recorre exactamente -50%, así que el corte es imperceptible. El hover
+ * ya pausa la animación (globals.css), lo que permite hacer clic con precisión.
  */
 export default function RevyoosMarquee({ reviews, locale }: RevyoosMarqueeProps) {
+  const [selectedReview, setSelectedReview] = useState<RevyoosReview | null>(null);
+
   if (reviews.length === 0) return null;
 
   const duration = Math.max(MIN_DURATION_SECONDS, Math.round(reviews.length * SECONDS_PER_CARD));
 
   return (
-    <div
-      className="revyoos-marquee-viewport overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]"
-      style={{ ["--revyoos-marquee-duration" as string]: `${duration}s` }}
-    >
-      <div className="revyoos-marquee-track flex w-max gap-4 py-2">
-        {[...reviews, ...reviews].map((review, i) => (
-          <MarqueeCard key={`${review.id}-${i}`} review={review} locale={locale} />
-        ))}
+    <>
+      <div
+        className="revyoos-marquee-viewport overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]"
+        style={{ ["--revyoos-marquee-duration" as string]: `${duration}s` }}
+      >
+        <div className="revyoos-marquee-track flex w-max gap-4 py-2">
+          {[...reviews, ...reviews].map((review, i) => (
+            <MarqueeCard key={`${review.id}-${i}`} review={review} locale={locale} onOpen={setSelectedReview} />
+          ))}
+        </div>
       </div>
-    </div>
+      <RevyoosReviewDialog
+        review={selectedReview}
+        onOpenChange={(open) => !open && setSelectedReview(null)}
+      />
+    </>
   );
 }

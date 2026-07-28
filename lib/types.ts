@@ -186,6 +186,12 @@ export interface RevyoosReview {
   lang?: string;
   reviewDate: Date;
   sourceUrl?: string;
+  /** Controla si aparece en la pestaña de reseñas de su propiedad. Default en reseñas nuevas: 'draft'. */
+  status: "draft" | "published";
+  /** Controla si aparece en el carrusel del inicio. Independiente de `status`. */
+  featuredOnHome: boolean;
+  /** Texto editado por el admin; si existe, se muestra en vez de `text`. `text` (original de la plataforma) nunca se toca. */
+  displayText?: string;
 }
 
 export interface Reservation {

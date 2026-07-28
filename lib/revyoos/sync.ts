@@ -26,9 +26,9 @@ export interface RevyoosSyncResult {
   byProperty: Record<string, number>;
 }
 
-function buildDocPayload(raw: RevyoosRawReview, propertyId: string) {
+function buildDocPayload(raw: RevyoosRawReview, propertyId: string, isNew: boolean) {
   const rating = Number(raw.score_reviews);
-  return {
+  const payload: Record<string, unknown> = {
     externalId: raw._id,
     propertyId,
     platform: normalizeRevyoosPlatform(raw.type_source_reviews) as PropertyReviewChannel,
@@ -42,10 +42,23 @@ function buildDocPayload(raw: RevyoosRawReview, propertyId: string) {
     reviewDate: new Date(raw.date),
     sourceUrl: raw.sourceUrl ?? null,
   };
+  // Sólo se fijan en la primera escritura: en un re-sync, {merge:true} sin estos
+  // campos deja intacta la curación manual del admin (status/featuredOnHome/displayText).
+  if (isNew) {
+    payload.status = "draft";
+    payload.featuredOnHome = false;
+  }
+  return payload;
+}
+
+async function getExistingRevyoosReviewIds(): Promise<Set<string>> {
+  const snapshot = await adminDb.collection(REVYOOS_COLLECTION).select().get();
+  return new Set(snapshot.docs.map((d) => d.id));
 }
 
 async function upsertReviews(
-  reviews: Array<{ raw: RevyoosRawReview; propertyId: string }>
+  reviews: Array<{ raw: RevyoosRawReview; propertyId: string }>,
+  existingIds: Set<string>
 ): Promise<number> {
   let written = 0;
   for (let i = 0; i < reviews.length; i += FIRESTORE_BATCH_LIMIT) {
@@ -53,7 +66,7 @@ async function upsertReviews(
     const batch = adminDb.batch();
     for (const { raw, propertyId } of chunk) {
       const ref = adminDb.collection(REVYOOS_COLLECTION).doc(raw._id);
-      batch.set(ref, buildDocPayload(raw, propertyId), { merge: true });
+      batch.set(ref, buildDocPayload(raw, propertyId, !existingIds.has(raw._id)), { merge: true });
     }
     await batch.commit();
     written += chunk.length;
@@ -101,9 +114,10 @@ async function updateBusinessAggregate(meta: {
 }
 
 export async function syncRevyoosReviews(): Promise<RevyoosSyncResult> {
-  const [{ meta, reviews }, properties] = await Promise.all([
+  const [{ meta, reviews }, properties, existingIds] = await Promise.all([
     fetchAllRevyoosReviews(),
     getAdminProperties(),
+    getExistingRevyoosReviewIds(),
   ]);
 
   const holdingToProperty = new Map<string, string>();
@@ -127,7 +141,7 @@ export async function syncRevyoosReviews(): Promise<RevyoosSyncResult> {
     mapped.push({ raw, propertyId });
   }
 
-  const imported = await upsertReviews(mapped);
+  const imported = await upsertReviews(mapped, existingIds);
   await updateBusinessAggregate(meta);
 
   const byProperty: Record<string, number> = {};

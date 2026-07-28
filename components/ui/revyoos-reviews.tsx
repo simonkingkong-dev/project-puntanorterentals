@@ -6,6 +6,7 @@ import { Star, ExternalLink, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es as esLocale, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import RevyoosReviewDialog from "@/components/ui/revyoos-review-dialog";
 import type { RevyoosReview } from "@/lib/types";
 import { getReviewChannelLabel } from "@/lib/review-channels";
 import { getNameInitials } from "@/lib/utils";
@@ -18,16 +19,31 @@ interface RevyoosReviewsProps {
 }
 
 const PAGE_SIZE = 9;
-const EXPAND_THRESHOLD = 220;
 
-function RevyoosCard({ review, locale }: { review: RevyoosReview; locale: "es" | "en" }) {
-  const { t } = useLocale();
-  const [expanded, setExpanded] = useState(false);
+function RevyoosCard({
+  review,
+  locale,
+  onOpen,
+}: {
+  review: RevyoosReview;
+  locale: "es" | "en";
+  onOpen: (review: RevyoosReview) => void;
+}) {
   const dateFnsLocale = locale === "en" ? enUS : esLocale;
-  const isLong = review.text.length > EXPAND_THRESHOLD;
 
   return (
-    <article className="p-4 rounded-lg border bg-white flex flex-col gap-3">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(review)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(review);
+        }
+      }}
+      className="p-4 rounded-lg border bg-white flex flex-col gap-3 text-left cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+    >
       <div className="flex items-start gap-3">
         {review.avatarUrl ? (
           <div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border">
@@ -56,6 +72,7 @@ function RevyoosCard({ review, locale }: { review: RevyoosReview; locale: "es" |
                 href={review.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 font-semibold uppercase tracking-wide text-orange-700 hover:underline"
               >
                 {getReviewChannelLabel(review.platform, locale)}
@@ -68,7 +85,7 @@ function RevyoosCard({ review, locale }: { review: RevyoosReview; locale: "es" |
             )}
             <span aria-hidden="true">·</span>
             <span>
-              {formatDistanceToNow(review.reviewDate, { addSuffix: true, locale: dateFnsLocale })}
+              {formatDistanceToNow(new Date(review.reviewDate), { addSuffix: true, locale: dateFnsLocale })}
             </span>
           </div>
         </div>
@@ -76,32 +93,10 @@ function RevyoosCard({ review, locale }: { review: RevyoosReview; locale: "es" |
 
       <div>
         {review.title ? <p className="font-medium text-gray-900 text-sm mb-1">{review.title}</p> : null}
-        <p
-          className={`text-gray-600 text-sm leading-relaxed whitespace-pre-line ${
-            expanded ? "" : "line-clamp-3"
-          }`}
-        >
+        <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line line-clamp-3">
           {review.text}
         </p>
-        {isLong ? (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="text-xs text-orange-700 font-medium mt-1 hover:underline"
-          >
-            {expanded ? t("reviews_show_less", "Show less") : t("reviews_read_more", "Read more")}
-          </button>
-        ) : null}
       </div>
-
-      {review.ownerResponse ? (
-        <div className="border-l-2 border-orange-200 pl-3">
-          <p className="font-semibold text-gray-800 text-xs uppercase tracking-wide mb-1">
-            {t("reviews_owner_response", "Response from the host")}
-          </p>
-          <p className="text-gray-600 text-sm whitespace-pre-line">{review.ownerResponse}</p>
-        </div>
-      ) : null}
     </article>
   );
 }
@@ -114,6 +109,7 @@ export default function RevyoosReviews({ propertyId, initialReviews, total }: Re
   const { locale, t } = useLocale();
   const [reviews, setReviews] = useState(initialReviews);
   const [loading, setLoading] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<RevyoosReview | null>(null);
 
   if (total === 0) return null;
 
@@ -141,7 +137,7 @@ export default function RevyoosReviews({ propertyId, initialReviews, total }: Re
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {reviews.map((review) => (
-          <RevyoosCard key={review.id} review={review} locale={locale} />
+          <RevyoosCard key={review.id} review={review} locale={locale} onOpen={setSelectedReview} />
         ))}
       </div>
       {reviews.length < total ? (
@@ -152,6 +148,10 @@ export default function RevyoosReviews({ propertyId, initialReviews, total }: Re
           </Button>
         </div>
       ) : null}
+      <RevyoosReviewDialog
+        review={selectedReview}
+        onOpenChange={(open) => !open && setSelectedReview(null)}
+      />
     </div>
   );
 }
