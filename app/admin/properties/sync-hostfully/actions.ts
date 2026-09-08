@@ -245,7 +245,9 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
   const avail = (h.availability ?? {}) as Record<string, unknown>;
   const pricing = (h.pricing ?? {}) as Record<string, unknown>;
   const maxGuests = Number(avail.maxGuests ?? avail.baseGuests ?? h.maxGuests ?? 4) || 4;
-  const dailyRate = Number(pricing.dailyRate ?? pricing.rate ?? h.pricePerNight ?? 0) || 0;
+  // +10% de margen sobre el precio base importado de Hostfully (mismo criterio que extractDailyRatesFromDays).
+  const rawDailyRate = Number(pricing.dailyRate ?? pricing.rate ?? h.pricePerNight ?? 0) || 0;
+  const dailyRate = rawDailyRate > 0 ? Math.round(rawDailyRate * 1.1 * 100) / 100 : 0;
 
   const includedRaw = firstNumeric(
     pricing.includedGuests,

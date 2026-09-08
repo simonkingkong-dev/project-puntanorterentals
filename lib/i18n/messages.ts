@@ -145,6 +145,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     calendar_hint_select_checkout:
       "Seleccione la fecha de salida (o haga clic en otra fecha para cambiar la entrada)",
     calendar_hint_select_stay: "Seleccione las fechas de su estancia",
+    calendar_min_nights_notice: "Estancia mínima: {n} noches",
+    calendar_clear_selection: "Borrar selección",
     calendar_prev_month: "Mes anterior",
     calendar_next_month: "Mes siguiente",
     calendar_check_in_label: "Fecha de entrada:",
@@ -614,6 +616,8 @@ export const messages: Record<Locale, Record<string, string>> = {
     calendar_hint_select_checkout:
       "Select check-out (or click another date to change check-in)",
     calendar_hint_select_stay: "Select your stay dates",
+    calendar_min_nights_notice: "Minimum stay: {n} nights",
+    calendar_clear_selection: "Clear dates",
     calendar_prev_month: "Previous month",
     calendar_next_month: "Next month",
     calendar_check_in_label: "Check-in date:",

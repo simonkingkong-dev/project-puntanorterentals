@@ -18,9 +18,11 @@ export interface SyncBookingToHostfullyParams {
   guestLastName?: string;
   guestEmail?: string;
   guestPhone?: string;
-  /** Total cobrado en el sitio (USD, con impuestos). Se incluye en notas del lead. */
+  /** Total cobrado en el sitio, siempre en USD (Hostfully opera en USD). Se envía como quoteOverrides.totalPrice. */
   totalAmountUsd?: number;
   guests?: number;
+  /** Idioma del huésped al reservar; se exporta como guestInformation.preferredLocale para que los mensajes de Hostfully lleguen en su idioma. */
+  locale?: 'es' | 'en';
 }
 
 export type SyncBookingResult =
@@ -90,6 +92,9 @@ export async function trySyncBookingToHostfully(
     if (Number.isFinite(guests) && guests > 0) {
       guestInformation.adultCount = guests;
     }
+    if (params.locale === 'es' || params.locale === 'en') {
+      guestInformation.preferredLocale = { language: params.locale };
+    }
 
     const payload: Record<string, unknown> = {
       type: 'BOOKING',
@@ -107,6 +112,8 @@ export async function trySyncBookingToHostfully(
     };
     const totalUsd = Number(params.totalAmountUsd);
     if (Number.isFinite(totalUsd) && totalUsd > 0) {
+      // Sin esto, Hostfully calcula su propio total estimado en vez del monto realmente cobrado.
+      payload.quoteOverrides = { totalPrice: Math.round(totalUsd * 100) / 100 };
       payload.notes = `Reserva web Punta Norte — total cobrado ${totalUsd} USD (incl. IVA/ISH).`;
     }
     if (process.env.NODE_ENV === 'development' && isHostfullyDebugEnabled()) {

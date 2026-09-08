@@ -24,7 +24,7 @@ import { sumNightlyRatesUsd } from '@/lib/property-nightly-total';
 
 interface AvailabilityCalendarProps {
   property: Property;
-  onDateSelect: (dates: { checkIn: Date; checkOut?: Date }) => void;
+  onDateSelect: (dates: { checkIn: Date; checkOut?: Date } | undefined) => void;
   selectedDates?: { checkIn?: Date; checkOut?: Date };
   /** Huéspedes seleccionados (para estimar cargo extra en el resumen). */
   guestCount?: number;
@@ -204,6 +204,16 @@ export default function AvailabilityCalendar({
     [rangeFrom, isNightAvailable, minNights]
   );
 
+  /** Evita fechas "huérfanas": disponibles pero sin ninguna noche disponible adyacente (antes o después), donde el huésped quedaría atorado sin poder completar ninguna estancia. */
+  const hasAdjacentAvailableNight = useCallback(
+    (date: Date): boolean => {
+      const prevKey = format(addDays(date, -1), 'yyyy-MM-dd');
+      const nextKey = format(addDays(date, 1), 'yyyy-MM-dd');
+      return availabilityMap[prevKey] !== false || availabilityMap[nextKey] !== false;
+    },
+    [availabilityMap]
+  );
+
   const isDateDisabled = useCallback(
     (date: Date): boolean => {
       const dateString = format(date, 'yyyy-MM-dd');
@@ -212,9 +222,10 @@ export default function AvailabilityCalendar({
         rangeFrom != null && startOfDay(date).getTime() > startOfDay(rangeFrom).getTime();
 
       if (isCheckoutCandidate) return !canUseAsCheckout(date);
-      return availabilityMap[dateString] === false;
+      if (availabilityMap[dateString] === false) return true;
+      return !hasAdjacentAvailableNight(date);
     },
-    [availabilityMap, rangeFrom, canUseAsCheckout]
+    [availabilityMap, rangeFrom, canUseAsCheckout, hasAdjacentAvailableNight]
   );
 
   const handleDayClick = useCallback(
@@ -334,6 +345,14 @@ export default function AvailabilityCalendar({
 
   const isSelectingRange = Boolean(rangeFrom && !selectedRange?.to);
 
+  const hasSelection = Boolean(rangeFrom || selectedDates?.checkIn);
+  const clearSelection = useCallback(() => {
+    setRangeFrom(undefined);
+    setHoveredDate(undefined);
+    lastClickedDayRef.current = null;
+    onDateSelect(undefined);
+  }, [onDateSelect]);
+
   const displayCheckIn = rangeFrom ?? selectedDates?.checkIn;
   const displayCheckOut = selectedDates?.checkOut ?? (rangeFrom && hoveredDate ? hoveredDate : undefined);
   const checkOutIsPreview = Boolean(rangeFrom && hoveredDate && !selectedDates?.checkOut);
@@ -414,26 +433,45 @@ export default function AvailabilityCalendar({
               ? t('calendar_hint_select_checkout', 'Pick check-out (or click another date to change check-in)')
               : t('calendar_hint_select_stay', 'Select your stay dates')}
           </p>
+          {minNights > 1 && (
+            <p className="text-sm text-orange-700 font-medium mt-1">
+              {t('calendar_min_nights_notice', 'Minimum stay: {n} nights').replace(
+                '{n}',
+                String(minNights)
+              )}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-1 shrink-0 rounded-md border border-gray-200 bg-gray-50 p-0.5">
-          <button
-            type="button"
-            onClick={goPrevMonth}
-            disabled={!canGoPrev}
-            aria-label={t('calendar_prev_month', 'Previous month')}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={goNextMonth}
-            disabled={!canGoNext}
-            aria-label={t('calendar_next_month', 'Next month')}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasSelection && (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 underline underline-offset-2 whitespace-nowrap"
+            >
+              {t('calendar_clear_selection', 'Clear dates')}
+            </button>
+          )}
+          <div className="flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              type="button"
+              onClick={goPrevMonth}
+              disabled={!canGoPrev}
+              aria-label={t('calendar_prev_month', 'Previous month')}
+              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={goNextMonth}
+              disabled={!canGoNext}
+              aria-label={t('calendar_next_month', 'Next month')}
+              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

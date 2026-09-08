@@ -35,17 +35,44 @@ type DisplayRateInput = Pick<Property, "pricePerNight" | "dailyRates" | "availab
   lowestAvailableNightlyRate?: number | null;
 };
 
+export interface DisplayDateRange {
+  checkIn: Date;
+  checkOut: Date;
+}
+
 /**
- * Precio "Desde" en tarjetas: el **mínimo** entre noches futuras disponibles en Hostfully.
- * Si no hay tarifas por fecha, usa `lowestAvailableNightlyRate` (cron diario) o `pricePerNight`.
+ * Precio "Desde" en tarjetas: el **mínimo** entre noches disponibles en Hostfully.
+ * Sin `dateRange`: mínimo entre todas las noches futuras (usa `lowestAvailableNightlyRate`,
+ * el cron diario, como atajo). Con `dateRange`: mínimo estrictamente dentro de esas fechas
+ * (ignora el atajo del cron, que no es específico del rango elegido por el huésped).
+ * Si no hay tarifas por fecha aplicables, usa `pricePerNight`.
  */
-export function computeDisplayNightlyRate(property: DisplayRateInput): number | null {
+export function computeDisplayNightlyRate(
+  property: DisplayRateInput,
+  dateRange?: DisplayDateRange
+): number | null {
   const baseRate =
     typeof property.pricePerNight === "number" &&
     Number.isFinite(property.pricePerNight) &&
     property.pricePerNight > 0
       ? property.pricePerNight
       : null;
+
+  const rates = property.dailyRates ?? {};
+
+  if (dateRange) {
+    const startKey = toDateKey(dateRange.checkIn);
+    const endKey = toDateKey(dateRange.checkOut);
+    let minRate: number | null = null;
+    for (const [dateKey, rate] of Object.entries(rates)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+      if (dateKey < startKey || dateKey >= endKey) continue;
+      if (property.availability?.[dateKey] === false) continue;
+      if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) continue;
+      if (minRate == null || rate < minRate) minRate = rate;
+    }
+    return minRate ?? baseRate;
+  }
 
   if (
     typeof property.lowestAvailableNightlyRate === "number" &&
@@ -55,7 +82,6 @@ export function computeDisplayNightlyRate(property: DisplayRateInput): number | 
     return property.lowestAvailableNightlyRate;
   }
 
-  const rates = property.dailyRates ?? {};
   const todayKey = toDateKey(new Date());
   let minRate: number | null = null;
 
@@ -69,7 +95,7 @@ export function computeDisplayNightlyRate(property: DisplayRateInput): number | 
   return minRate ?? baseRate;
 }
 
-export function toPropertyListItem(property: Property): PropertyListItem {
+export function toPropertyListItem(property: Property, dateRange?: DisplayDateRange): PropertyListItem {
   return {
     id: property.id,
     slug: property.slug,
@@ -84,7 +110,7 @@ export function toPropertyListItem(property: Property): PropertyListItem {
     amenitiesEn: property.amenitiesEn,
     images: property.images?.length ? property.images : [],
     pricePerNight: property.pricePerNight,
-    displayNightlyRate: computeDisplayNightlyRate(property),
+    displayNightlyRate: computeDisplayNightlyRate(property, dateRange),
     maxGuests: property.maxGuests,
     location: property.location,
     featured: property.featured,
@@ -93,6 +119,6 @@ export function toPropertyListItem(property: Property): PropertyListItem {
   };
 }
 
-export function toPropertyListItems(properties: Property[]): PropertyListItem[] {
-  return properties.map(toPropertyListItem);
+export function toPropertyListItems(properties: Property[], dateRange?: DisplayDateRange): PropertyListItem[] {
+  return properties.map((property) => toPropertyListItem(property, dateRange));
 }

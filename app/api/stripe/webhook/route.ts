@@ -106,6 +106,7 @@ export async function POST(request: Request) {
             guestPhone: data.guestPhone,
             totalAmountUsd: Number(data.totalAmount) || undefined,
             guests: Number(data.guests) || undefined,
+            locale: data.locale === 'en' ? 'en' : 'es',
           });
           if (!syncResult.synced) {
             console.error('[Hostfully] Sync falló en webhook:', syncResult.error);

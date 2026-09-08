@@ -209,6 +209,8 @@ export interface Reservation {
   /** Moneda e importe cobrado por Stripe (puede diferir de totalAmount en USD). Opcional en documentos antiguos. */
   paidCurrency?: string;
   paidAmount?: number;
+  /** Idioma del huésped al reservar (se exporta a Hostfully para que sus mensajes lleguen en este idioma). */
+  locale?: 'es' | 'en';
   status: 'pending' | 'confirmed' | 'cancelled';
   stripePaymentId?: string;
   createdAt: Date;

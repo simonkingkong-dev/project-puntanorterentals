@@ -97,7 +97,11 @@ export default function ModifyReservationPage() {
       .finally(() => setLoading(false));
   }, [id, token, t]);
 
-  const onDateSelect = useCallback((dates: { checkIn: Date; checkOut?: Date }) => {
+  const onDateSelect = useCallback((dates: { checkIn: Date; checkOut?: Date } | undefined) => {
+    if (!dates) {
+      setSelectedDates(undefined);
+      return;
+    }
     setSelectedDates((prev) => ({
       checkIn: dates.checkIn,
       checkOut: dates.checkOut ?? prev?.checkOut,

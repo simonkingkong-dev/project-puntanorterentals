@@ -92,7 +92,7 @@ export default function ReservationForm({
   usdEurRate = null,
 }: ReservationFormProps) {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { cart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [datesUnavailable, setDatesUnavailable] = useState(false);
@@ -316,6 +316,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           guestEmail: formData.guestEmail,
           guestPhone: guestPhoneStr,
           totalAmount: totalUsd,
+          locale,
         }),
       });
       const data = await res.json();

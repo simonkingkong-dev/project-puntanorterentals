@@ -130,7 +130,21 @@ export const getFeaturedPropertiesAdmin = async (): Promise<Property[]> => {
 /** Busca propiedades con filtros; devuelve DTO liviano para listados. */
 export const searchPropertiesForList = async (params: SearchParams): Promise<PropertyListItem[]> => {
   const properties = await searchPropertiesAdmin(params);
-  return toPropertyListItems(properties);
+
+  // Si el huésped eligió fechas, el precio mostrado debe ser el mínimo dentro de ese
+  // rango (no el mínimo histórico de todas las fechas disponibles).
+  const checkInTrim = params.checkIn?.trim();
+  let dateRange: { checkIn: Date; checkOut: Date } | undefined;
+  if (checkInTrim) {
+    const checkIn = new Date(checkInTrim);
+    const checkOutTrim = params.checkOut?.trim();
+    const checkOut = checkOutTrim ? new Date(checkOutTrim) : new Date(checkIn.getTime() + 86400000);
+    if (Number.isFinite(checkIn.getTime()) && Number.isFinite(checkOut.getTime()) && checkOut > checkIn) {
+      dateRange = { checkIn, checkOut };
+    }
+  }
+
+  return toPropertyListItems(properties, dateRange);
 };
 
 /** Busca propiedades con filtros (usa Admin SDK en servidor). */

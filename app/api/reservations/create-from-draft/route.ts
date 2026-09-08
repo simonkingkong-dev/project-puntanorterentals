@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
       guestEmail,
       guestPhone,
       totalAmount,
+      locale,
     } = body;
+    const guestLocale: 'es' | 'en' = locale === 'en' ? 'en' : 'es';
 
     if (!propertyId || !guestEmail || totalAmount == null) {
       return NextResponse.json(
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
       checkOut: checkOutDate,
       guests: Number(guests) || 1,
       totalAmount: Number(totalAmount) || 0,
+      locale: guestLocale,
       status: 'pending',
       createdAt: new Date(),
       expiresAt,

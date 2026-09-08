@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
       guestPhone: updated.guestPhone,
       totalAmountUsd: Number(updated.totalAmount) || undefined,
       guests: Number(updated.guests) || undefined,
+      locale: updated.locale === 'en' ? 'en' : 'es',
     });
     if (!syncResult.synced) {
       console.error('[Hostfully] Sync falló tras confirmar reserva:', syncResult.error);
