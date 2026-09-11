@@ -26,6 +26,13 @@ import { messages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/messages";
 import { contentMap, pickSiteContent } from "@/lib/site-content-localization";
+import { getHomeFaq } from "@/lib/home-faq";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const revalidate = 300;
 
@@ -159,61 +166,6 @@ export default async function HomePage() {
         .map((item) => item.trim())
         .filter(Boolean)
     : [heroCoverImageFallback];
-  const businessDescription =
-    locale === "en"
-      ? "Vacation rental platform with beachfront homes and apartments in Punta Norte, Mexico. Direct booking with live availability and secure payments."
-      : "Plataforma de renta vacacional con casas y departamentos frente al mar en Punta Norte, México. Reserva directa con disponibilidad en tiempo real y pagos seguros.";
-  const businessFeatures =
-    locale === "en"
-      ? ["Direct booking", "Secure Stripe payments", "Live availability", "Personalized support"]
-      : ["Reserva directa", "Pagos seguros con Stripe", "Disponibilidad en tiempo real", "Atención personalizada"];
-  const faqItems =
-    locale === "en"
-      ? [
-          {
-            question: "How do I book a property with Punta Norte Rentals?",
-            answer:
-              "Select your property, choose dates on the live availability calendar, enter your details, and pay securely with Stripe. You will receive email confirmation.",
-          },
-          {
-            question: "What is the cancellation policy?",
-            answer:
-              "Each property has its own cancellation policy on the detail page. You can modify your booking from the reservations page with your access token.",
-          },
-          {
-            question: "Where are Punta Norte Rentals properties located?",
-            answer:
-              "Our properties are located in Punta Norte, Mexico. We offer vacation homes and apartments with beach access, ocean views, and complete amenities.",
-          },
-          {
-            question: "What payment methods do you accept?",
-            answer:
-              "We accept secure credit and debit card payments through Stripe. Payments are encrypted and processed securely.",
-          },
-        ]
-      : [
-          {
-            question: "¿Cómo reservar una propiedad en Punta Norte Rentals?",
-            answer:
-              "Seleccione la propiedad, elija las fechas en el calendario de disponibilidad en tiempo real, complete sus datos y realice el pago seguro con Stripe. Recibirá la confirmación por correo electrónico.",
-          },
-          {
-            question: "¿Cuál es la política de cancelación?",
-            answer:
-              "Cada propiedad indica su política de cancelación en la página de detalle. Puede modificar su reserva desde el panel de reservas con su enlace de acceso.",
-          },
-          {
-            question: "¿Dónde están ubicadas las propiedades de Punta Norte Rentals?",
-            answer:
-              "Todas nuestras propiedades están ubicadas en Punta Norte, México. Ofrecemos casas y departamentos vacacionales con acceso a playa, vistas al mar y amenidades completas.",
-          },
-          {
-            question: "¿Qué métodos de pago aceptan?",
-            answer:
-              "Aceptamos pagos seguros con tarjeta de crédito y débito a través de Stripe. Los pagos se procesan de forma encriptada y segura.",
-          },
-        ];
-
   return (
     <div className="flex flex-col min-h-screen">
       <section className="relative min-h-[55vh] sm:min-h-[600px] flex items-center justify-center">
@@ -416,6 +368,29 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="py-16 md:py-20 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-gray-900">
+              {L.home_faq_title}
+            </h2>
+            <p className="text-muted-foreground text-lg">{L.home_faq_subtitle}</p>
+          </div>
+          <Accordion type="single" collapsible className="w-full">
+            {getHomeFaq(locale).map((item, i) => (
+              <AccordionItem key={i} value={`faq-${i}`}>
+                <AccordionTrigger className="text-left text-base md:text-lg">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground leading-relaxed">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
+
       <section className="py-16 md:py-20 bg-background">
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <h2 className="text-2xl md:text-4xl font-bold mb-4 text-gray-900">
@@ -433,38 +408,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'LodgingBusiness',
-            name: 'Punta Norte Rentals',
-            description: businessDescription,
-            url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-            image: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/og-image.png`,
-            address: { '@type': 'PostalAddress', addressCountry: 'MX', addressRegion: 'Punta Norte' },
-            priceRange: '$$',
-            amenityFeature: businessFeatures.map((name) => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
-            mainEntityOfPage: { '@type': 'WebPage', '@id': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: faqItems.map((item) => ({
-              '@type': 'Question',
-              name: item.question,
-              acceptedAnswer: { '@type': 'Answer', text: item.answer },
-            })),
-          }),
-        }}
-      />
     </div>
   );
 }

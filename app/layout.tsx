@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import Analytics from '@/components/analytics';
 import { getServerLocale } from '@/lib/i18n/server';
+import { ISLA_MUJERES_POIS_ES, ISLA_MUJERES_POIS_EN } from '@/lib/seo-entities';
+import { getHomeFaq } from '@/lib/home-faq';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -50,6 +52,13 @@ export async function generateMetadata(): Promise<Metadata> {
             'Isla Mujeres accommodation',
             'Mexico Caribbean vacation rental',
             'Quintana Roo vacation apartments',
+            'downtown Isla Mujeres lodging',
+            'apartments steps from Playa Media Luna',
+            'rentals near the Ferry Ultramar dock',
+            'walkable vacation rentals Isla Mujeres',
+            '3-bedroom vacation house Isla Mujeres',
+            'private rooms for couples Isla Mujeres',
+            'direct booking alternative to Airbnb Isla Mujeres',
           ]
         : [
             'rentas en Isla Mujeres',
@@ -61,6 +70,13 @@ export async function generateMetadata(): Promise<Metadata> {
             'apartamentos familiares Isla Mujeres',
             'renta vacacional Isla Mujeres',
             'La Casa Naranja Isla Mujeres',
+            'hospedaje en el centro de Isla Mujeres',
+            'departamentos a metros de Playa Media Luna',
+            'rentas cerca del ferry Ultramar',
+            'casa de 3 habitaciones Isla Mujeres',
+            'habitaciones privadas céntricas Isla Mujeres',
+            'renta vacacional directa Isla Mujeres',
+            'alternativa a Airbnb en Isla Mujeres',
           ],
     authors: [{ name: 'Punta Norte Rentals' }],
     robots: {
@@ -174,70 +190,23 @@ export default async function RootLayout({
         ],
         numberOfRooms: '9',
         starRating: { '@type': 'Rating', ratingValue: '4' },
+        nearbyAttraction: (locale === 'en' ? ISLA_MUJERES_POIS_EN : ISLA_MUJERES_POIS_ES).map(
+          (name) => ({ '@type': 'TouristAttraction', name })
+        ),
+        knowsAbout:
+          locale === 'en'
+            ? ['Isla Mujeres vacation rentals', 'Punta Norte neighborhood', 'Playa Norte area lodging']
+            : ['rentas vacacionales en Isla Mujeres', 'zona de Punta Norte', 'hospedaje cerca de Playa Norte'],
       },
       {
         '@type': 'FAQPage',
-        mainEntity: locale === 'en'
-          ? [
-              {
-                '@type': 'Question',
-                name: 'Where are Punta Norte Rentals properties located?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'Our properties are located in Isla Mujeres, Quintana Roo, Mexico. Most are near Punta Norte (the northern tip of the island), Playa Norte (one of the Caribbean\'s top beaches), and the Hidalgo pedestrian street in the town center.',
-                },
-              },
-              {
-                '@type': 'Question',
-                name: 'What types of vacation rentals are available in Isla Mujeres?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'We offer studios for 2–3 guests (from $44 USD/night), private rooms, family apartments for up to 5 guests, and the full La Casa Naranja house for groups of up to 14 people (from $225 USD/night).',
-                },
-              },
-              {
-                '@type': 'Question',
-                name: 'How do I book a vacation rental in Isla Mujeres?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'You can book directly on our website at puntanorterentals.com with no extra fees. We accept USD, MXN, and EUR. Live availability is shown in real time.',
-                },
-              },
-            ]
-          : [
-              {
-                '@type': 'Question',
-                name: '¿Dónde están ubicadas las propiedades de Punta Norte Rentals?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'Nuestras propiedades están en Isla Mujeres, Quintana Roo, México. La mayoría se encuentran cerca de Punta Norte (el extremo norte de la isla), Playa Norte y la peatonal Hidalgo en el centro del pueblo.',
-                },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Qué tipos de rentas vacacionales hay en Isla Mujeres?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'Ofrecemos estudios para 2–3 huéspedes (desde $44 USD/noche), habitaciones privadas, apartamentos familiares para hasta 5 personas y La Casa Naranja completa para grupos de hasta 14 personas (desde $225 USD/noche).',
-                },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Cómo reservo una renta vacacional en Isla Mujeres?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'Puede reservar directamente en puntanorterentals.com sin comisiones adicionales. Aceptamos USD, MXN y EUR. La disponibilidad se muestra en tiempo real.',
-                },
-              },
-              {
-                '@type': 'Question',
-                name: '¿Hay estudios cerca de la peatonal Hidalgo en Isla Mujeres?',
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: 'Sí, contamos con estudios y apartamentos en el centro de Isla Mujeres, a pocos pasos de la peatonal Hidalgo y Playa Norte. Ideales para parejas o familias pequeñas.',
-                },
-              },
-            ],
+        // Misma fuente que la sección visible de FAQ en la home (lib/home-faq.ts):
+        // el schema siempre coincide con el contenido que ve el huésped.
+        mainEntity: getHomeFaq(locale).map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
       },
     ],
   };

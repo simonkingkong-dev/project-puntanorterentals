@@ -43,8 +43,34 @@ export async function generateMetadata(): Promise<Metadata> {
       : 'Explora estudios, apartamentos y casas vacacionales en Isla Mujeres. Cerca de Playa Norte, Punta Norte y la peatonal Hidalgo. Para grupos, parejas y familias. Desde $44 USD/noche.';
   const keywords =
     locale === 'en'
-      ? ['vacation rentals Isla Mujeres', 'studios Isla Mujeres', 'family apartments Isla Mujeres', 'near Playa Norte', 'Punta Norte rentals', 'Quintana Roo vacation']
-      : ['rentas vacacionales Isla Mujeres', 'estudios Isla Mujeres', 'apartamentos familiares Isla Mujeres', 'cerca de Playa Norte', 'rentas Punta Norte', 'renta zona céntrica Isla Mujeres'];
+      ? [
+          'vacation rentals Isla Mujeres',
+          'studios Isla Mujeres',
+          'family apartments Isla Mujeres',
+          'near Playa Norte',
+          'Punta Norte rentals',
+          'Quintana Roo vacation',
+          'apartments near Playa Media Luna',
+          'rentals near the Malecón',
+          'lodging near Hidalgo pedestrian street',
+          'rentals near Ferry Ultramar',
+          '3-bedroom house for groups Isla Mujeres',
+          'private rooms for couples Isla Mujeres',
+        ]
+      : [
+          'rentas vacacionales Isla Mujeres',
+          'estudios Isla Mujeres',
+          'apartamentos familiares Isla Mujeres',
+          'cerca de Playa Norte',
+          'rentas Punta Norte',
+          'renta zona céntrica Isla Mujeres',
+          'departamentos cerca de Playa Media Luna',
+          'alojamiento cerca del Malecón',
+          'hospedaje cerca de la peatonal Hidalgo',
+          'rentas cerca del Ferry Ultramar',
+          'casa de 3 habitaciones para grupos Isla Mujeres',
+          'habitaciones privadas para parejas Isla Mujeres',
+        ];
 
   return {
     title,

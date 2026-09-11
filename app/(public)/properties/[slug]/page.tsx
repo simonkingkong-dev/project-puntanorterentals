@@ -25,6 +25,7 @@ import {
   listingSearchQueryFromServerSearchParams,
   listingSearchSelectionFromServerSearchParams,
 } from '@/lib/listing-search-params';
+import { nearbyAttractionsJsonLd } from '@/lib/seo-entities';
 
 export const revalidate = 300;
 
@@ -66,8 +67,12 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
       propertyTitle,
       locale === 'en' ? 'vacation rental' : 'renta vacacional',
       'Punta Norte',
+      'Isla Mujeres',
       'México',
       m.property_card_up_to_guests.replace('{n}', String(property.maxGuests)),
+      ...(locale === 'en'
+        ? ['near Playa Norte', 'near Playa Media Luna', 'near Hidalgo pedestrian street', 'downtown Isla Mujeres']
+        : ['cerca de Playa Norte', 'cerca de Playa Media Luna', 'cerca de la peatonal Hidalgo', 'centro de Isla Mujeres']),
     ],
     robots: { index: true, follow: true },
     openGraph: {
@@ -161,8 +166,17 @@ export default async function PropertyPage({
     priceRange: property.pricePerNight
       ? `${locale === 'en' ? 'From' : 'Desde'} $${property.pricePerNight} ${m.property_card_per_night}`
       : undefined,
-    address: { '@type': 'PostalAddress', addressCountry: 'MX', addressRegion: 'Punta Norte' },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Isla Mujeres',
+      addressRegion: 'Quintana Roo',
+      addressCountry: 'MX',
+    },
     containedInPlace: { '@type': 'LodgingBusiness', name: 'Punta Norte Rentals', url: siteUrl },
+    // Todas las propiedades están a pocas cuadras entre sí en Colonia Centro / Punta Norte,
+    // por lo que estos puntos de interés verificados aplican a cualquiera de ellas.
+    nearbyAttraction: nearbyAttractionsJsonLd(locale),
+    petsAllowed: false,
   };
 
   return (

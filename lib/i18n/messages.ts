@@ -283,6 +283,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     home_trust_location_title: "Ubicaciones privilegiadas",
     home_trust_location_body:
       "Zonas codiciadas, con buen acceso a playas, gastronomía y vida local.",
+    home_faq_title: "Preguntas frecuentes",
+    home_faq_subtitle:
+      "Ubicación, tipos de alojamiento, capacidades y cómo reservar en Isla Mujeres.",
     home_cta_title: "¿Está listo para su próxima escapada?",
     home_cta_subtitle:
       "Reserve en minutos o escríbanos para diseñar su viaje a medida.",
@@ -744,6 +747,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     home_trust_location_title: "Prime locations",
     home_trust_location_body:
       "Sought-after areas with easy access to beaches, dining, and local life.",
+    home_faq_title: "Frequently asked questions",
+    home_faq_subtitle:
+      "Location, accommodation types, group sizes, and how to book in Isla Mujeres.",
     home_cta_title: "Ready for your next escape?",
     home_cta_subtitle:
       "Book in minutes or message us to plan a tailored trip.",
