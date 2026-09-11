@@ -211,7 +211,13 @@ export interface Reservation {
   paidAmount?: number;
   /** Idioma del huésped al reservar (se exporta a Hostfully para que sus mensajes lleguen en este idioma). */
   locale?: 'es' | 'en';
-  status: 'pending' | 'confirmed' | 'cancelled';
+  /**
+   * `pending`: en proceso de pago (hold activo, aún dentro de la ventana de 10 min).
+   * `confirmed`: pago acreditado.
+   * `incomplete`: nunca se completó el pago (hold expiró o Stripe reportó fallo). No implica que el huésped haya cancelado.
+   * `cancelled`: fue pagada y luego cancelada (por el huésped o el staff), con o sin reembolso.
+   */
+  status: 'pending' | 'confirmed' | 'cancelled' | 'incomplete';
   stripePaymentId?: string;
   createdAt: Date;
   /** Solo para pending: fecha límite para completar el pago; después se liberan las fechas */

@@ -14,18 +14,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, XCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Edit, Eye, XCircle, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cancelReservationAdmin, confirmReservationAdmin } from "./actions";
 
 type ReservationRowActionsProps = {
   reservationId: string;
   status: string;
+  /** Ocultar el botón "Ver" (usado en la propia página de detalle, donde sería un enlace a sí misma). */
+  hideView?: boolean;
 };
 
 export default function ReservationRowActions({
   reservationId,
   status,
+  hideView = false,
 }: ReservationRowActionsProps) {
   const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -70,6 +73,14 @@ export default function ReservationRowActions({
   return (
     <>
       <div className="flex items-center gap-2">
+        {!hideView && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/reservations/${reservationId}`}>
+              <Eye className="w-4 h-4 mr-1" />
+              Ver
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline" size="sm">
           <Link href={`/admin/reservations/${reservationId}/edit`}>
             <Edit className="w-4 h-4 mr-1" />
@@ -94,7 +105,7 @@ export default function ReservationRowActions({
             )}
           </Button>
         )}
-        {status !== "cancelled" && (
+        {status !== "cancelled" && status !== "incomplete" && (
           <Button
             variant="outline"
             size="sm"

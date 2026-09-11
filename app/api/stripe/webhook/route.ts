@@ -147,8 +147,10 @@ export async function POST(request: Request) {
      const paymentIntent = event.data.object as Stripe.PaymentIntent;
      const reservationId = paymentIntent.metadata.reservationId;
      if (reservationId) {
+        // El pago nunca se completó: es una reserva incompleta, no una cancelación
+        // (el huésped no llegó a pagar, así que no hay nada que "cancelar").
         await adminDb.collection('reservations').doc(reservationId).update({
-            status: 'cancelled',
+            status: 'incomplete',
             updatedAt: new Date(),
         });
      }

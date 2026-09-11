@@ -236,7 +236,7 @@ export const getConfirmedReservationsByPropertyAdmin = async (
   }
 };
 
-// Solo confirmadas y canceladas (no pending, no incomplete)
+// Confirmadas, canceladas e incompletas (no las 'pending' en proceso de pago dentro de su ventana de hold)
 export const getAdminReservations = async (): Promise<Reservation[]> => {
   try {
     const snapshot = await adminDb.collection('reservations').orderBy('createdAt', 'desc').get();
@@ -245,7 +245,7 @@ export const getAdminReservations = async (): Promise<Reservation[]> => {
         const d = doc.data();
         return { ...d, id: doc.id, checkIn: safeTimestampToDate(d.checkIn), checkOut: safeTimestampToDate(d.checkOut), createdAt: safeTimestampToDate(d.createdAt) } as Reservation;
       })
-      .filter(r => r.status === 'confirmed' || r.status === 'cancelled'));
+      .filter(r => r.status === 'confirmed' || r.status === 'cancelled' || r.status === 'incomplete'));
   } catch (error) {
     console.error('Admin: Error fetching reservations', error);
     return [];
@@ -768,6 +768,9 @@ export const getReservationByIdForConfirmationAdmin = async (
       checkIn: safeTimestampToDate(data.checkIn),
       checkOut: safeTimestampToDate(data.checkOut),
       createdAt: safeTimestampToDate(data.createdAt),
+      confirmedAt: data.confirmedAt != null ? safeTimestampToDate(data.confirmedAt) : undefined,
+      hostfullySyncedAt:
+        data.hostfullySyncedAt != null ? safeTimestampToDate(data.hostfullySyncedAt) : undefined,
       propertyTitle,
     } as ReservationWithPropertyTitle;
   } catch (error) {
@@ -807,7 +810,8 @@ export const updatePropertyAvailabilityAdmin = async (
 };
 
 /**
- * Libera una reserva pendiente: la cancela y vuelve a dejar sus fechas disponibles.
+ * Libera una reserva pendiente que nunca se pagó (hold expirado): la marca `incomplete`
+ * y vuelve a dejar sus fechas disponibles. No es una cancelación (el huésped nunca pagó).
  * Usado por la API release y por checkPropertyAvailability al limpiar reservas expiradas.
  */
 export const releasePendingReservationAdmin = async (reservationId: string): Promise<boolean> => {
@@ -820,7 +824,7 @@ export const releasePendingReservationAdmin = async (reservationId: string): Pro
   const checkIn = safeTimestampToDate(data.checkIn);
   const checkOut = safeTimestampToDate(data.checkOut);
   const propertyId = data.propertyId as string;
-  await ref.update({ status: 'cancelled', updatedAt: new Date() });
+  await ref.update({ status: 'incomplete', updatedAt: new Date() });
   // No modificamos property.availability: el cron Hostfully es la fuente para listados/calendario.
   return true;
 };

@@ -22,6 +22,8 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendiente</Badge>;
     case 'cancelled':
        return <Badge className="bg-red-100 text-red-800 hover:bg-red-800">Cancelada</Badge>;
+    case 'incomplete':
+      return <Badge className="bg-gray-200 text-gray-700 hover:bg-gray-200">Incompleta</Badge>;
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }

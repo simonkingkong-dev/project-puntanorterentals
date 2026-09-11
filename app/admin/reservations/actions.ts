@@ -10,7 +10,11 @@ import {
   releasePendingReservationAdmin,
 } from "@/lib/firebase-admin-queries";
 
-/** Cancela una reserva. Si tenía fechas en hold o estaba confirmada, libera las fechas. */
+/**
+ * Cancela una reserva. Si tenía fechas en hold o estaba confirmada, libera las fechas.
+ * Si nunca se pagó (`pending`), se marca `incomplete` en vez de `cancelled`: no hubo nada
+ * que cancelar, el huésped simplemente no completó el pago.
+ */
 export async function cancelReservationAdmin(reservationId: string) {
   if (!reservationId) return { success: false, error: "ID requerido" };
   try {
@@ -19,7 +23,7 @@ export async function cancelReservationAdmin(reservationId: string) {
     if (!snap.exists) return { success: false, error: "Reserva no encontrada" };
     const data = snap.data()!;
     const status = data.status as string;
-    if (status === "cancelled") {
+    if (status === "cancelled" || status === "incomplete") {
       revalidatePath("/admin/reservations");
       return { success: true };
     }
@@ -28,8 +32,9 @@ export async function cancelReservationAdmin(reservationId: string) {
     const propertyId = data.propertyId as string;
     const datesHeld = data.datesHeld === true;
     const dateStrings = generateDateRange(checkIn, checkOut);
+    const newStatus = status === "pending" ? "incomplete" : "cancelled";
 
-    await ref.update({ status: "cancelled", updatedAt: new Date() });
+    await ref.update({ status: newStatus, updatedAt: new Date() });
     if (status === "confirmed" || datesHeld) {
       await updatePropertyAvailabilityAdmin(propertyId, dateStrings, true);
     }

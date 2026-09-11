@@ -95,7 +95,9 @@ function CartItemCard({
           modifyToken: data.modifyToken ?? null,
         };
         setReservationStatus(status);
-        if (data.status === 'cancelled') {
+        // 'incomplete': el hold expiró sin pagarse. Se trata igual que 'cancelled' en el
+        // carrito (se quita el item); no es una cancelación real, solo nunca se pagó.
+        if (data.status === 'cancelled' || data.status === 'incomplete') {
           onRemove(key);
           return;
         }
@@ -179,7 +181,10 @@ function CartItemCard({
     router.push(reservarHref);
   };
 
-  if (item.reservationId && reservationStatus?.status === 'cancelled') {
+  if (
+    item.reservationId &&
+    (reservationStatus?.status === 'cancelled' || reservationStatus?.status === 'incomplete')
+  ) {
     return null;
   }
 

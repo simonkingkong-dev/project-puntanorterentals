@@ -16,6 +16,7 @@ const getStatusBadge = (status: string) => {
     case 'confirmed': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Confirmada</Badge>;
     case 'pending': return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pendiente</Badge>;
     case 'cancelled': return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Cancelada</Badge>;
+    case 'incomplete': return <Badge className="bg-gray-200 text-gray-700 hover:bg-gray-200">Incompleta</Badge>;
     default: return <Badge variant="secondary">{status}</Badge>;
   }
 };
@@ -74,10 +75,21 @@ export default async function AdminReservationsPage() {
                 ) : (
                   reservations.map((reservation) => (
                     <TableRow key={reservation.id}>
-                      <TableCell className="font-medium text-xs">...{reservation.id.slice(-6)}</TableCell>
+                      <TableCell className="font-medium text-xs">
+                        <Link
+                          href={`/admin/reservations/${reservation.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          ...{reservation.id.slice(-6)}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{reservation.guestName}</p>
+                          <p className="font-medium">
+                            <Link href={`/admin/reservations/${reservation.id}`} className="hover:underline">
+                              {reservation.guestName}
+                            </Link>
+                          </p>
                           <p className="text-sm text-gray-600">{reservation.guestEmail}</p>
                         </div>
                       </TableCell>
