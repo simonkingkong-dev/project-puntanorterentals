@@ -2,6 +2,7 @@ import {
   extractCalendarDaysFromHostfullyCalendar,
   type HostfullyPropertyCalendarDay,
 } from "@/lib/hostfully/client";
+import { HOSTFULLY_PRICE_MARKUP_MULTIPLIER } from "@/lib/hostfully-price-markup";
 
 export type ParsedHostfullyCalendar = {
   availability: Record<string, boolean>;
@@ -29,9 +30,6 @@ function extractRawCalendarDays(
   return [];
 }
 
-/** Margen aplicado sobre el precio base importado de Hostfully. */
-const PRICE_MARKUP_MULTIPLIER = 1.1;
-
 function extractDailyRatesFromDays(days: HostfullyPropertyCalendarDay[]): Record<string, number> {
   const dailyRates: Record<string, number> = {};
   for (const d of days) {
@@ -39,7 +37,7 @@ function extractDailyRatesFromDays(days: HostfullyPropertyCalendarDay[]): Record
     if (!dateStr || d.available === false) continue;
     const rate = d.rate ?? d.price ?? d.dailyRate;
     if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) {
-      dailyRates[dateStr] = Math.round(rate * PRICE_MARKUP_MULTIPLIER * 100) / 100;
+      dailyRates[dateStr] = Math.round(rate * HOSTFULLY_PRICE_MARKUP_MULTIPLIER * 100) / 100;
     }
   }
   return dailyRates;
