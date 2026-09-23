@@ -26,6 +26,7 @@ import {
   listingSearchSelectionFromServerSearchParams,
 } from '@/lib/listing-search-params';
 import { nearbyAttractionsJsonLd } from '@/lib/seo-entities';
+import { computeDisplayNightlyRate } from '@/lib/property-list-item';
 
 export const revalidate = 300;
 
@@ -149,6 +150,7 @@ export default async function PropertyPage({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const propertyTitle = getLocalizedPropertyTitle(property, locale);
   const amenities = getLocalizedPropertyAmenities(property, locale);
+  const displayNightlyRate = computeDisplayNightlyRate(property);
   const propertyJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'VacationRental',
@@ -163,8 +165,8 @@ export default async function PropertyPage({
       name: a,
       value: true,
     })),
-    priceRange: property.pricePerNight
-      ? `${locale === 'en' ? 'From' : 'Desde'} $${property.pricePerNight} ${m.property_card_per_night}`
+    priceRange: displayNightlyRate
+      ? `${locale === 'en' ? 'From' : 'Desde'} $${displayNightlyRate} ${m.property_card_per_night}`
       : undefined,
     address: {
       '@type': 'PostalAddress',

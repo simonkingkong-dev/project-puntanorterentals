@@ -52,4 +52,30 @@ describe("computeDisplayNightlyRate", () => {
     });
     expect(rate).toBe(199);
   });
+
+  it("returns null (no price shown) when there are no dailyRates at all, ignoring pricePerNight", () => {
+    const rate = computeDisplayNightlyRate({
+      pricePerNight: 500,
+      dailyRates: {},
+      availability: {},
+    });
+    expect(rate).toBeNull();
+  });
+
+  it("returns null when all future dates are unavailable, ignoring pricePerNight", () => {
+    const rate = computeDisplayNightlyRate({
+      pricePerNight: 500,
+      dailyRates: { [futureA]: 150, [futureB]: 180 },
+      availability: { [futureA]: false, [futureB]: false },
+    });
+    expect(rate).toBeNull();
+  });
+
+  it("returns null for a dateRange with no matching dailyRates, ignoring pricePerNight", () => {
+    const rate = computeDisplayNightlyRate(
+      { pricePerNight: 500, dailyRates: {}, availability: {} },
+      { checkIn: new Date(futureA), checkOut: new Date(futureB) }
+    );
+    expect(rate).toBeNull();
+  });
 });

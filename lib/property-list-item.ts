@@ -45,19 +45,14 @@ export interface DisplayDateRange {
  * Sin `dateRange`: mínimo entre todas las noches futuras (usa `lowestAvailableNightlyRate`,
  * el cron diario, como atajo). Con `dateRange`: mínimo estrictamente dentro de esas fechas
  * (ignora el atajo del cron, que no es específico del rango elegido por el huésped).
- * Si no hay tarifas por fecha aplicables, usa `pricePerNight`.
+ * Si no hay tarifas por fecha disponibles (sin sync de Hostfully, o sin disponibilidad
+ * futura), no se muestra precio: `pricePerNight` es solo un valor de referencia interno
+ * del admin, no un precio real importado, así que nunca se usa como fallback visible.
  */
 export function computeDisplayNightlyRate(
   property: DisplayRateInput,
   dateRange?: DisplayDateRange
 ): number | null {
-  const baseRate =
-    typeof property.pricePerNight === "number" &&
-    Number.isFinite(property.pricePerNight) &&
-    property.pricePerNight > 0
-      ? property.pricePerNight
-      : null;
-
   const rates = property.dailyRates ?? {};
 
   if (dateRange) {
@@ -71,7 +66,7 @@ export function computeDisplayNightlyRate(
       if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) continue;
       if (minRate == null || rate < minRate) minRate = rate;
     }
-    return minRate ?? baseRate;
+    return minRate;
   }
 
   if (
@@ -92,7 +87,7 @@ export function computeDisplayNightlyRate(
     if (minRate == null || rate < minRate) minRate = rate;
   }
 
-  return minRate ?? baseRate;
+  return minRate;
 }
 
 export function toPropertyListItem(property: Property, dateRange?: DisplayDateRange): PropertyListItem {
