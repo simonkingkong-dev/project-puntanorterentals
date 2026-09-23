@@ -94,7 +94,7 @@ function normalizeDateKey(raw: unknown): string | null {
   return toLocalDateStr(parsed);
 }
 
-function isHostfullyDayAvailable(day: Record<string, unknown>): boolean {
+export function isHostfullyDayAvailable(day: Record<string, unknown>): boolean {
   if (typeof day.available === "boolean") return day.available;
   if (typeof day.isAvailable === "boolean") return day.isAvailable;
   if (typeof day.bookable === "boolean") return day.bookable;
@@ -124,10 +124,26 @@ function isHostfullyDayAvailable(day: Record<string, unknown>): boolean {
   return false;
 }
 
-/** Extrae días con disponibilidad desde cualquier forma de respuesta del calendario Hostfully. */
-export function extractCalendarDaysFromHostfullyCalendar(
+const CALENDAR_DAY_DATE_KEYS = ["date", "from", "day", "startDate"] as const;
+
+function dayDateKey(day: Record<string, unknown>): string | null {
+  for (const key of CALENDAR_DAY_DATE_KEYS) {
+    const date = normalizeDateKey(day[key]);
+    if (date) return date;
+  }
+  return null;
+}
+
+/**
+ * Encuentra el array de "días" (objetos crudos, sin transformar) en cualquier forma de
+ * respuesta del calendario Hostfully — p. ej. `{dates: [...]}`, `{calendar: [...]}`, o
+ * anidado como en v3.2: `{calendar: {entries: [...], propertyUid}}`. Cada elemento trae
+ * tanto disponibilidad (`availability.unavailable`) como precio (`pricing.value`) según
+ * la versión de la API, por eso disponibilidad y precio se extraen del mismo array.
+ */
+export function findRawCalendarDayObjects(
   calendar: Record<string, unknown>
-): Array<{ date: string; available: boolean }> {
+): Array<Record<string, unknown>> {
   const directArrayKeys = [
     "dates",
     "calendar",
@@ -135,47 +151,33 @@ export function extractCalendarDaysFromHostfullyCalendar(
     "availability",
     "items",
     "results",
+    "entries",
   ] as const;
 
-  const tryMapArray = (arr: unknown[]): Array<{ date: string; available: boolean }> => {
-    const mapped: Array<{ date: string; available: boolean }> = [];
-    for (const raw of arr) {
-      if (!raw || typeof raw !== "object") continue;
-      const day = raw as Record<string, unknown>;
-      const date =
-        normalizeDateKey(day.date) ??
-        normalizeDateKey(day.from) ??
-        normalizeDateKey(day.day) ??
-        normalizeDateKey(day.startDate);
-      if (!date) continue;
-      mapped.push({ date, available: isHostfullyDayAvailable(day) });
-    }
-    return mapped;
-  };
+  const asDayObjects = (arr: unknown[]): Array<Record<string, unknown>> =>
+    arr.filter(
+      (raw): raw is Record<string, unknown> =>
+        !!raw && typeof raw === "object" && dayDateKey(raw as Record<string, unknown>) != null
+    );
 
   for (const key of directArrayKeys) {
     const v = calendar[key];
     if (Array.isArray(v)) {
-      const mapped = tryMapArray(v);
-      if (mapped.length > 0) return mapped;
+      const days = asDayObjects(v);
+      if (days.length > 0) return days;
     }
   }
 
-  const mappedDays: Array<{ date: string; available: boolean }> = [];
+  const byDateKey: Array<Record<string, unknown>> = [];
   for (const [k, v] of Object.entries(calendar)) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
     if (typeof v === "boolean") {
-      mappedDays.push({ date: k, available: v });
-      continue;
-    }
-    if (v && typeof v === "object") {
-      mappedDays.push({
-        date: k,
-        available: isHostfullyDayAvailable(v as Record<string, unknown>),
-      });
+      byDateKey.push({ date: k, available: v });
+    } else if (v && typeof v === "object") {
+      byDateKey.push({ date: k, ...(v as Record<string, unknown>) });
     }
   }
-  if (mappedDays.length > 0) return mappedDays;
+  if (byDateKey.length > 0) return byDateKey;
 
   const queue: unknown[] = Object.values(calendar);
   const seen = new Set<unknown>();
@@ -186,8 +188,8 @@ export function extractCalendarDaysFromHostfullyCalendar(
     seen.add(current);
 
     if (Array.isArray(current)) {
-      const mapped = tryMapArray(current);
-      if (mapped.length > 0) return mapped;
+      const days = asDayObjects(current);
+      if (days.length > 0) return days;
       continue;
     }
 
@@ -197,6 +199,16 @@ export function extractCalendarDaysFromHostfullyCalendar(
   }
 
   return [];
+}
+
+/** Extrae días con disponibilidad desde cualquier forma de respuesta del calendario Hostfully. */
+export function extractCalendarDaysFromHostfullyCalendar(
+  calendar: Record<string, unknown>
+): Array<{ date: string; available: boolean }> {
+  return findRawCalendarDayObjects(calendar).map((day) => ({
+    date: dayDateKey(day)!,
+    available: isHostfullyDayAvailable(day),
+  }));
 }
 
 export interface HostfullyProperty {

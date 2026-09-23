@@ -1,5 +1,7 @@
 import {
   extractCalendarDaysFromHostfullyCalendar,
+  findRawCalendarDayObjects,
+  isHostfullyDayAvailable,
   type HostfullyPropertyCalendarDay,
 } from "@/lib/hostfully/client";
 import { HOSTFULLY_PRICE_MARKUP_MULTIPLIER } from "@/lib/hostfully-price-markup";
@@ -9,34 +11,30 @@ export type ParsedHostfullyCalendar = {
   dailyRates: Record<string, number>;
 };
 
-const CALENDAR_DAY_ARRAY_KEYS = [
-  "dates",
-  "calendar",
-  "days",
-  "availability",
-  "items",
-  "results",
-] as const;
+/**
+ * Precio por noche crudo de un día de calendario Hostfully. Cubre tanto formatos planos
+ * (`rate`/`price`/`dailyRate` en el nivel superior) como el formato v3.2, donde el precio
+ * viene anidado en `pricing.value` (ver `findRawCalendarDayObjects`).
+ */
+function extractRawNightlyRate(day: Record<string, unknown>): number | undefined {
+  const flat = day.rate ?? day.price ?? day.dailyRate;
+  if (typeof flat === "number" && Number.isFinite(flat) && flat > 0) return flat;
 
-function extractRawCalendarDays(
-  calendar: Record<string, unknown>
-): HostfullyPropertyCalendarDay[] {
-  for (const key of CALENDAR_DAY_ARRAY_KEYS) {
-    const value = calendar[key];
-    if (Array.isArray(value) && value.length > 0) {
-      return value as HostfullyPropertyCalendarDay[];
-    }
+  const pricing = day.pricing;
+  if (pricing && typeof pricing === "object") {
+    const value = (pricing as Record<string, unknown>).value;
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
   }
-  return [];
+  return undefined;
 }
 
-function extractDailyRatesFromDays(days: HostfullyPropertyCalendarDay[]): Record<string, number> {
+function extractDailyRatesFromDays(days: Array<Record<string, unknown>>): Record<string, number> {
   const dailyRates: Record<string, number> = {};
   for (const d of days) {
-    const dateStr = d.date;
-    if (!dateStr || d.available === false) continue;
-    const rate = d.rate ?? d.price ?? d.dailyRate;
-    if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) {
+    const dateStr = typeof d.date === "string" ? d.date : undefined;
+    if (!dateStr || !isHostfullyDayAvailable(d)) continue;
+    const rate = extractRawNightlyRate(d);
+    if (rate != null) {
       dailyRates[dateStr] = Math.round(rate * HOSTFULLY_PRICE_MARKUP_MULTIPLIER * 100) / 100;
     }
   }
@@ -52,7 +50,7 @@ export function parseHostfullyCalendarResponse(
   for (const day of parsedDays) {
     availability[day.date] = day.available;
   }
-  const rawDays = extractRawCalendarDays(calendar);
+  const rawDays = findRawCalendarDayObjects(calendar);
   const dailyRates = extractDailyRatesFromDays(rawDays);
   return { availability, dailyRates };
 }
