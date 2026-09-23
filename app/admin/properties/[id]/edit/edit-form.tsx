@@ -12,6 +12,7 @@ import { Save, Loader2, Plus, X, Link2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import NextLink from 'next/link';
 import { Property } from "@/lib/types";
+import { HOSTFULLY_PRICE_MARKUP_MULTIPLIER } from "@/lib/hostfully-price-markup";
 import {
   DEFAULT_EXTRA_GUEST_FEE_USD_PER_NIGHT,
   DEFAULT_INCLUDED_GUESTS,
@@ -127,7 +128,12 @@ export default function PropertyEditForm({
     description: initialData.description,
     location: initialData.location,
     maxGuests: initialData.maxGuests,
-    pricePerNight: initialData.pricePerNight,
+    // Se muestra el precio base (sin markup): el guardado vuelve a aplicar el margen
+    // (ver applyMarkupToPricePerNight en ../../actions.ts), igual que los precios de Hostfully.
+    pricePerNight:
+      initialData.pricePerNight > 0
+        ? Math.round((initialData.pricePerNight / HOSTFULLY_PRICE_MARKUP_MULTIPLIER) * 100) / 100
+        : initialData.pricePerNight,
     minNights: initialData.minNights ?? DEFAULT_MIN_NIGHTS,
     parentPropertyId: initialData.parentPropertyId ?? '',
     includedGuests: initialData.includedGuests ?? DEFAULT_INCLUDED_GUESTS,
@@ -710,8 +716,12 @@ export default function PropertyEditForm({
               <Input id="maxGuests" type="number" min="1" value={formData.maxGuests} onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 1 }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pricePerNight">Precio por Noche ($)</Label>
+              <Label htmlFor="pricePerNight">Precio Base por Noche ($, sin margen)</Label>
               <Input id="pricePerNight" type="number" min="1" value={formData.pricePerNight} onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) || 1 }))} />
+              <p className="text-xs text-gray-500">
+                Se usa solo si no hay tarifas sincronizadas de Hostfully para fechas futuras. Al guardar se le aplica
+                el mismo margen que a los precios de Hostfully (negocio + comisión de Stripe).
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Propiedad Destacada</Label>

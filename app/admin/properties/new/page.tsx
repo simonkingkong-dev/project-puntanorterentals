@@ -400,8 +400,12 @@ export default function NewPropertyPage() {
                       <Input id="maxGuests" type="number" min="1" value={formData.maxGuests} onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 1 }))} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pricePerNight">Precio por Noche ($)</Label>
+                      <Label htmlFor="pricePerNight">Precio Base por Noche ($, sin margen)</Label>
                       <Input id="pricePerNight" type="number" min="1" value={formData.pricePerNight} onChange={(e) => setFormData(prev => ({ ...prev, pricePerNight: parseInt(e.target.value) || 1 }))} />
+                      <p className="text-xs text-gray-500">
+                        Se usa solo si no hay tarifas sincronizadas de Hostfully para fechas futuras. Al guardar se le
+                        aplica el mismo margen que a los precios de Hostfully (negocio + comisión de Stripe).
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Propiedad Destacada</Label>

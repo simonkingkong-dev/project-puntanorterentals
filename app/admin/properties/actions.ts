@@ -4,6 +4,16 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase-admin";
 import { Property } from "@/lib/types";
+import { HOSTFULLY_PRICE_MARKUP_MULTIPLIER } from "@/lib/hostfully-price-markup";
+
+/**
+ * Aplica el mismo markup del sync de Hostfully (lib/hostfully-price-markup.ts) al precio
+ * base que el admin teclea a mano, para que `pricePerNight` (fallback de "desde $X" cuando
+ * no hay `dailyRates` sincronizadas) sea consistente con los precios que sí vienen de Hostfully.
+ */
+function applyMarkupToPricePerNight(price: number): number {
+  return Math.round(price * HOSTFULLY_PRICE_MARKUP_MULTIPLIER * 100) / 100;
+}
 
 export async function handleCreateProperty(formData: Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'slug' | 'availability'>) {
   try {
@@ -15,6 +25,10 @@ export async function handleCreateProperty(formData: Omit<Property, 'id' | 'crea
 
     const newProperty = {
       ...formData,
+      pricePerNight:
+        typeof formData.pricePerNight === "number" && formData.pricePerNight > 0
+          ? applyMarkupToPricePerNight(formData.pricePerNight)
+          : formData.pricePerNight,
       slug,
       availability: {}, // Inicializamos disponibilidad vacía
       createdAt: new Date(),
@@ -52,8 +66,13 @@ export async function handleUpdateProperty(propertyId: string, formData: UpdateP
     const existingSnap = await docRef.get();
     const slug = existingSnap.data()?.slug as string | undefined;
 
+    const payload = stripUndefined(formData as Record<string, unknown>);
+    if (typeof payload.pricePerNight === "number" && payload.pricePerNight > 0) {
+      payload.pricePerNight = applyMarkupToPricePerNight(payload.pricePerNight);
+    }
+
     await docRef.update({
-      ...stripUndefined(formData as Record<string, unknown>),
+      ...payload,
       updatedAt: new Date(),
     });
 

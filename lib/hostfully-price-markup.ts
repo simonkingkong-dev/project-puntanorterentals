@@ -6,7 +6,7 @@
  */
 
 /** Margen de negocio sobre la tarifa de Hostfully. */
-export const HOSTFULLY_BASE_MARKUP_MULTIPLIER = 1.1;
+export const HOSTFULLY_BASE_MARKUP_MULTIPLIER = 1.15;
 
 /** Margen adicional para absorber la comisión de Stripe sobre el monto cobrado. */
 export const STRIPE_FEE_MARKUP_MULTIPLIER = 1.0861;
