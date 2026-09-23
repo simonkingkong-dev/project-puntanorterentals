@@ -106,5 +106,11 @@ env:
     secret: SMTP_PASS
     availability:
       - RUNTIME
+
+  # Cron (Cloud Scheduler -> /api/cron/*): autentica las llamadas periodicas de sync.
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability:
+      - RUNTIME
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
