@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const MXN_MARGIN = 0.2; // 20 centavos sobre el tipo oficial (cuando destino es MXN)
+const MXN_MARGIN = 0.05; // 5 centavos sobre el tipo oficial (cuando destino es MXN)
 
 /**
  * GET /api/exchange-rate?from=USD|EUR&to=MXN|EUR
