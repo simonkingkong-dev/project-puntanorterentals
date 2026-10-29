@@ -762,6 +762,9 @@ export const getReservationByIdForConfirmationAdmin = async (
       const propSnap = await adminDb.collection('properties').doc(propertyId).get();
       propertyTitle = propSnap.exists ? (propSnap.data()?.title as string) : undefined;
     }
+    // Este resultado se pasa a Client Components (admin edit): ningún Timestamp de
+    // Firestore puede quedar en el objeto, o Next lanza "Only plain objects...".
+    const pending = data.pendingModification as Record<string, unknown> | null | undefined;
     return {
       ...data,
       id: doc.id,
@@ -771,8 +774,18 @@ export const getReservationByIdForConfirmationAdmin = async (
       confirmedAt: data.confirmedAt != null ? safeTimestampToDate(data.confirmedAt) : undefined,
       hostfullySyncedAt:
         data.hostfullySyncedAt != null ? safeTimestampToDate(data.hostfullySyncedAt) : undefined,
+      expiresAt: data.expiresAt != null ? safeTimestampToDate(data.expiresAt) : undefined,
+      updatedAt: data.updatedAt != null ? safeTimestampToDate(data.updatedAt) : undefined,
+      pendingModification: pending
+        ? {
+            ...pending,
+            newCheckIn: pending.newCheckIn != null ? safeTimestampToDate(pending.newCheckIn) : undefined,
+            newCheckOut: pending.newCheckOut != null ? safeTimestampToDate(pending.newCheckOut) : undefined,
+            requestedAt: pending.requestedAt != null ? safeTimestampToDate(pending.requestedAt) : undefined,
+          }
+        : undefined,
       propertyTitle,
-    } as ReservationWithPropertyTitle;
+    } as unknown as ReservationWithPropertyTitle;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Admin: Error fetching reservation by ID for confirmation', error);
