@@ -93,7 +93,10 @@ export async function trySyncBookingToHostfully(
       guestInformation.adultCount = guests;
     }
     if (params.locale === 'es' || params.locale === 'en') {
-      guestInformation.preferredLocale = { language: params.locale };
+      // La API espera un string de locale (ej. "es"), no un objeto: enviar
+      // {language: ...} produce "Invalid locale format: {" (Jackson) y tumba
+      // el sync de TODAS las reservas desde que se agregó este campo.
+      guestInformation.preferredLocale = params.locale;
     }
 
     const payload: Record<string, unknown> = {
