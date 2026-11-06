@@ -47,6 +47,25 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Slugs viejos (basados en el nombre interno) → unidad-1…9. Mantener sincronizado con lib/unit-slugs.ts.
+  async redirects() {
+    const legacy = {
+      '01-casa-naranja': 'unidad-1',
+      '01-celeste': 'unidad-2',
+      '02-verde': 'unidad-3',
+      '03-fondo': 'unidad-4',
+      '04-naranja': 'unidad-5',
+      '05-conchi-abajo': 'unidad-6',
+      '06-conchi-arriba': 'unidad-7',
+      '07-estudio': 'unidad-8',
+      '11-cheche': 'unidad-9',
+    };
+    return Object.entries(legacy).map(([from, to]) => ({
+      source: `/properties/${from}`,
+      destination: `/properties/${to}`,
+      permanent: true,
+    }));
+  },
   // Evita 308 cuando Airbnb/Hostfully piden /calendar-feed/?ical=... (barra final)
   async rewrites() {
     return {
