@@ -6,7 +6,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, Shield, Calendar } from 'lucide-react';
+import { Loader2, CreditCard, Shield, Calendar, AlertTriangle } from 'lucide-react';
 import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -17,6 +17,7 @@ import { getUsdDisplayMultiplier } from '@/lib/display-exchange-rate';
 import { useCart, getCartItemKey, getDraftFromStorage } from '@/lib/cart-context';
 import { useLocale } from '@/components/providers/locale-provider';
 import { resolveLodgingPricingFromTotalUsd } from '@/lib/lodging-taxes';
+import { describePaymentFailure, type PaymentFailure } from '@/lib/payment-errors';
 
 // Clave pública: disponible en build (NEXT_PUBLIC_*) o en runtime; evita undefined en loadStripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
@@ -34,17 +35,6 @@ function formatTimeLeft(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function stripeErrorMessage(error: { type?: string; code?: string; message?: string }): string {
-  const msg = error.message || '';
-  if (error.code === 'card_declined') return 'Su tarjeta fue rechazada. Revise los datos o pruebe con otro método de pago.';
-  if (error.code === 'expired_card') return 'La tarjeta ha caducado. Utilice otra tarjeta.';
-  if (error.code === 'incorrect_cvc') return 'El código de seguridad (CVC) no es correcto.';
-  if (error.code === 'insufficient_funds') return 'Fondos insuficientes en la tarjeta.';
-  if (error.code === 'authentication_required') return 'Su banco requiere verificar el pago. Intente de nuevo.';
-  if (msg.toLowerCase().includes('declined')) return 'El pago fue rechazado. Verifique los datos o utilice otro método.';
-  return msg || 'No se pudo completar el pago. Intente de nuevo.';
-}
-
 /**
  * A component that renders a checkout form and handles payment confirmation using Stripe.
  * @example
@@ -52,11 +42,20 @@ function stripeErrorMessage(error: { type?: string; code?: string; message?: str
  * Returns a form element with payment handling and confirmation logic.
  * @returns {JSX.Element} A form component that facilitates the payment process by integrating with Stripe APIs.
  */
-function CheckoutForm({ reservationId }: { reservationId: string | null }) {
+function CheckoutForm({
+  reservationId,
+  currency,
+  onChangeCurrency,
+}: {
+  reservationId: string | null;
+  currency: Currency;
+  onChangeCurrency: (value: Currency) => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
-  const { t } = useLocale();
+  const [failure, setFailure] = useState<PaymentFailure | null>(null);
+  const { t, locale } = useLocale();
 
   /**
    * Handles the payment confirmation process.
@@ -75,6 +74,7 @@ function CheckoutForm({ reservationId }: { reservationId: string | null }) {
     if (!stripe || !elements) return;
 
     setIsLoading(true);
+    setFailure(null);
 
     try {
       const returnUrl = new URL('/payment/success', window.location.origin);
@@ -88,10 +88,12 @@ function CheckoutForm({ reservationId }: { reservationId: string | null }) {
       });
 
       if (result.error) {
-        toast.error(stripeErrorMessage(result.error));
+        // Bloque fijo (no un aviso que desaparece): el cliente necesita leer el motivo
+        // y saber qué hacer (cambiar moneda, hablar con su banco, otro método).
+        setFailure(describePaymentFailure(result.error, currency, locale === 'en' ? 'en' : 'es'));
       }
     } catch (error) {
-      toast.error('Error procesando el pago. Intenta de nuevo.');
+      setFailure(describePaymentFailure({}, currency, locale === 'en' ? 'en' : 'es'));
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +101,34 @@ function CheckoutForm({ reservationId }: { reservationId: string | null }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {failure && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+            <div className="space-y-2">
+              <p className="font-semibold">{failure.title}</p>
+              <p>{failure.message}</p>
+              {failure.action === 'change_currency' && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {failure.alternativeCurrencies.map((c) => (
+                    <Button
+                      key={c}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-white"
+                      onClick={() => onChangeCurrency(c)}
+                    >
+                      {t('payment_pay_in', 'Pay in')} {c}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 border border-gray-200 rounded-lg">
         <PaymentElement />
       </div>
@@ -164,6 +194,8 @@ function PaymentContent() {
   const [usdMxnRate, setUsdMxnRate] = useState<number | null>(null);
   const [usdEurRate, setUsdEurRate] = useState<number | null>(null);
   const previousCurrencyRef = useRef<Currency>(initialCurrency);
+  /** Solo vale la respuesta del último PaymentIntent pedido (evita que una lenta pise a la nueva). */
+  const intentRequestSeqRef = useRef(0);
   const { t, locale } = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : esLocale;
 
@@ -379,6 +411,7 @@ function PaymentContent() {
     if (!reservationId || amount == null || loading) return;
     if (previousCurrencyRef.current === currency) return;
     previousCurrencyRef.current = currency;
+    const requestSeq = ++intentRequestSeqRef.current;
     // `amount` es siempre USD (total de reserva); la API convierte a MXN/EUR al crear el intent.
     fetch('/api/stripe/create-payment-intent', {
       method: 'POST',
@@ -393,10 +426,12 @@ function PaymentContent() {
     })
       .then((res) => res.json())
       .then((data) => {
+        if (requestSeq !== intentRequestSeqRef.current) return;
         if (data?.error) throw new Error(data.error);
         if (data?.clientSecret) setClientSecret(data.clientSecret);
       })
       .catch((err) => {
+        if (requestSeq !== intentRequestSeqRef.current) return;
         toast.error(err?.message || 'No se pudo actualizar la moneda de pago');
       });
   }, [currency, reservationId, amount, modification, loading, tokenParam]);
@@ -592,7 +627,7 @@ function PaymentContent() {
         </CardHeader>
         <CardContent>
           <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm reservationId={reservationId} />
+            <CheckoutForm reservationId={reservationId} currency={currency} onChangeCurrency={setCurrency} />
           </Elements>
         </CardContent>
       </Card>

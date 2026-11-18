@@ -3,6 +3,7 @@ import { addDays } from 'date-fns';
 import { adminDb } from '@/lib/firebase-admin';
 import { generateDateRange } from '@/lib/utils/date';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
+import { placeHostfullyHold } from '@/lib/hostfully/holds';
 import {
   getBlockingPropertyIds,
   getInventoryGroupId,
@@ -144,6 +145,18 @@ export async function POST(
 
     if (!claimed.ok) {
       return NextResponse.json({ error: claimed.error }, { status: claimed.status });
+    }
+
+    // Espeja el hold en Hostfully para que las OTAs no vendan estas noches mientras se paga.
+    // Falla cerrado, igual que la consulta de disponibilidad: sin bloqueo en el PMS el hold
+    // no protege nada, así que se deshace el reclamo y el huésped puede reintentar.
+    const hostfullyHold = await placeHostfullyHold(id);
+    if (!hostfullyHold.ok) {
+      await ref.update({ datesHeld: false });
+      return NextResponse.json(
+        { error: 'No se pudieron bloquear las fechas. Inténtalo de nuevo en un momento.' },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({ held: true, alreadyHeld: claimed.alreadyHeld === true });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Property, PropertyReview, PropertyReviewPlatformStat, RevyoosReview, Testimonial } from "@/lib/types";
 import { Users, BedDouble, Bath } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import { getUsdDisplayMultiplier } from "@/lib/display-exchange-rate";
 import { useLocale } from "@/components/providers/locale-provider";
 import { getLocalizedPropertyTitle } from "@/lib/property-localization";
 import type { ListingSearchSelection } from "@/lib/listing-search-params";
-import { parseCurrency } from "@/lib/parse-currency";
+import { parseCurrency, readStoredListingCurrency } from "@/lib/parse-currency";
+import { suggestCurrencyFromBrowser } from "@/lib/currency-suggestion";
 import type { Currency } from "@/components/ui/currency-select";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 
@@ -44,6 +45,13 @@ export default function PropertyPageContent({
   const [currency, setCurrency] = useState<Currency>(() =>
     parseCurrency(initialSearch?.currency)
   );
+  // Si el visitante no eligió moneda (sin `currency` en la URL), se sugiere según su
+  // ubicación. Se resuelve tras montar para no desajustar la hidratación del servidor.
+  const hasExplicitCurrency = Boolean(initialSearch?.currency);
+  useEffect(() => {
+    if (hasExplicitCurrency) return;
+    setCurrency(readStoredListingCurrency() ?? suggestCurrencyFromBrowser());
+  }, [hasExplicitCurrency]);
   const { usdMxnRate, usdEurRate } = useExchangeRates(currency);
 
   const baseNightlyUsd = property.pricePerNight;

@@ -7,8 +7,7 @@ import { sendConfirmationEmail } from '@/lib/mail';
 import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
-import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
-import { registerHostfullyLeadPayment } from '@/lib/hostfully/client';
+import { trySyncBookingToHostfully, registerAndRecordHostfullyPayment } from '@/lib/hostfully/sync-booking-lead';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 
 export async function POST(request: Request) {
@@ -107,6 +106,9 @@ export async function POST(request: Request) {
             totalAmountUsd: Number(data.totalAmount) || undefined,
             guests: Number(data.guests) || undefined,
             locale: data.locale === 'en' ? 'en' : 'es',
+            chargedAmount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+            chargedCurrency: paymentIntent.currency,
+            stripePaymentIntentId: paymentIntent.id,
           });
           if (!syncResult.synced) {
             console.error('[Hostfully] Sync falló en webhook:', syncResult.error);
@@ -121,19 +123,15 @@ export async function POST(request: Request) {
               ? syncResult.leadUid
               : ((data.hostfullyLeadUid as string | undefined) ?? '').trim() || undefined;
           if (leadUidForPayment) {
-            const paymentSync = await registerHostfullyLeadPayment({
+            await registerAndRecordHostfullyPayment({
+              reservationId,
               leadUid: leadUidForPayment,
-              amount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
-              currency: paymentIntent.currency?.toUpperCase() || 'USD',
+              amountUsd: Number(paymentIntent.metadata?.baseAmountUsd) || Number(data.totalAmount) || 0,
+              chargedAmount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+              chargedCurrency: paymentIntent.currency || 'usd',
+              stripePaymentIntentId: paymentIntent.id,
               paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
-              externalPaymentId: paymentIntent.id,
-              note: `Pago Stripe ${paymentIntent.id} — ${
-                (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100
-              } ${(paymentIntent.currency ?? 'usd').toUpperCase()}`,
             });
-            if (!paymentSync.synced) {
-              console.error('[Hostfully] No se pudo registrar pago del lead (webhook):', paymentSync.error);
-            }
           }
         }
 
@@ -143,18 +141,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Error updating reservation' }, { status: 500 });
       }
     }
-  } else if (event.type === 'payment_intent.payment_failed') {
-     const paymentIntent = event.data.object as Stripe.PaymentIntent;
-     const reservationId = paymentIntent.metadata.reservationId;
-     if (reservationId) {
-        // El pago nunca se completó: es una reserva incompleta, no una cancelación
-        // (el huésped no llegó a pagar, así que no hay nada que "cancelar").
-        await adminDb.collection('reservations').doc(reservationId).update({
-            status: 'incomplete',
-            updatedAt: new Date(),
-        });
-     }
   }
+  // `payment_intent.payment_failed` se ignora a propósito. Un cobro fallido no es el fin
+  // de la reserva: el huésped sigue dentro de su ventana de 10 min y debe poder reintentar
+  // (otra tarjeta, otra moneda). Marcarla `incomplete` aquí rompía justo ese reintento:
+  // create-payment-intent exige `pending` y GET /api/reservations/[id] devuelve 404 si no
+  // lo está. Si nunca paga, la reserva pasa a `incomplete` sola al expirar el hold.
 
   return NextResponse.json({ received: true });
 }

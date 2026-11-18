@@ -55,6 +55,26 @@ async function getUsdEurRate(): Promise<number> {
 }
 
 /**
+ * Cancela el PaymentIntent anterior de esta reserva si sigue sin usarse
+ * (`requires_payment_method` / `requires_confirmation`). Nunca bloquea el cobro nuevo.
+ */
+async function cancelSupersededIntent(
+  reservationRef: FirebaseFirestore.DocumentReference
+): Promise<void> {
+  try {
+    const snap = await reservationRef.get();
+    const previousId = snap.data()?.activePaymentIntentId;
+    if (typeof previousId !== 'string' || !previousId) return;
+    const previous = await stripe.paymentIntents.retrieve(previousId);
+    if (previous.status === 'requires_payment_method' || previous.status === 'requires_confirmation') {
+      await stripe.paymentIntents.cancel(previousId, { cancellation_reason: 'abandoned' });
+    }
+  } catch (e) {
+    console.error('No se pudo cancelar el PaymentIntent anterior:', e);
+  }
+}
+
+/**
  * Última puerta antes del cobro. Ninguna reserva llega a Stripe sin que el servidor
  * confirme aquí que el importe corresponde y que las fechas siguen siendo reservables
  * (incluida la consulta en vivo a Hostfully). Falla cerrado: ante cualquier duda, no se cobra.
@@ -185,6 +205,11 @@ export async function POST(request: NextRequest) {
       metadata.usdEurRateApplied = String(rate);
     }
 
+    // Cada cambio de moneda o recarga crea un PaymentIntent nuevo. Se cancela el anterior
+    // (si nadie lo ha usado) para que no queden decenas de cobros "incompletos" en Stripe.
+    const reservationRef = adminDb.collection('reservations').doc(String(reservationId));
+    await cancelSupersededIntent(reservationRef);
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(chargeAmount * 100), // smallest currency unit
       currency: normalizedCurrency,
@@ -193,6 +218,12 @@ export async function POST(request: NextRequest) {
       },
       metadata,
     });
+
+    try {
+      await reservationRef.update({ activePaymentIntentId: paymentIntent.id });
+    } catch (e) {
+      console.error('No se pudo guardar activePaymentIntentId:', e);
+    }
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
