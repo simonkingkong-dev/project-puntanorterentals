@@ -23,7 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocale } from '@/components/providers/locale-provider';
 import { CurrencySelect, type Currency } from '@/components/ui/currency-select';
-import { parseCurrency, writeStoredListingCurrency } from '@/lib/parse-currency';
+import { parseCurrency, readStoredListingCurrency, writeStoredListingCurrency } from '@/lib/parse-currency';
+import { suggestCurrencyFromBrowser } from '@/lib/currency-suggestion';
 import { cn } from '@/lib/utils';
 import { isCheckInDateDisabledForWebBooking } from '@/lib/booking-policy';
 
@@ -84,7 +85,9 @@ export default function SearchForm({
       checkIn: params.get('checkIn') ?? '',
       checkOut: params.get('checkOut') ?? '',
       guests: params.get('guests') ?? '',
-      currency: parseCurrency(params.get('currency')),
+      currency: params.get('currency')
+        ? parseCurrency(params.get('currency'))
+        : readStoredListingCurrency() ?? suggestCurrencyFromBrowser(),
     });
   }, [urlKey]);
 
@@ -105,7 +108,7 @@ export default function SearchForm({
     Boolean(searchParams.checkIn?.trim()) ||
     Boolean(searchParams.checkOut?.trim()) ||
     Boolean(searchParams.guests?.trim()) ||
-    searchParams.currency !== 'USD';
+    (Boolean(urlSearchParams.get('currency')) && searchParams.currency !== 'USD');
 
   const checkInParsed = useMemo(
     () => parseDateOnly(searchParams.checkIn),

@@ -12,6 +12,7 @@ import {
 import { Property } from "@/lib/types";
 import { optimizePropertyImageUrls } from "@/lib/optimize-property-image";
 import { HOSTFULLY_PRICE_MARKUP_MULTIPLIER } from "@/lib/hostfully-price-markup";
+import { unitSlugForHostfullyUid } from "@/lib/unit-slugs";
 
 type HostfullyRaw = Record<string, unknown>;
 const HOSTFULLY_DEBUG_PROPERTY_UID = "8dbf9762-f3b9-46a7-9fb7-1659e1102e7d";
@@ -312,7 +313,8 @@ function mapHostfullyToProperty(h: HostfullyRaw): Omit<Property, "id" | "created
   }
   const uid = (h.uid ?? h.id) as string;
 
-  const slug = slugify(name);
+  // Slug fijo de unidad (unidad-1…9) si la propiedad está en el mapa; si no, desde el nombre.
+  const slug = unitSlugForHostfullyUid(uid) ?? slugify(name);
   const amenities = extractAmenities(h);
   const bedrooms = typeof h.bedrooms === "number" ? h.bedrooms : undefined;
   const bathrooms = typeof h.bathrooms === "number" ? h.bathrooms : undefined;

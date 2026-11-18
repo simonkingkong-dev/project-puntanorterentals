@@ -47,6 +47,11 @@ export const messages: Record<Locale, Record<string, string>> = {
     payment_currency_name_usd: "dólares estadounidenses (USD)",
     payment_confirm: "Confirmar pago",
     payment_processing: "Procesando pago…",
+    payment_pay_in: "Pagar en",
+    success_confirmation_by_email: "La confirmación de tu reserva llegará a tu correo electrónico.",
+    success_checkin_instructions: "Las instrucciones para llegar e ingresar se enviarán dentro de las 24 horas previas a tu check-in.",
+    payment_failed_title: "No se pudo completar el pago",
+    payment_failed_back: "Volver al pago e intentar de nuevo",
     payment_success: "¡Pago exitoso!",
     payment_received: "Pago recibido",
     payment_success_subtitle:
@@ -512,6 +517,11 @@ export const messages: Record<Locale, Record<string, string>> = {
     payment_currency_name_usd: "US dollars (USD)",
     payment_confirm: "Confirm payment",
     payment_processing: "Processing payment…",
+    payment_pay_in: "Pay in",
+    success_confirmation_by_email: "Your booking confirmation will arrive by email.",
+    success_checkin_instructions: "Directions and check-in instructions will be sent within 24 hours before your check-in.",
+    payment_failed_title: "The payment couldn't be completed",
+    payment_failed_back: "Back to payment to try again",
     payment_success: "Payment successful!",
     payment_received: "Payment received",
     payment_success_subtitle:

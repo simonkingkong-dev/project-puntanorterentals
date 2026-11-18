@@ -61,11 +61,19 @@ En `api/cron/sync-hostfully-availability/route.ts`:
 ## 4. Diseño de sincronización (contrato)
 
 - **Fuente de verdad:** Hostfully para: nombre público, descripción, fotos, capacidad, amenidades, reseñas, precios por noche (por fecha si el calendario los devuelve), disponibilidad por fecha.
-- **Firestore:** Caché de todo lo anterior; la UI solo lee Firestore. Las reservas se crean y actualizan en Firestore (y Stripe); no se escriben reservas en Hostfully desde esta app.
+- **Firestore:** Caché de todo lo anterior; la UI solo lee Firestore. Las reservas se crean y actualizan en Firestore (y Stripe). Con `HOSTFULLY_ENABLE_WRITES=true` la app también escribe en Hostfully: un BLOCK temporal durante el pago y el lead BOOKING + pago al confirmar (ver «Hold en Hostfully»).
 - **Sync de propiedades (manual):** Admin → Sync Hostfully. Actualiza datos de cada propiedad y mantiene `hostfullyPropertyId`; no sobrescribe `availability` (eso lo hace el cron).
 - **Sync de disponibilidad (automático, ~10 min):** Cron que rellena solo `availability` en Firestore.
 - **Sync de precios (automático, 1×/día):** Cron que rellena `dailyRates` y el mínimo disponible para tarjetas.
 - **Verificación al pagar:** Hostfully en vivo + holds de otros huéspedes; listados/calendario usan Firestore del cron.
+
+### Hold en Hostfully mientras se paga (requiere `HOSTFULLY_ENABLE_WRITES=true`)
+- Al reclamar las fechas (`POST /api/reservations/[id]/hold`) se crea un **BLOCK** en Hostfully y su uid se guarda en `reservations/{id}.hostfullyHoldLeadUid`. Si Hostfully falla, el hold se deshace y el huésped reintenta (falla cerrado).
+- Hostfully **no expira** los bloqueos: el vencimiento lo controla este sitio. Se borra el BLOCK cuando: el timer llega a 0, el huésped lo quita del carrito, empieza otro intento (`create-from-draft`), el admin cancela, o corre el cron.
+- **Cron `POST /api/cron/release-expired-holds` (programar cada 1 min en Cloud Scheduler, igual que los otros crons, con `Authorization: Bearer <CRON_SECRET>`)**: libera reservas `pending` vencidas (→ `incomplete`) y reintenta borrados fallidos. Sin este cron, un huésped que cierra el navegador deja las fechas bloqueadas en Hostfully hasta que alguien más consulte esas fechas.
+- Al confirmarse el pago, el BLOCK se borra justo antes de crear el lead BOOKING; si crear el BOOKING falla, el BLOCK se restaura (con nota) para que las fechas no queden libres.
+- Mientras existe el BLOCK propio, `checkPropertyAvailability` no consulta el calendario de Hostfully para esa reserva (el calendario marcaría las noches como ocupadas por nosotros).
+- Resultado del registro de pago: `reservations/{id}.hostfullyPaymentSync = { ok, error, at }`.
 
 ### Cambios de código recomendados (si algo falla)
 - Si la disponibilidad no coincide: revisar timezone en el cron y en Hostfully; ampliar rango del cron si hace falta; asegurar que el calendario de Hostfully devuelva `available` y opcionalmente `rate`/`price`/`dailyRate` por día.

@@ -5,8 +5,7 @@ import { sendConfirmationEmail } from '@/lib/mail';
 import { Reservation } from '@/lib/types';
 import { updatePropertyAvailabilityAdmin } from '@/lib/firebase-admin-queries';
 import { generateDateRange } from '@/lib/utils/date';
-import { trySyncBookingToHostfully } from '@/lib/hostfully/sync-booking-lead';
-import { registerHostfullyLeadPayment } from '@/lib/hostfully/client';
+import { trySyncBookingToHostfully, registerAndRecordHostfullyPayment } from '@/lib/hostfully/sync-booking-lead';
 import { checkPropertyAvailability } from '@/app/(public)/properties/actions';
 import { paymentDisplayFromIntent } from '@/lib/stripe-payment-display';
 
@@ -194,6 +193,9 @@ export async function POST(request: NextRequest) {
       totalAmountUsd: Number(updated.totalAmount) || undefined,
       guests: Number(updated.guests) || undefined,
       locale: updated.locale === 'en' ? 'en' : 'es',
+      chargedAmount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+      chargedCurrency: paymentIntent.currency,
+      stripePaymentIntentId: paymentIntent.id,
     });
     if (!syncResult.synced) {
       console.error('[Hostfully] Sync falló tras confirmar reserva:', syncResult.error);
@@ -208,19 +210,15 @@ export async function POST(request: NextRequest) {
         ? syncResult.leadUid
         : ((updated.hostfullyLeadUid as string | undefined) ?? '').trim() || undefined;
     if (leadUidForPayment) {
-      const paymentSync = await registerHostfullyLeadPayment({
+      await registerAndRecordHostfullyPayment({
+        reservationId: reservationSnap.id,
         leadUid: leadUidForPayment,
-        amount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
-        currency: paymentIntent.currency?.toUpperCase() || 'USD',
+        amountUsd: Number(paymentIntent.metadata?.baseAmountUsd) || Number(updated.totalAmount) || 0,
+        chargedAmount: (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100,
+        chargedCurrency: paymentIntent.currency || 'usd',
+        stripePaymentIntentId: paymentIntent.id,
         paidAt: paymentIntent.created ? new Date(paymentIntent.created * 1000) : new Date(),
-        externalPaymentId: paymentIntent.id,
-        note: `Pago Stripe ${paymentIntent.id} — ${
-          (paymentIntent.amount_received ?? paymentIntent.amount ?? 0) / 100
-        } ${(paymentIntent.currency ?? 'usd').toUpperCase()}`,
       });
-      if (!paymentSync.synced) {
-        console.error('[Hostfully] No se pudo registrar pago del lead:', paymentSync.error);
-      }
     }
     await sendConfirmationEmail(reservationData);
 

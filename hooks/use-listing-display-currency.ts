@@ -9,8 +9,9 @@ import {
   readStoredListingCurrency,
 } from "@/lib/parse-currency";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
+import { suggestCurrencyFromBrowser } from "@/lib/currency-suggestion";
 
-/** Moneda del listado: query `currency`, o preferencia guardada en sesión, o USD. */
+/** Moneda del listado: query `currency`, o preferencia guardada en sesión, o la sugerida por ubicación. */
 export function useListingDisplayCurrency() {
   const searchParams = useSearchParams();
   const urlCurrency = searchParams.get("currency");
@@ -23,7 +24,8 @@ export function useListingDisplayCurrency() {
       setCurrency(parseCurrency(urlCurrency));
       return;
     }
-    setCurrency(readStoredListingCurrency() ?? "USD");
+    // Sin elección previa: se sugiere según la ubicación (MX→MXN, Europa→EUR, resto USD).
+    setCurrency(readStoredListingCurrency() ?? suggestCurrencyFromBrowser());
   }, [urlCurrency]);
 
   const { usdMxnRate, usdEurRate } = useExchangeRates(currency);

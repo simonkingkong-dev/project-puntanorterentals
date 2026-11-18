@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Check, Calendar, Users, Mail, Loader2, CreditCard, Compass } from 'lucide-react';
+import { Check, Calendar, Users, Mail, Loader2, CreditCard, Compass, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Reservation } from '@/lib/types';
@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { es as esLocale, enUS } from 'date-fns/locale';
 import { useLocale } from '@/components/providers/locale-provider';
 import type { Locale } from '@/lib/i18n/messages';
+import { describePaymentFailure, type PaymentFailure } from '@/lib/payment-errors';
+import { parseCurrency } from '@/lib/parse-currency';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_ATTEMPTS = 8; // ~16 segundos
@@ -66,6 +68,15 @@ function SuccessContent({
   const searchParams = useSearchParams();
   const paymentIntentId = searchParams.get('payment_intent');
   const reservationId = searchParams.get('reservation');
+  // Stripe devuelve aquí al cliente tras un pago con redirección (3D Secure, etc.), también
+  // cuando falla: no debe mostrarse como pago recibido.
+  const paymentFailedOnRedirect = Boolean(paymentIntentId) && searchParams.get('redirect_status') === 'failed';
+  const [failedPayment, setFailedPayment] = useState<{
+    failure: PaymentFailure;
+    currency: string;
+    reservationId: string | null;
+  } | null>(null);
+  const [failureLoaded, setFailureLoaded] = useState(false);
   const [reservationData, setReservationData] = useState<ReservationWithTitle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +94,37 @@ function SuccessContent({
   const [stripeChargeFetchDone, setStripeChargeFetchDone] = useState(() => paymentIntentId == null);
 
   useEffect(() => {
+    if (!paymentFailedOnRedirect || !paymentIntentId) return;
+    let cancelled = false;
+    fetch(`/api/stripe/payment-intents/${encodeURIComponent(paymentIntentId)}`)
+      .then((r) => r.json().catch(() => null))
+      .then((data) => {
+        if (cancelled) return;
+        const currency = parseCurrency(data?.currency);
+        setFailedPayment({
+          failure: describePaymentFailure(data?.paymentError ?? {}, currency, locale === 'en' ? 'en' : 'es'),
+          currency,
+          reservationId: reservationId ?? data?.reservationId ?? null,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFailedPayment({
+          failure: describePaymentFailure({}, 'USD', locale === 'en' ? 'en' : 'es'),
+          currency: 'USD',
+          reservationId,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setFailureLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentFailedOnRedirect, paymentIntentId, reservationId, locale]);
+
+  useEffect(() => {
+    if (paymentFailedOnRedirect) return;
     if (!paymentIntentId) {
       setStripeChargeFetchDone(true);
       setChargeFromStripe(null);
@@ -107,9 +149,10 @@ function SuccessContent({
     return () => {
       cancelled = true;
     };
-  }, [paymentIntentId]);
+  }, [paymentIntentId, paymentFailedOnRedirect]);
 
   useEffect(() => {
+    if (paymentFailedOnRedirect) return;
     const confirmByPaymentIntent = async (): Promise<ReservationWithTitle | null> => {
       if (!paymentIntentId) return null;
       try {
@@ -203,7 +246,7 @@ function SuccessContent({
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [paymentIntentId, reservationId, t]);
+  }, [paymentIntentId, reservationId, t, paymentFailedOnRedirect]);
 
   useEffect(() => {
     if (!reservationData) return;
@@ -229,6 +272,31 @@ function SuccessContent({
     markServicesOfferSeen();
     setShowServicesOffer(false);
   };
+
+  if (paymentFailedOnRedirect) {
+    if (!failureLoaded || !failedPayment) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-12 h-12 animate-spin text-gray-400 mb-4" />
+        </div>
+      );
+    }
+    const backHref = failedPayment.reservationId
+      ? `/payment?reservation=${encodeURIComponent(failedPayment.reservationId)}&currency=${failedPayment.currency}`
+      : '/cart';
+    return (
+      <Card className="max-w-2xl mx-auto border-red-200 bg-red-50">
+        <CardContent className="pt-6 text-center">
+          <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+          <h2 className="text-2xl font-bold text-red-800 mb-2">{failedPayment.failure.title}</h2>
+          <p role="alert" className="text-red-700">{failedPayment.failure.message}</p>
+          <Button asChild className="mt-6">
+            <Link href={backHref}>{t('payment_failed_back', 'Back to payment to try again')}</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Estado de Carga (inicial o polling)
   if (loading) {
@@ -430,14 +498,17 @@ function SuccessContent({
             </div>
           </div>
 
-          <div className="pt-4 border-t">
-             <p className="text-sm text-gray-600 mb-2">
-              <strong>{t('reservation_id', 'Booking ID')}:</strong> {reservationData.id}
-            </p>
+          <div className="pt-4 border-t space-y-2">
             <p className="text-sm text-gray-600">
               <strong>{t('confirmation_sent_to', 'Confirmation sent to')}:</strong> {reservationData.guestEmail}
             </p>
-           </div>
+            <p className="text-sm text-gray-600">
+              {t(
+                'success_confirmation_by_email',
+                'Your booking confirmation will arrive by email.'
+              )}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -452,7 +523,10 @@ function SuccessContent({
             <div>
               <p className="font-medium">{t('confirmation_by_email', 'Email confirmation')}</p>
               <p className="text-sm text-gray-600">
-                {t('confirmation_by_email_subtitle', "You'll receive all booking details and check-in instructions.")}
+                {t(
+                  'success_checkin_instructions',
+                  'Directions and check-in instructions will be sent within 24 hours before your check-in.'
+                )}
               </p>
             </div>
           </div>

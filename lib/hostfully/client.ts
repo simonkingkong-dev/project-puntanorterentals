@@ -263,6 +263,65 @@ export async function getHostfullyLeadByUid(
   return lead && typeof lead === "object" ? lead : {};
 }
 
+/**
+ * Obtiene el order de un lead. La respuesta del lead NO trae el UID del order (verificado
+ * en la documentación y en producción: el order existía pero nunca se encontraba), así que
+ * se consulta GET /orders?leadUid=. Devuelve null si aún no existe.
+ * @see https://dev.hostfully.com/reference/getall_9 — la doc muestra la ruta en v3.3.
+ */
+export async function getHostfullyOrderByLeadUid(
+  leadUid: string
+): Promise<Record<string, unknown> | null> {
+  const qs = `?leadUid=${encodeURIComponent(leadUid.trim())}`;
+  let data: Record<string, unknown>;
+  try {
+    data = await hostfullyFetch<Record<string, unknown>>(`/orders${qs}`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const base = getBaseUrl();
+    if (/Hostfully API error 404/.test(msg) && base.includes("/v3.2")) {
+      data = await hostfullyFetch<Record<string, unknown>>(
+        `${base.replace("/v3.2", "/v3.3")}/orders${qs}`
+      );
+    } else {
+      throw e;
+    }
+  }
+  const list = (data?.orders ?? data?.content ?? (Array.isArray(data) ? data : [])) as unknown;
+  if (!Array.isArray(list) || list.length === 0) return null;
+  const first = list[0];
+  return first && typeof first === "object" ? (first as Record<string, unknown>) : null;
+}
+
+/**
+ * Cuerpos de POST /transactions, en orden de preferencia. Con `fullPayment` Hostfully
+ * salda el balance del order tal como él lo calculó; si su total difiere de lo realmente
+ * cobrado, se registra el importe real (así el desfase queda visible en vez de ocultarse).
+ */
+export function buildTransactionPayloads(input: {
+  orderUid: string;
+  amountUsd: number;
+  orderTotal?: number;
+  externalPaymentId?: string;
+  notes?: string;
+}): Array<Record<string, unknown>> {
+  const { orderUid, amountUsd, externalPaymentId, notes } = input;
+  const full = { orderUid, type: "SALE", status: "SUCCESS", fullPayment: true, manual: true, notes };
+  const manualAmount = { orderUid, type: "SALE", status: "SUCCESS", amount: amountUsd, manual: true, notes };
+  const processorAmount = {
+    orderUid,
+    type: "SALE",
+    status: "SUCCESS",
+    amount: amountUsd,
+    manual: false,
+    transactionId: externalPaymentId,
+    notes,
+  };
+  const totalsMatch =
+    input.orderTotal == null || Math.abs(input.orderTotal - amountUsd) <= 0.01;
+  return totalsMatch ? [full, processorAmount, manualAmount] : [manualAmount, processorAmount, full];
+}
+
 // --- Funciones de la API ---
 
 /**
@@ -348,7 +407,7 @@ export async function checkHostfullyAvailability(
  */
 export async function registerHostfullyLeadPayment(
   params: HostfullyLeadPaymentParams
-): Promise<{ synced: boolean; path?: string; error?: string }> {
+): Promise<{ synced: boolean; path?: string; error?: string; orderUid?: string; orderTotal?: number }> {
   const leadUid = params.leadUid?.trim();
   if (!leadUid) return { synced: false, error: "leadUid requerido" };
   const amount = Number(params.amount);
@@ -360,47 +419,47 @@ export async function registerHostfullyLeadPayment(
     params.note ??
     (params.externalPaymentId ? `Pago Stripe ${params.externalPaymentId}` : undefined);
 
+  // El order puede crearse un instante después que el lead: se reintenta antes de rendirse
+  // (sin order no hay dónde registrar el pago y la reserva queda "sin pagar").
   let orderUid = params.orderUid?.trim() || undefined;
-  if (!orderUid) {
+  let orderTotal: number | undefined;
+  const ORDER_LOOKUP_ATTEMPTS = 3;
+  let lookupError = "";
+  for (let attempt = 1; !orderUid && attempt <= ORDER_LOOKUP_ATTEMPTS; attempt++) {
     try {
-      const lead = await getHostfullyLeadByUid(leadUid);
-      orderUid = extractOrderUidFromHostfullyRecord(lead);
+      const order = await getHostfullyOrderByLeadUid(leadUid);
+      orderUid = toOptionalString(order?.uid);
+      const t = Number(order?.totalAmount);
+      if (orderUid && Number.isFinite(t)) orderTotal = t;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { synced: false, error: `No se pudo obtener orderUid del lead: ${msg}` };
+      lookupError = e instanceof Error ? e.message : String(e);
+    }
+    if (!orderUid) {
+      // Respaldo: algunas cuentas sí exponen el order dentro del lead.
+      try {
+        orderUid = extractOrderUidFromHostfullyRecord(await getHostfullyLeadByUid(leadUid));
+      } catch {
+        /* se informa abajo */
+      }
+    }
+    if (!orderUid && attempt < ORDER_LOOKUP_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, 1500));
     }
   }
   if (!orderUid) {
-    return { synced: false, error: "orderUid no encontrado en el lead de Hostfully" };
+    return {
+      synced: false,
+      error: `orderUid no encontrado para el lead ${leadUid}${lookupError ? `: ${lookupError}` : ""}`,
+    };
   }
 
-  const transactionPayloads: Array<Record<string, unknown>> = [
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      fullPayment: true,
-      manual: true,
-      notes,
-    },
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      amount,
-      manual: false,
-      transactionId: params.externalPaymentId,
-      notes,
-    },
-    {
-      orderUid,
-      type: "SALE",
-      status: "SUCCESS",
-      amount,
-      manual: true,
-      notes,
-    },
-  ];
+  const transactionPayloads = buildTransactionPayloads({
+    orderUid,
+    amountUsd: amount,
+    orderTotal,
+    externalPaymentId: params.externalPaymentId,
+    notes,
+  });
 
   let lastErr = "Hostfully payment sync failed";
   for (const body of transactionPayloads) {
@@ -409,7 +468,7 @@ export async function registerHostfullyLeadPayment(
         method: "POST",
         body: JSON.stringify(body),
       });
-      return { synced: true, path: "/transactions" };
+      return { synced: true, path: "/transactions", orderUid, orderTotal };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       if (process.env.NODE_ENV === "development" && isHostfullyDebugEnabled()) {
@@ -575,6 +634,41 @@ export async function createHostfullyBookingLead(
     method: "POST",
     body: bodyString,
   });
+}
+
+/**
+ * Borra un lead en Hostfully (DELETE /leads/{uid}). Los BLOCK siempre se pueden borrar.
+ * Si ya no existe (404) se considera borrado: liberar dos veces es inocuo.
+ */
+export async function deleteHostfullyLead(
+  leadUid: string
+): Promise<{ deleted: true; alreadyGone: boolean }> {
+  const uid = leadUid?.trim();
+  if (!uid) throw new Error("deleteHostfullyLead: leadUid requerido");
+  getApiKey(); // falla pronto si no hay API key
+  try {
+    await hostfullyFetch<unknown>(`/leads/${encodeURIComponent(uid)}`, { method: "DELETE" });
+    return { deleted: true, alreadyGone: false };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/Hostfully API error 404/.test(msg)) return { deleted: true, alreadyGone: true };
+    throw e;
+  }
+}
+
+/**
+ * UID del lead en la respuesta de POST /leads. Hostfully lo envuelve: `{ lead: { uid } }`
+ * (leerlo en `uid` del nivel superior devolvía undefined: el lead se creaba pero su UID
+ * nunca se guardaba y, sin él, el pago ni siquiera se intentaba registrar).
+ */
+export function extractLeadUid(response: unknown): string | undefined {
+  if (!response || typeof response !== "object") return undefined;
+  const r = response as Record<string, unknown>;
+  const inner = r.lead && typeof r.lead === "object" ? (r.lead as Record<string, unknown>) : undefined;
+  for (const c of [inner?.uid, inner?.leadUid, r.uid, r.leadUid]) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return undefined;
 }
 
 export interface HostfullyLead {

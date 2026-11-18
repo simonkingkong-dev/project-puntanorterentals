@@ -182,6 +182,27 @@ async function releaseExpiredHoldsForDates(propertyIds: string[], dateStrings: s
   }
 }
 
+/** true si la reserva tiene un bloqueo vivo en Hostfully exactamente sobre estas noches. */
+async function reservationOwnsHostfullyHold(
+  reservationId: string | undefined,
+  dateStrings: string[]
+): Promise<boolean> {
+  if (!reservationId) return false;
+  try {
+    const snap = await adminDb.collection("reservations").doc(reservationId).get();
+    const data = snap.data();
+    if (!data || typeof data.hostfullyHoldLeadUid !== "string" || !data.hostfullyHoldLeadUid) {
+      return false;
+    }
+    const resCheckIn = data.checkIn?.toDate?.() ?? new Date(data.checkIn);
+    const resCheckOut = data.checkOut?.toDate?.() ?? new Date(data.checkOut);
+    const own = generateDateRange(resCheckIn, resCheckOut);
+    return own.length === dateStrings.length && own.every((d, i) => d === dateStrings[i]);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Verifica si las fechas siguen disponibles para la propiedad (para proceder al pago).
  * - Si hay `hostfullyPropertyId`: consulta Hostfully en tiempo real.
@@ -292,7 +313,15 @@ export async function checkPropertyAvailability(
       return { available: false, error: "Esas fechas ya están reservadas." };
     }
 
-    const hostfullyChecks = await Promise.all(
+    // Si esta reserva ya tiene su propio bloqueo (hold) en Hostfully, el calendario del PMS
+    // marca esas noches como ocupadas por NOSOTROS: consultarlo rechazaría al propio huésped
+    // en la página de pago y, peor, una reserva ya pagada. Las noches son suyas.
+    const ownsHostfullyHold = await reservationOwnsHostfullyHold(
+      options?.excludeReservationId,
+      dateStrings
+    );
+
+    const hostfullyChecks = ownsHostfullyHold ? [] : await Promise.all(
       calendarIds.map(async (id) => {
         const prop = id === propertyId ? property : await getPropertyByIdAdmin(id);
         if (!prop?.hostfullyPropertyId) return null;

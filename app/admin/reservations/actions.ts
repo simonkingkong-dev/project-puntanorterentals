@@ -35,6 +35,10 @@ export async function cancelReservationAdmin(reservationId: string) {
     const newStatus = status === "pending" ? "incomplete" : "cancelled";
 
     await ref.update({ status: newStatus, updatedAt: new Date() });
+    if (status === "pending") {
+      const { releaseHostfullyHold } = await import("@/lib/hostfully/holds");
+      await releaseHostfullyHold(reservationId);
+    }
     if (status === "confirmed" || datesHeld) {
       await updatePropertyAvailabilityAdmin(propertyId, dateStrings, true);
     }
