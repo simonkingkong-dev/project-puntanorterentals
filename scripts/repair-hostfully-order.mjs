@@ -32,6 +32,9 @@ const APPLY = args.includes("--apply");
 const ALL = args.includes("--all");
 const reservationFlag = args.indexOf("--reservation");
 const RESERVATION_ID = reservationFlag >= 0 ? args[reservationFlag + 1] : null;
+const TOL = 0.05; // Hostfully redondea a centavos (66.01 vs 66.00): no es una diferencia real
+const excludeFlag = args.indexOf("--exclude");
+const EXCLUDE = new Set(excludeFlag >= 0 ? String(args[excludeFlag + 1] ?? "").split(",").filter(Boolean) : []);
 const variantFlag = args.indexOf("--variant");
 const VARIANT = variantFlag >= 0 ? args[variantFlag + 1] : "fees"; // fees (verificada: VAT/City Tax con netPrice) | tax | flat
 const orderFlag = args.indexOf("--order");
@@ -42,7 +45,8 @@ const searchTerm = args
       !a.startsWith("--") &&
       !(reservationFlag >= 0 && i === reservationFlag + 1) &&
       !(orderFlag >= 0 && i === orderFlag + 1) &&
-      !(variantFlag >= 0 && i === variantFlag + 1)
+      !(variantFlag >= 0 && i === variantFlag + 1) &&
+      !(excludeFlag >= 0 && i === excludeFlag + 1)
   )
   ?.trim()
   .toLowerCase();
@@ -126,6 +130,40 @@ async function resolveLeadUidFromOrder(r, orderUid) {
   return match?.leadUid ?? null;
 }
 
+/**
+ * Sin UID guardado y sin --order: busca el lead entre los orders recientes de la propiedad y
+ * lo identifica por correo del huésped + fecha de entrada. Solo acepta una coincidencia única.
+ */
+const usedLeadUids = new Set();
+async function resolveLeadUidAuto(r) {
+  const propSnap = await db.collection("properties").doc(String(r.propertyId)).get();
+  const propertyUid = propSnap.data()?.hostfullyPropertyId;
+  const email = String(r.guestEmail ?? "").trim().toLowerCase();
+  if (!propertyUid || !email) return null;
+  const created = r.createdAt?.toDate?.() ?? new Date(r.createdAt);
+  const since = new Date(created.getTime() - 24 * 3600 * 1000).toISOString().slice(0, 19);
+  const ci = (r.checkIn?.toDate?.() ?? new Date(r.checkIn)).toISOString().slice(0, 10);
+  const data = await hfWithFallback(
+    `/orders?propertyUid=${encodeURIComponent(propertyUid)}&updatedSince=${encodeURIComponent(since)}`
+  );
+  const orders = data?.orders ?? data?.content ?? [];
+  const matches = [];
+  for (const o of Array.isArray(orders) ? orders : []) {
+    if (!o.leadUid || usedLeadUids.has(o.leadUid)) continue;
+    let lead;
+    try {
+      const l = await hf(`/leads/${encodeURIComponent(o.leadUid)}`);
+      lead = l?.lead ?? l;
+    } catch {
+      continue;
+    }
+    const leadEmail = String(lead?.guestInformation?.email ?? "").trim().toLowerCase();
+    const leadIn = String(lead?.checkInLocalDateTime ?? "").slice(0, 10);
+    if (leadEmail === email && leadIn === ci) matches.push(o.leadUid);
+  }
+  return matches.length === 1 ? matches[0] : matches.length > 1 ? "AMBIGUO" : null;
+}
+
 // ---------- Desglose (mismo cálculo que lib/lodging-taxes.ts) ----------
 const IVA = 0.16;
 const ISH = 0.06;
@@ -180,8 +218,8 @@ async function findTargets() {
     return s.exists ? [{ id: s.id, ...s.data() }] : [];
   }
   const snap = await db.collection("reservations").where("status", "==", "confirmed").get();
-  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.hostfullyLeadUid || ORDER_UID);
-  if (ALL) return all.filter((r) => r.hostfullyPaymentSync?.ok !== true);
+  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.hostfullyLeadUid || ORDER_UID || ALL);
+  if (ALL) return all.filter((r) => r.hostfullyPaymentSync?.ok !== true && !EXCLUDE.has(r.id));
   return all.filter((r) => {
     const hay = [r.guestName, r.guestFirstName, r.guestLastName, `${r.guestFirstName ?? ""} ${r.guestLastName ?? ""}`, r.guestEmail]
       .filter(Boolean)
@@ -198,10 +236,12 @@ async function repair(r) {
   if (!Number.isFinite(expected) || expected <= 0) return console.log("  Total de la reserva inválido: se omite.");
 
   if (!r.hostfullyLeadUid) {
-    if (!ORDER_UID) return console.log("  Sin lead guardado: usa --order <orderUid> para resolverlo.");
-    r.hostfullyLeadUid = await resolveLeadUidFromOrder(r, ORDER_UID);
-    if (!r.hostfullyLeadUid) return console.log("  No se pudo resolver el lead desde ese order: se omite.");
-    console.log(`  Lead resuelto desde el order: ${r.hostfullyLeadUid}`);
+    if (!ORDER_UID && !ALL) return console.log("  Sin lead guardado: usa --order <orderUid> o --all para resolverlo.");
+    r.hostfullyLeadUid = ORDER_UID ? await resolveLeadUidFromOrder(r, ORDER_UID) : await resolveLeadUidAuto(r);
+    if (r.hostfullyLeadUid === "AMBIGUO") return console.log("  ✖ Varias coincidencias en Hostfully: se omite (resolver a mano).");
+    if (!r.hostfullyLeadUid) return console.log("  No se encontró un lead en Hostfully para esta reserva: se omite (no se crea nada).");
+    usedLeadUids.add(r.hostfullyLeadUid);
+    console.log(`  Lead resuelto (correo + fecha de entrada): ${r.hostfullyLeadUid}`);
     if (APPLY) {
       await db.collection("reservations").doc(r.id).update({
         hostfullyLeadUid: r.hostfullyLeadUid,
@@ -223,18 +263,30 @@ async function repair(r) {
     return console.log(`  ✖ El order está en ${orderCurrency}, no en USD: se omite para no registrar importes en otra moneda.`);
   }
 
-  const mismatch = Math.abs(Number(order.totalAmount) - expected) > 0.01;
+  const mismatch = Math.abs(Number(order.totalAmount) - expected) > TOL;
   const b = breakdown(expected);
   if (mismatch) {
     console.log(`  → Corregir total [variante ${VARIANT}]: renta ${b.subtotal} + VAT ${b.iva} + City Tax ${b.ish} = ${expected}`);
     if (APPLY) {
+      // Leads antiguos traen líneas propias con identificador (IVA, City Tax…). La API NO deja
+      // borrarlas ni modificarlas con una alteración (probado: se duplican y el total sube),
+      // así que esos orders se corrigen a mano en Hostfully.
+      const stale = (order.fees?.otherFees ?? []).filter((f) => f.uid);
+      if (stale.length) {
+        console.log(
+          `    ✖ El order tiene líneas antiguas (${stale.map((f) => `${f.name} ${f.netPrice}`).join(", ")}) que la API no puede quitar. Corregir a mano en Hostfully.`
+        );
+        return;
+      }
+      const qo = quoteOverrides(expected);
+      qo.rent = { ...qo.rent, extraGuestsNetPrice: 0, extraGuestsBaseNetPrice: 0 };
       await hfWithFallback(`/leads/${encodeURIComponent(r.hostfullyLeadUid)}/alteration`, {
         method: "POST",
-        body: JSON.stringify({ quoteOverrides: quoteOverrides(expected) }),
+        body: JSON.stringify({ quoteOverrides: qo }),
       });
       order = await getOrder(r.hostfullyLeadUid);
       console.log(`    Order tras la alteración: ${money(order?.totalAmount)}`);
-      if (Math.abs(Number(order?.totalAmount) - expected) > 0.01) {
+      if (Math.abs(Number(order?.totalAmount) - expected) > TOL) {
         console.log("    ✖ Hostfully NO aplicó los importes. No se registra el pago. Ajustar a mano (Add Order Adjustment).");
         await db.collection("reservations").doc(r.id).update({
           "hostfullyPaymentSync.totalsMatch": false,
@@ -248,7 +300,7 @@ async function repair(r) {
   }
 
   const missing = Math.round((expected - paid()) * 100) / 100;
-  if (missing > 0.01) {
+  if (missing > TOL) {
     console.log(`  → Registrar pago de ${money(missing)} USD (Stripe ${r.stripePaymentId ?? "?"})`);
     if (APPLY) {
       await hf("/transactions", {
@@ -265,6 +317,8 @@ async function repair(r) {
       txs = await getTransactions(order.uid);
       console.log(`    Pagado en Hostfully ahora: ${money(paid())}`);
     }
+  } else if (paid() > expected + TOL) {
+    console.log(`  ⚠ Pagado en Hostfully (${money(paid())}) supera el total (${money(expected)}): no se toca, revisar a mano.`);
   } else {
     console.log("  Pago ya registrado.");
   }
@@ -277,7 +331,7 @@ async function repair(r) {
         orderUid: order.uid,
         orderTotalUsd: Number(order.totalAmount) || null,
         paidUsd: paid(),
-        totalsMatch: Math.abs(Number(order.totalAmount) - expected) <= 0.01,
+        totalsMatch: Math.abs(Number(order.totalAmount) - expected) <= TOL,
         repairedAt: new Date(),
         at: new Date(),
       },
