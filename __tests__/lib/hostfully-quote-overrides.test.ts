@@ -2,7 +2,7 @@ import { buildHostfullyQuoteOverrides } from '@/lib/hostfully/quote-overrides';
 
 type Q = {
   totalPrice: number;
-  rent: { rentNetPrice: number; rentBaseNetPrice: number; taxAmount: number };
+  rent: { rentNetPrice: number; rentBaseNetPrice: number; taxAmount: number; extraGuestsNetPrice: number; extraGuestsBaseNetPrice: number };
   fees: { otherFees: Array<{ name: string; netPrice: number }> };
 };
 
@@ -30,5 +30,11 @@ describe('buildHostfullyQuoteOverrides', () => {
   it('el valor va en netPrice, no en amount (Hostfully ignora amount)', () => {
     const q = buildHostfullyQuoteOverrides(53) as Q;
     for (const f of q.fees.otherFees) expect(f).not.toHaveProperty('amount');
+  });
+
+  it('pone en 0 el cargo por huésped extra (ya va dentro del subtotal cobrado)', () => {
+    const q = buildHostfullyQuoteOverrides(66) as Q;
+    expect(q.rent.extraGuestsNetPrice).toBe(0);
+    expect(q.rent.extraGuestsBaseNetPrice).toBe(0);
   });
 });

@@ -29,6 +29,10 @@ export function buildHostfullyQuoteOverrides(totalUsd: number): Record<string, u
     rent: {
       rentBaseNetPrice: subtotalUsd,
       rentNetPrice: subtotalUsd,
+      // El subtotal cobrado ya incluye a los huéspedes extra; si no se pone en 0, Hostfully
+      // conserva su propio cargo por huésped extra y el total del lead sale más alto.
+      extraGuestsNetPrice: 0,
+      extraGuestsBaseNetPrice: 0,
       taxAmount: 0,
     },
     fees: {
